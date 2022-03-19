@@ -1,33 +1,27 @@
 pico-8 cartridge // http://www.pico-8.com
 version 34
 __lua__
---status line 1.1
+--status line 1.2
 --by christopher drum
 
 _z_machine_version = 0
-_engine_version = 1.1
+_engine_version = 1.2
 story_loaded = false
-lines_height = 20
-line_width = 32
-
---io control
-lines_shown = 0
-emit_rate = nil --the lower the faster
-clock_type = nil
-cursor_type = nil
+-- full_color = false
 
 local screen_types = {
 	default = 1, 
 	values = {
 		{'b&w', {6,0}}, {'green', {138, 131}}, 
 		{'amber', {9,128}}, {'blue', {12,129}}, 
-		{'oldlcd', {131,129}}, {'plasma', {8,130}}, {'invert', {0,6}}
+		{'oldlcd', {131,129}}, {'plasma', {8,130}}, 
+		{'invert', {0,6}}--, {'ega', {7,0}}
 	}
 }
 local scroll_speeds = {
 	default = 3,
 	values = {
-		{'slow', 20}, {'medium', 9}, {'fast', 4}, 
+		{'slow', 30}, {'medium', 20}, {'fast', 10}, 
 		{'faster', 2}, {'fastest', -1}
 	}
 }
@@ -45,66 +39,72 @@ local cursor_types = {
 	}
 }
 
---some frequently used values we can cache before beginning the game
+--frequently used values we can cache before starting
 max_input_length = 0
-parse_buffer_length = 0
+z_parse_buffer_length = 0
 separators = {}
 _dictionary_lookup = {}
+blank_line = '                                '
 
 --these literally make the engine run
 _program_counter = 0x0
 _interrupt = nil
 
---debugging routines
-function tohex(value, full)
-	if (value == nil) return '- - -'
-	if (full == nil) full = true
-	if (full == true) return tostr(value, true)
-	return sub(tostr(value, true),3,6)
-end
-
-function log(str)
-	--printh(str, 'status_line_log_11')
-end
 
 --useful functions
-function in_set(char, set)
+function in_set(val, set)
 	for i = 1, #set do
-		if (char == set[i]) return true
+		if (val == set[i]) return true
 	end
 	return false
 end
 
+function in_range(val,min,max)
+	return mid(min,val,max) == val
+end
+
+function tohex(value, full)
+	if (value == nil) return '(no_value)'
+	local hex = tostr(value, true)
+	if (full == false) hex = sub(hex, 3, 6)
+	return hex
+end
+
+function log(str)
+	-- printh(str, 'status_line_log_12')
+end
+
+lines_shown = 0
 function wait_for_any_key(message)
-	rectfill(0,122,127,127,1)
-	print(message,63-(#message * 2),122,0)
+	screen(message)
 	local keypress = ''
 	while (keypress == '') do
 		if stat(30) then
 			poke(0x5f30,1)
 			keypress = stat(31)
-			lines_shown = 0
 		end
 		flip()
 	end
-	--cleanup the above message line
-	rectfill(0,122,127,127,0)
-	cursor(0,122)
+	if active_window == 0 then
+		local buffer = windows[active_window].screen_buffer
+		deli(buffer, #buffer)
+		windows[active_window].screen_buffer = buffer
+	end
+	lines_shown = 0
 end
 
 local flip_time = t()
 local c = 1
 function draw_cursor()
-	if cursor_x > 0 then
-		local blink = (t() - flip_time) >= 0.5
-		if (blink == true) then
-			flip_time = t()
-			c = (c+1)%2
-		end
-		local x,y = peek(0x5f26), peek(0x5f27)
-		print(cursor_type, cursor_x, cursor_y, c)
-		cursor(x,y)
+	local px, py = unpack(windows[active_window].p_cursor)
+	-- log('draw_cursor sees: '..px..','..py)
+	local blink = (t() - flip_time) >= 0.5
+	if (blink == true) then
+		flip_time = t()
+		c = (c+1)%2
 	end
+	local cur_col = (c == 0) and current_bg or current_fg
+	print(cursor_type, px, py, cur_col)
 end
 
 function build_menu(name, dval, table)
@@ -124,6 +124,7 @@ end
 
 function _init()
 	poke(0x5f2d, 1)
+	poke(0x5f36,0x4)
 
 	cartdata('drum_statusline_1')
 
@@ -137,12 +138,13 @@ function draw_splashscreen(did_load)
 	cls(0)
 
 	sspr(0,0,128,124,0,0)--monitor
-	rectfill(6,125,122,127,1)--underside
+	rectfill(6,125,122,127,1)
 	sspr(90,125,7,3,83,124)--knobs
 	sspr(90,125,7,3,93,124)
 
 	color(7)
 	line(33,83,93,83)
+	print('V'.._engine_version, 82, 69)
 
 	if (did_load == true) then
 		sspr(100,124,14,4,103,116)
@@ -151,8 +153,8 @@ function draw_splashscreen(did_load)
 	else
 		sspr(114,124,14,4,103,116)
 		cursor(20,92)
-		?'DRAG IN A Z3 GAME FILE'
-		?'   TO START PLAYING'
+		print('DRAG IN A Z3 GAME', 30, 92)
+		print('TO START PLAYING', 32, 98) 
 	end
 
 	color()
@@ -165,12 +167,30 @@ function game_id()
 	return tohex(id<<16, false)
 end
 
+function setup_palette()
+	local st = dget(0) or 1
+	local type = screen_types.values[st]
+	full_color = type[1] == 'ega'
+	fg, bg = unpack(type[2])
+	pal({fg,0,8,139,10,140,136,12,7,10,11,12,13,14,15,bg},1)
+	palt(0,false)
+end
+
+function setup_user_prefs()
+	local er = dget(1) or 3
+	local ct = dget(2) or 1
+	local cur = dget(3) or 1
+
+	_, emit_rate = unpack(scroll_speeds.values[er])
+	_, clock_type = unpack(clock_types.values[ct])
+	_, cursor_type = unpack(cursor_types.values[cur])
+end
+
 function _update60()
 
 	if (story_loaded == true) then
-		--_interrupt is set when the system is ready for user input
+		--_interrupt is set when _read() is called
 		if _interrupt then
-			flush_line_buffer()
 			local key = nil
 			if (stat(30)) then
 				poke(0x5f30,1)
@@ -178,17 +198,15 @@ function _update60()
 			end
 			_interrupt(key)
 		else
-			--I found 20 vm instructions per frame at 60fps
-			--provides a stable, consistent user experience
-			--We can probably increase this later after further experimentation
-			--or take a P8 approach and assign "costs" to various opcodes
+			--I found this method of running multiple vm instructions
+			--per frame more consistent and easier to regulate
 			local count = 0
 			local max_instruction = 20
 			while count < max_instruction and 
 					_interrupt == nil and
 					story_loaded == true do
 				local func, operands = load_instruction()
-				if (func == _save) capture_save_state()
+				if (func == _save) capture_state(_current_state)
 				func(unpack(operands))
 				count += 1
 			end
@@ -201,11 +219,9 @@ function _update60()
 			load_story_file()
 		else
 			if (_program_counter != 0x0) then
-				if line_buffer then
-					--give the player an opportunity to see end-of-game text
-					flush_line_buffer()
-					wait_for_any_key("~ END OF SESSION ~")
-				end
+				--let the player see end-of-game text
+				flush_line_buffer()
+				wait_for_any_key("\^i       ~ END OF SESSION ~       ")
 				reset_all_memory()
 			end
 			pal()
@@ -239,29 +255,47 @@ function fetch_parser_separators()
 	local num_separators = get_zbyte(_dictionary_addr)
 	local seps = get_zbytes(_dictionary_addr + 0x.0001, num_separators)
 	seps = zscii_to_p8scii(seps)
-	-- log('word separators are: '..seps)
 	for i = 1, num_separators do
 		local k = sub(seps, i, i)
 		add(separators, k)
 	end
 end
 
-function set_header_flags()
-	set_zbyte(screen_height, lines_height) --20 lines
-	set_zbyte(screen_width, line_width) --32 chars
+function process_header()
+	_z_machine_version = get_zbyte(version)
+
+	origin_y = (_z_machine_version == 3) and 8 or 0
+	screen_height = (_z_machine_version == 3) and 20 or 21
+
+	set_zbyte(_screen_height, screen_height)
+	set_zbyte(_screen_width, 32)
+
 	local i_flag = get_zbyte(interpreter_flags)
-	i_flag &= 0xf3 --clear bit 0; we're monochrome only
-	i_flag &= 0xdf --clear bit 5; we don't provide an "upper window"
+	if _z_machine_version == 3 then
+		i_flag &= 0xa6 --turn off some bits
+		i_flag |= 0x20 --enable upper window
+	elseif _z_machine_version == 4 then
+		i_flag &= 0xd3
+		i_flag |= 0x92
+	elseif _z_machine_version == 5 then
+		i_flag &= 0x90
+		i_flag |= 0x90
+		-- if (full_color == true) i_flag |= 0x01
+	end
+	-- log('interpreter flags set to: '..tohex(i_flag))
 	set_zbyte(interpreter_flags, i_flag)
+
 	local p_flag = get_zbyte(peripherals)
-	p_flag &= 0xfe --clear bit 0; turn off transcription
+	p_flag &= 0xfe --no transcription
 	set_zbyte(peripherals, p_flag)
+
+	set_zbyte(interpreter_number, 8) --c64
 end
 
-function set_memory_addresses()
+function cache_memory_addresses()
 	_program_counter = zword_to_zaddress(get_zword(program_counter_addr))
 	_paged_memory_addr = zword_to_zaddress(get_zword(paged_memory_addr))
-	_dictionary_addr = 	zword_to_zaddress(get_zword(dictionary_addr))
+	_dictionary_addr = zword_to_zaddress(get_zword(dictionary_addr))
 	_object_table_addr = zword_to_zaddress(get_zword(object_table_addr))
 	_global_var_table_addr = zword_to_zaddress(get_zword(global_var_table_addr))
 	_abbr_table_addr = zword_to_zaddress(get_zword(abbr_table_addr))
@@ -270,43 +304,25 @@ end
 
 function initialize_game()
 
-	--get user prefs or defaults
-	local st = dget(0)
-	local er = dget(1)
-	local ct = dget(2)
-	local cur = dget(3)
-
-	local fg, bg = unpack(screen_types.values[st][2])
-	_, emit_rate = unpack(scroll_speeds.values[er])
-	_, clock_type = unpack(clock_types.values[ct])
-	_, cursor_type = unpack(cursor_types.values[cur])
-
-	cls(0)
-	pal(1,fg,1)
-	pal(0,bg,1)
-	flip()
-
-	cursor_x, cursor_y = 0, 0
-	line_buffer = nil
-
-	--text is supposed to "scroll up from the bottom" like a teletype
-	--we fake it by adding a full screen of blank lines to force
-	--new lines to scroll in from the bottom
-	screen_buffer = {}
-	while #screen_buffer < max_lines do
-		add(screen_buffer, '', 1)
-	end
-	
-	set_memory_addresses()
-	set_header_flags()
+	setup_user_prefs()
+	setup_palette()
+	process_header()
+	cache_memory_addresses()
 	fetch_parser_separators()
 	build_dictionary_lookup()
 	
 	call_stack_push()
 	--special case at startup for the program counter
 	_call_stack[#_call_stack - 9] = _program_counter
-	
+
+	active_window = 0
+	windows[0].screen_buffer = {}
+	split_window(0)
+	if (_memory_start_state == nil) capture_state(_memory_start_state)
+	update_current_format()
+	update_p_cursor()
 	story_loaded = true
+	cls()
 end
 __gfx__
 05555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555550
