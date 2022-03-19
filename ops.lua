@@ -384,7 +384,7 @@ end
 
 --timer function turned off in header for now
 function read(baddr1, baddr2, time, raddr)
-	if (_interrupt == nil) then
+	if (not _interrupt) then
 	--log('s/read: '..tohex(baddr1)..','..tohex(baddr2)..', time: '..tohex(time)..', '..tohex(raddr))
 		--cache addresses for capture_input()
 		flush_line_buffer()
@@ -416,7 +416,7 @@ function pull(var)
 	set_var(a, var, true)
 end
 function split_window(lines)
-	--log('split_window called: '..lines)
+	log('split_window called: '..lines)
 	flush_line_buffer(0)
 	local win0 = windows[0]
 	local win1 = windows[1]
@@ -458,8 +458,7 @@ function erase_window(win)
 		cls(current_bg)
 	end
 	if (win <= 0) then
-		windows[0].buffer = nil
-		windows[0].screen_buffer = {}
+		windows[0].buffer = {}
 		lines_shown = 0
 	end
 end
@@ -528,7 +527,7 @@ end
 
 --timer is "OFF" in the header, until z5 Border Zone support
 function read_char(one, time, raddr)
-log('read_char: '..one..','..tohex(time)..','..tohex(raddr))
+	--log('read_char: '..one..','..tohex(time)..','..tohex(raddr))
 	--if (active_window == 1) 
 	flush_line_buffer()
 	local char = wait_for_any_key()

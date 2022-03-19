@@ -84,39 +84,27 @@ function log(str)
 end
 
 lines_shown = 0
-function wait_for_any_key(message)
-	if message then 
-		screen(message)
-	else
-		-- log('wait_for_any_key turning ON cursor?')
-		draw_cursor(1)
-		flip()
-	end
+function wait_for_any_key()
+
+	draw_cursor(1)
 
 	local keypress = ''
 	while (keypress == '') do
-		-- draw_cursor(1)
 		if stat(30) then
 			poke(0x5f30,1)
 			keypress = stat(31)
 		end
-		-- flip()
 	end
-	-- log('keypress: '..keypress..' ('..ord(keypress))
-	if (active_window == 0) deli(windows[active_window].screen_buffer)
-	lines_shown = 0
-	if not message then
-		local o = ord(keypress)
-		if (in_range(o,128,153)) o -= 63
-		-- log('wait_for_any_key turning OFF cursor?')
-		draw_cursor(0)
-		return chr(o)
-	end
+
+	local o = ord(keypress)
+	if (in_range(o,128,153)) o -= 63
+	return chr(o)
 end
 
 local flip_time = t()
 local c = 1
 function draw_cursor(state)
+	if (not _interrupt) return
 	local win = windows[active_window]
 	local px, py = unpack(win.p_cursor)
 	-- log('draw_cursor at ('..win.z_cursor.x..','..win.z_cursor.y..') sees: '..px..','..py)
@@ -167,25 +155,25 @@ end
 function draw_splashscreen(did_load)
 	cls(0)
 
-	-- sspr(0,0,128,124,0,0)--monitor
-	-- rectfill(6,125,122,127,1)
-	-- sspr(90,125,7,3,83,124)--knobs
-	-- sspr(90,125,7,3,93,124)
+	sspr(0,0,128,124,0,0)--monitor
+	rectfill(6,125,122,127,1)
+	sspr(90,125,7,3,83,124)--knobs
+	sspr(90,125,7,3,93,124)
 
-	-- color(7)
-	-- line(33,83,93,83)
-	-- print('V'.._engine_version, 82, 69)
+	color(7)
+	line(33,83,93,83)
+	print('V'.._engine_version, 82, 69)
 
-	-- if (did_load == true) then
-	-- 	sspr(100,124,14,4,103,116)
-	-- 	print('sTORY IS LOADING', 31, 100)
-	-- else
-	-- 	sspr(114,124,14,4,103,116)
-	-- 	print('DRAG IN A Z3/4 STORY\n  TO START PLAYING', 24, 92)
-	-- end
+	if (did_load == true) then
+		sspr(100,124,14,4,103,116)
+		print('sTORY IS LOADING', 31, 100)
+	else
+		sspr(114,124,14,4,103,116)
+		print('DRAG IN A Z3/4 STORY\n  TO START PLAYING', 24, 92)
+	end
 
-	-- color()
-	-- flip()
+	color()
+	flip()
 end
 
 function game_id()
@@ -246,8 +234,9 @@ function _update60()
 		else
 			if (_program_counter != 0x0) then
 				--let the player see end-of-game text
+				output("\^i       ~ END OF SESSION ~       ")
 				flush_line_buffer()
-				wait_for_any_key("\^i       ~ END OF SESSION ~       ")
+				wait_for_any_key()
 				reset_all_memory()
 			end
 			pal()
@@ -276,7 +265,7 @@ function build_dictionary_lookup()
 			lower ..= chr(c)
 		end
 		_dictionary_lookup[lower] = (addr << 16)
-		log('  '..lower..', set to '..tohex(addr << 16)..'(was '..tohex(addr)..')')
+		-- log('  '..lower..', set to '..tohex(addr << 16)..'(was '..tohex(addr)..')')
 		addr += entry_length
 	end
 end
@@ -295,14 +284,12 @@ end
 function process_header()
 	_z_machine_version = get_zbyte(version)
 
-	origin_y = 8
 	screen_height = 20
 	packed_shift = 1
 	default_property_count = 31
 	object_entry_size = 0x.0009
 	dictionary_word_size = 6
 	if _z_machine_version > 3 then
-		origin_y = 1
 		screen_height = 21
 		packed_shift = 2
 		default_property_count = 63
@@ -365,7 +352,6 @@ function initialize_game()
 	_call_stack[#_call_stack - 9] = _program_counter
 
 	active_window = 0
-	windows[0].screen_buffer = {}
 	split_window(0)
 	if (_memory_start_state == nil) capture_state(_memory_start_state)
 	update_current_format(0)
