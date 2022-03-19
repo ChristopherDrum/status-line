@@ -568,7 +568,7 @@ end
 --set them to the same if you don't like mixed case
 local l_zchars = '     abcdefghijklmnopqrstuvwxyz'
 local u_zchars = '     ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-local p_zchars = '      \n0123456789.,!?_#'.."'"..'"/\\-:()'
+local p_zchars = '      \n0123456789'..punc
 local zchar_tables = {l_zchars, u_zchars, p_zchars}
 
 local zscii, zscii_decode, abbr_code = nil, false, nil

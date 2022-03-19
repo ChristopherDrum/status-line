@@ -2,27 +2,27 @@
 --functions with <branch> means send true/false to branch()
 
 function branch(should_branch)
-	--log('branch called with should_branch: '..tostr(should_branch,true))
+	-- log('branch called with should_branch: '..tostr(should_branch,true))
 	local branch_arg = get_zbyte()
-	--log('branch arg: '..tohex(branch_arg))
+	-- log('branch arg: '..tohex(branch_arg))
 	local reverse_arg = (branch_arg & 0x80) == 0
 	local big_branch = (branch_arg & 0x40) == 0
-	--log('  against 0x40: '..tohex(branch_arg & 0x40))
+	-- log('  against 0x40: '..tohex(branch_arg & 0x40))
 	local offset = (branch_arg & 0x3f)
 
 	if (reverse_arg == true) should_branch = not should_branch
 
 	if (big_branch == true) then
-		--log('big_branch evaluated')
+		-- log('big_branch evaluated')
 		if (offset > 31) offset -= 64
 		offset <<= 8
 		offset += get_zbyte()
 	end
 
-	-- --log('_program_counter at: '..tohex(_program_counter))
-	--log('branch offset at: '..offset)
+		-- log('_program_counter at: '..tohex(_program_counter))
+	-- log('branch offset at: '..offset)
 	if (should_branch == true) then
-		--log('should_branch is true')
+		-- log('should_branch is true')
 		if offset == 0 or offset == 1 then --same as rfalse/rtrue
 			ret(offset)
 		else 
@@ -272,7 +272,7 @@ end
 
 function print_obj(obj)
 	local name, zchars = zobject_name(obj)
-	-- --log('print_obj with name: '..name)
+		--log('print_obj with name: '..name)
 	output(name)
 end
 
@@ -287,7 +287,7 @@ end
 function print_paddr(saddr)
 	local zaddress = zword_to_zaddress(saddr, true)
 	local str, zchars = get_zstring(zaddress)
-	-- --log('print_paddr: '..str)
+		--log('print_paddr: '..str)
 	output(str)
 end
 function load(var)
@@ -310,12 +310,11 @@ function rfalse()
 end
 function _print(zstring)
 	local str, zchars = get_zstring(zstring)
-	-- --log('_print: '..str)
-	-- memory(zchars)
+	--log('_print: '..str)
 	output(str)
 end
 function print_ret(zstring)
---log('print_ret')
+log('print_ret')
 	_print(zstring)
 	new_line()
 	rtrue()
@@ -368,13 +367,13 @@ function quit()
 end
 
 function new_line()
---log('new_line')
+	--log('new_line')
 	-- output('\n')
 	print_char(10)
 end
 
 function verify()
-	--log('verify: cheating on this')
+	-- log('verify: cheating on this')
 	branch(true)
 end
 
@@ -400,7 +399,7 @@ end
 function print_char(n)
 	-- local char = zscii_to_p8scii({n})
 	if (n == 10) n = 13
-	-- --log('print_char '..n..': '..chr(n))
+		--log('print_char '..n..': '..chr(n))
 	output(chr(n))
 end
 function print_num(s)
@@ -417,7 +416,7 @@ function pull(var)
 	set_var(a, var, true)
 end
 function split_window(lines)
-	-- --log('split_window called: '..lines)
+	--log('split_window called: '..lines)
 	flush_line_buffer(0)
 	local win0 = windows[0]
 	local win1 = windows[1]
@@ -443,14 +442,14 @@ function split_window(lines)
 end
 
 function set_window(win)
-	-- --log('set_window: '..win)
+	-- log('set_window: '..win)
 	flush_line_buffer()
 	active_window = win
 	if (win == 1) set_zcursor(1,1)
 end
 
 function erase_window(win)
-	-- --log('erase_window: '..win)
+	-- log('erase_window: '..win)
 	if win >= 0 then
 		local a,b,c,d = unpack(windows[win].screen_rect)
 		rectfill(a,b,c,d,current_bg)
@@ -466,14 +465,14 @@ function erase_window(win)
 end
 
 function erase_line(val)
---log('erase_line: '..val)
+	-- log('erase_line: '..val)
 	if (val == 1) screen("\^i\#"..current_fg..'\f'..current_bg..blank_line)
 end
 
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
 --autosplitting on z4 Nord & Bert reveals a status line bug in the game (!)
 function set_zcursor(lin, col)
-	-- --log('set_zcursor to line '..lin..', col '..col)
+	-- log('set_zcursor to line '..lin..', col '..col)
 	flush_line_buffer()
 	if ((_z_machine_version == 5) and (lin > windows[1].h)) split_window(lin)
 	windows[1].z_cursor = {x=col, y=lin}
@@ -481,7 +480,7 @@ function set_zcursor(lin, col)
 end
 
 function get_cursor(baddr)
--- --log('get_cursor called')
+	--log('get_cursor called')
 	baddr = zword_to_zaddress(baddr)
 	local zc = windows[active_window].z_cursor
 	set_zword(baddr, zc.y)
@@ -490,17 +489,17 @@ end
 
 function set_text_style(n)
 	-- current_style = n
--- --log('set_text_style: '..n)
+	-- log('set_text_style: '..n)
 	update_current_format(n)
 end
 
 function buffer_mode(bit)
--- --log('buffer_mode: '..tostr(bit))
+	-- log('buffer_mode: '..tostr(bit))
 	--ignore; we have to buffer regardless
 end
 
 function output_stream(n, baddr)
---log('output_stream: '..n..', '..tohex(baddr))
+	--log('output_stream: '..n..', '..tohex(baddr))
 	if (n == 1) screen_output = true
 	if (n == -1) screen_output = false
 	if (n == 3) set_zword(zword_to_zaddress(baddr),0x00) add(memory_output,baddr)
@@ -518,19 +517,18 @@ function output_stream(n, baddr)
 end
 
 function input_stream(operands)
-	-- --log('input_stream: NI')
+	-- log('input_stream: NI')
 end
 
 function sound_effect(number)
-	--experimental
-	-- --log('sound_effect: '..number)
+	-- log('sound_effect: '..number)
 	-- if (number == 1) print("\ac7")
 	-- if (number == 2) print("\ac1")
 end
 
 --timer is "OFF" in the header, until z5 Border Zone support
 function read_char(one, time, raddr)
---log('read_char: '..one..','..tohex(time)..','..tohex(raddr))
+log('read_char: '..one..','..tohex(time)..','..tohex(raddr))
 	--if (active_window == 1) 
 	flush_line_buffer()
 	local char = wait_for_any_key()
@@ -548,7 +546,7 @@ function scan_table(a, baddr, n, byte) --<result> <branch>
 	for i = 0, n-1 do
 		local check_addr = base_addr + ((i * entry_len)>>>16)
 		local value = getter(check_addr)
-		-- --log('  check addr: '..tohex(check_addr)..', found: '..tohex(value)..', compare against: '..tohex(a))
+			--log('  check addr: '..tohex(check_addr)..', found: '..tohex(value)..', compare against: '..tohex(a))
 		if (value == a) then
 			--log('    FOUND!')
 			found_addr = check_addr

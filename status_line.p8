@@ -6,8 +6,11 @@ __lua__
 
 _z_machine_version = 0
 _engine_version = '2.0'
+checksum = 0x0
 story_loaded = false
 -- full_color = false
+
+local punc = '.,!?_#'.."'"..'"/\\-:()'
 
 local screen_types = {
 	default = 1, 
@@ -21,8 +24,8 @@ local screen_types = {
 local scroll_speeds = {
 	default = 3,
 	values = {
-		{'slow', 8}, {'medium', 6}, {'fast', 4}, 
-		{'faster', 2}, {'fastest', 0}
+		{'slow', 30}, {'medium', 20}, {'fast', 10}, 
+		{'faster', 2}, {'fastest', -1}
 	}
 }
 local clock_types = {
@@ -57,6 +60,8 @@ _interrupt = nil
 
 --useful functions
 function in_set(val, set)
+	if (not val or not set) return
+	if (type(set) == 'string') set = split(set,1)
 	for i = 1, #set do
 		if (val == set[i]) return true
 	end
@@ -202,8 +207,7 @@ function setup_user_prefs()
 	local ct = dget(2) or 1
 	local cur = dget(3) or 1
 
-	local _, emit_rate = unpack(scroll_speeds.values[er])
-	if (emit_rate > 0) emit_code = "\^"..emit_rate
+	_, emit_rate = unpack(scroll_speeds.values[er])
 	_, clock_type = unpack(clock_types.values[ct])
 	_, cursor_type = unpack(cursor_types.values[cur])
 end
@@ -267,12 +271,12 @@ function build_dictionary_lookup()
 		local zstring = get_zstring(addr,1)
 		local lower = ''
 		for j = 1, #zstring do
-			local c = ord(sub(zstring,j,j))
-			if (c >= 65 and c <= 90) c += 32
+			local c = ord(zstring,j)
+			if (in_range(c,65,90)) c += 32
 			lower ..= chr(c)
 		end
 		_dictionary_lookup[lower] = (addr << 16)
-		-- log('  '..lower..', set to '..tohex(addr << 16)..'(was '..tohex(addr)..')')
+		log('  '..lower..', set to '..tohex(addr << 16)..'(was '..tohex(addr)..')')
 		addr += entry_length
 	end
 end
@@ -281,7 +285,7 @@ function fetch_parser_separators()
 	local num_separators = get_zbyte(_dictionary_addr)
 	local seps = get_zbytes(_dictionary_addr + 0x.0001, num_separators)
 	seps = zscii_to_p8scii(seps)
-	-- log('fetch_parser_separators: '..seps)
+	log('fetch_parser_separators: '..seps)
 	for i = 1, num_separators do
 		local k = sub(seps, i, i)
 		add(separators, k)
@@ -339,10 +343,10 @@ function cache_memory_addresses()
 end
 
 function patch()
-	local checksum = get_zword(file_checksum)
-	-- log('checksum: '..tohex(checksum))
-	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, @fredrick
-	if (in_set(checksum, {0x4860, 0xfc65})) set_zbyte(_screen_width, 40) --amfv, beau
+	checksum = get_zword(file_checksum)
+	log('checksum: '..tohex(checksum))
+	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
+	if (in_set(checksum, {0x4860, 0xfc65})) set_zbyte(_screen_width, 40) --amfv, bur
 end
 
 function initialize_game()
