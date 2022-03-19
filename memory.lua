@@ -35,7 +35,7 @@ screen_width = 0x.0021
 --games that use every single possible byte will fail in Status Line
 --this will be addressed in a more robust memory banking strategy
 --when z5 game support is added
-local _memory = {}
+_memory = {}
 --call stack holds a flat list of frame data
 --a frame consists of 10 numbers:
 --   a stack pointer, a program counter, 8 zwords for in-scope local vars
@@ -81,12 +81,12 @@ end
 --may just be a zbyte, but storage is the same
 --there is no such thing as popping individual bytes from the words
 function stack_push(zword)
-	--log('+++ stack_push: '..tohex(zword))
+	log('+ + stack_push: '..tohex(zword))
 	add(_stack, zword)
 end
 
 function stack_pop()
-	--log('- - stack_pop: '..tohex(_stack[#_stack]))
+	log('- - stack_pop: '..tohex(_stack[#_stack]))
 	-- assert(#_stack > 0, 'ERR: asked to pop from an empty stack!')
 	if (#_stack == _call_stack[#_call_stack - 8]) then
 		--log('ERR: asked to pop beyond the limit of this frames base sp')
@@ -174,11 +174,14 @@ end
 
 function get_var(var_byte, indirect)
 	local var_address = decode_var_address(var_byte)
-	return get_zword(var_address, indirect)
+	local r = get_zword(var_address, indirect)
+	log('   --> '..tohex(r))
+	return r
 end
 
 function decode_var_address(var_byte)
 	local var_byte = var_byte or get_zbyte()
+	log(' --> asked to decode var byte: '..var_byte)
 	if (var_byte == 0) return _stack_var_addr
 	if (var_byte < 16) return local_var_address(var_byte)
 	if (var_byte >= 16) return global_var_address(var_byte-16) -- subtract 16 ONLY when decoding a var byte!
@@ -265,6 +268,7 @@ function set_zbyte(zaddress, byte)
 	local base = (zaddress & 0xffff)
 
 	if (zaddress == _stack_var_addr) then
+		log(' setting stack var byte: '..byte)
 		stack_push(byte)
 	else
 		local dword, cell, index  = get_dword(zaddress)
@@ -316,11 +320,13 @@ function get_zword(zaddress, indirect)
 end
 
 function set_zword(zaddress, zword, indirect)
+	log(' setting zword: '..tohex(zword))
 	local zword &= 0xffff --filter off any dword garbage
 	local base = (zaddress & 0xffff)
 	--log('set_zword at '..tohex(zaddress)..' to value: '..tohex(zword))
 	
 	if (zaddress == _stack_var_addr) then
+		log(' setting stack var zword: '..tohex(zword))
 		if indirect then
 			_stack[#_stack] = zword
 		else
@@ -353,6 +359,7 @@ end
 
 function zobject_attributes(index)
 	local address = zobject_address(index)
+	log('  address for zobject: '..index..', '..tohex(address,true))
 	local zworda = get_zword(address)
 	local zwordb = get_zword(address + 0x.0002)
 	return zworda | (zwordb >>> 16)
@@ -360,7 +367,10 @@ end
 
 function zobject_has_attribute(index, attribute_id)
 	local attributes = zobject_attributes(index)
-	return (attributes & (0x8000 >>> attribute_id)) == (0x8000 >>> attribute_id)
+	log('  zobject: '..index..', attributes: '..tohex(attributes,true))
+	local attr_check = (0x8000 >>> attribute_id)
+	log('    attr_check: '..tohex(attr_check,true))
+	return (attributes & attr_check) == attr_check
 end
 
 function zobject_set_attribute(index, attribute_id, val)
@@ -490,16 +500,17 @@ end
 
 function get_zstring(zaddress)
 	local end_found, zchars = false, {}
-	-- --log('fetching zstring starting at address: '..tostr(addr,true))
+	-- log('fetching zstring starting at address: '..tostr(zaddress,true))
 	while end_found == false do
 		local zword = get_zword(zaddress)
-		-- --log('address: '..tostr(addr,true)..' -> '..tostr(zword,true))
+		-- log('address: '..tostr(zaddress,true)..' -> '..tostr(zword,true))
 		add(zchars, ((zword & 0x7c00)>>10))
 		add(zchars, ((zword & 0x03e0)>>5))
 		add(zchars, (zword & 0x001f))
 		if (zaddress) zaddress += 0x.0002
 		end_found = ((zword & 0x8000) == 0x8000)
-		-- --log('  zchars: '..zscii_to_p8scii(zchars))
+		-- log(' zchars: '..zscii_to_p8scii(zchars))
+		-- if (end_found == true) log('  > end found at zword: '..tohex(zword,true))
 	end
 	return zscii_to_p8scii(zchars), zaddress
 end
@@ -518,7 +529,7 @@ function zscii_to_p8scii(zchars)
 	local abbr_code = nil
 	for i = 1, #zchars do
 		local zchar = zchars[i]
-		-- transcribe('converting zchar: '..zchar)
+		-- log('converting zchar: '..zchar)
 		if ascii_decode == true then
 			if ascii == nil then
 				ascii = zchar << 5
@@ -555,6 +566,11 @@ function zscii_to_p8scii(zchars)
 			ascii_decode = true
 
 		elseif zchar > 31 then
+			if (mid(97,zchar,122) == zchar) then
+				zchar -= 32
+			elseif (mid(65,zchar,90) == zchar) then
+				zchar += 32
+			end
 			zstring ..= chr(zchar)
 
 		else
@@ -563,7 +579,7 @@ function zscii_to_p8scii(zchars)
 			active_table = 1
 		end
 	end
-	-- transcribe('became: |'..zstring..'|\n')
+	-- log('became: |'..zstring..'|\n')
 	return zstring
 end
 

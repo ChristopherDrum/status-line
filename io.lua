@@ -1,19 +1,12 @@
 line_buffer = nil --processed lines, waiting to be shown
 screen_buffer = {} --what the player is currently reading
-cursor_x, cursor_y = 0, 0
+cursor_x, cursor_y = 0, 0 --pixel location at which to draw input cursor
+input_cursor = 0 --which actual character is being edited?
 
 function get_cursor_position(str)
 	cursor_x, cursor_y = peek(0x5f26), peek(0x5f27)
 	cursor_x += (#str * 4)
 	if (cursor_y == 122) cursor_y -= 6
-	-- log('cursor should be at: '..cursor_x..','..cursor_y)
-end
-
-function in_set(char, set)
-	for i = 1, #set do
-		if (char == set[i]) return true
-	end
-	return false
 end
 
 --remove extraneous white space from player input
@@ -30,46 +23,39 @@ function strip(str)
 	return stripped
 end
 
-local line_width = 0
+local break_chars = {'\n', ' ', ':', '-', '_', ';'}
+local break_index = 99
 function output(str)
+	-- log('received str: |'..str..'|')
 	if (line_buffer == nil) line_buffer = {''}
-	-- log('  received str: |'..str..'|')
 	local l = line_buffer[#line_buffer]
-	-- log('current line: '..l)
+
 	for i = 1 , #str do
-		local c = sub(str, i, _)
-		if #l <= char_width and c != '\n' then
-			l ..= c
-		else
-			--z-machine sends text as a mix of single chars, nums, and blocks
-			--we analyze each composed string, looking for a good line break
-			--and strip off leading spaces that carry over to next line
+		local char = sub(str,i,_)
+		-- log('considering char: '..char)
+		if (char != '\n') l ..= char
+		-- log('  appended to l: '..l)
+		if (in_set(char, break_chars)) break_index = #l
+		-- if (break_index != 99) log('  >> break found at: '..break_index)
+		if #l > line_width or char == '\n' then
 			local l2 = ''
-			if not in_set(c, {'\n', ' ', '-', ','}) then
-				local lb
-				for i = #l, 1, -1 do
-					lb = i
-					local lbc = sub(l,i,_)
-					if (in_set(lbc, {' ', '-'})) break
-				end
-				if lb < #l and lb > 1 then
-					l2 = sub(l, lb+1, #l)
-					l = sub(l, 1, lb)
-				end
+			if break_index < #l then
+				l2 = sub(l,break_index-#l)
+				-- log('      >> l2 broke at '..break_index-#l..' as: '..l2)
+				local check = ord(l,break_index)
+				if (check == 32) break_index -= 1
 			end
-			-- log('with char: '..c)
+			l = sub(l,1,break_index)
+			-- log('        l:'..l)
+			-- log('       l2:'..l2)
 			line_buffer[#line_buffer] = l
-			-- log('  added to buffer: |'..l..'|')
-			if (ord(c) == 32) c = ''
-			l = (#l > char_width or #l2 > 0) and c or ''
-			l = l2..l
-			while (sub(l,1,_) == ' ') do l = sub(l,2,#l) end
-			-- log('  carryover: '..l)
+			l = l2
 			add(line_buffer, l)
+			break_index = 99
+		else
+			line_buffer[#line_buffer] = l
 		end
 	end
-	line_buffer[#line_buffer] = l
-	-- log('now the buffer length is: '..#line_buffer)
 end
 
 
@@ -99,12 +85,9 @@ function flush_line_buffer()
 end
 
 function refresh_screen()
-	-- log('refresh screen: ')
-
 	while #screen_buffer > max_lines do
 		deli(screen_buffer,1)
 	end
-
 	clip(0,8,128,120)
 	rectfill(0,8,128,120,0)
 	cursor(0,8)
@@ -125,7 +108,7 @@ function refresh_screen()
 end
 
 --stream 1 to screen
---stream 2 unimplemented at this time
+--stream 2 unimplemented
 function screen(str)
 	clip(0,8,128,120)
 	cursor(0,122)
@@ -145,20 +128,20 @@ function tokenise(str)
 	local function commit(i)
 		if (index == 0) return
 		add(tokens, {sub(str,index,i-1),index})
-		index = 0		
+		index = 0
 	end
 
 	for i = 1, #str do
 		local char = sub(str,i,_)
 		add(bytes, ord(char))
-		
+
 		if char == ' ' then
 			commit(i)
-		
+
 		elseif in_set(char, separators) then
 			commit(i)
 			add(tokens, {char,i})
-		
+
 		else
 			if (index == 0) index = i
 		end
@@ -171,12 +154,17 @@ end
 text_buffer, parse_buffer = 0x0, 0x0
 local current_input = ''
 
-function capture_input(char)
-	if (not char) return
-	local char = tostr(char)
+function capture_input(c)
+	if (not c) return
+	poke(0x5f30,1)
 
-	--log('capture_input with char: '..char)
-	--this is called by sread so the buffer addresses must be non-zero
+	--normalize char to p8scii lowercase
+	local o = ord(c)
+	if (mid(128,o,153) == o) o -= 31
+	if (mid(65,o,90) == o) o += 32
+	local char = chr(o)
+
+	--called by read so buffer addresses must be non-zero
 	assert(text_buffer != 0, 'text buffer address has not been captured')
 	assert(parse_buffer != 0, 'parse buffer address has not been captured')
 
@@ -184,12 +172,12 @@ function capture_input(char)
 	if (parse_buffer_length == 0) parse_buffer_length = get_zbyte(parse_buffer)
 
 	if (char == '\r' and current_input == '') then
-		sread()
+		read()
 
 	elseif (char == '\r') then
 
 		add(line_buffer, '')
-	
+
 		--normalize the current input
 		current_input = strip(current_input)
 
@@ -222,7 +210,7 @@ function capture_input(char)
 			end
 			
 			current_input = ''
-			sread()
+			read()
 		end
 
 	else
@@ -236,7 +224,12 @@ function capture_input(char)
 		elseif char != '' then
 			if #current_input < max_input_length then
 				current_input ..= char
-				l ..= char
+
+				o = ord(c)
+				if (mid(65,o,90) == o) o += 32
+				if (mid(97,o,122) == o) o -= 32
+				if (mid(128,o,153) == o) o -= 31
+				l ..= chr(o)
 			end
 		end
 
@@ -257,7 +250,6 @@ local mem_max_index = nil
 function capture_save_state()
 	if mem_max_index == nil then
 		local zaddress = zword_to_zaddress(get_zword(_static_mem_addr))
-		-- log(filename..', static mem address: '..tohex(zaddress))
 		zaddress -= 0x.0001 --one byte less marks the end of dynamic mem
 		local base = (zaddress & 0xffff)
 		local za = (zaddress << 14) + 1
@@ -285,7 +277,7 @@ end
 
 local show_warning = true
 function save_game(char)
-	--keyboard handler should probably be shared :/
+	--keyboard handler should probably be shared
 	--with capture_input(); both modify current_input similarly
 	if show_warning == true then
 		screen('eNTER FILENAME (30 CHARACTERS)')
@@ -380,7 +372,6 @@ function restore_game()
 		end
 	end
 
-
 	local save_checksum = dword_to_str(temp[#temp])
 	local this_checksum = dword_to_str(get_zword(file_checksum))
 
@@ -404,10 +395,10 @@ function restore_game()
 
 	offset += 1
 	local memory_length = temp[offset]
-	-- log('memory_length: '..memory_length)
 	for i = 1, memory_length do
 		_memory[i] = temp[offset + i]
 	end
+	-- log('last memory slot: '..tohex(_memory[memory_length]))
 
 	offset += memory_length + 1
 	_call_stack = {}
@@ -424,6 +415,7 @@ function restore_game()
 	for i = 1, stack_length do
 		_stack[i] = temp[offset + i]
 	end
+	-- log('last stack: '..tohex(_stack[stack_length]))
 
 	-- log('setting pc to: '..tohex(temp[#temp-1]))
 	_program_counter = temp[#temp-1]
@@ -456,12 +448,11 @@ function update_status_bar()
 	local score = scorea..separator..scoreb
 	clip(0,0,128,7)
 	rectfill(0,0,127,127,1)
-
 	-- useful to use status bar for debug info
-	-- score = tostr(stat(9))
-
-	if (#location > 20) location = sub(location, 1, 20)..chr(144)
-	print(location, 4, 1, 0)
+	score = tostr(stat(0))
+	local loc = sub(location, 1, 30-#score-2)
+	if (#loc < #location) loc = sub(loc, 1, #loc-1)..chr(144)
+	print(loc, 4, 1, 0)
 	print(score, 124-(#score*4), 1, 0)
 
 	flip()

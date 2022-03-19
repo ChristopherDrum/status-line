@@ -4,7 +4,7 @@ function branch(should_branch)
 	--log('branch arg: '..tohex(branch_arg))
 	local reverse_arg = (branch_arg & 0x80) == 0
 	local big_branch = (branch_arg & 0x40) == 0
-	-- --log('  against 0x40: '..tohex(branch_arg & 0x40))
+	--log('  against 0x40: '..tohex(branch_arg & 0x40))
 	local offset = (branch_arg & 0x3f)
 
 	if (reverse_arg == true) should_branch = not should_branch
@@ -16,7 +16,7 @@ function branch(should_branch)
 		offset += get_zbyte()
 	end
 
-	--log('_program_counter currently at: '..tohex(_program_counter))
+	--log('_program_counter at: '..tohex(_program_counter))
 	--log('branch offset at: '..offset)
 	if (should_branch == true) then
 		--log('should_branch is true')
@@ -31,7 +31,7 @@ end
 
 --long ops
 function je(a, b1, b2, b3)
-	--log('je called...'..tohex(a)..','..tohex(b1)..','..tohex(b2)..','..tohex(b3))
+	--log('je: '..tohex(a)..','..tohex(b1)..','..tohex(b2)..','..tohex(b3))
 	local b_vars = {b1, b2, b3}
 	local should_branch = false
 	for i = 1, #b_vars do
@@ -42,66 +42,66 @@ end
 
 
 function jl(s, t)
-	--log('jl called...') 
+	--log('jl: ') 
 	branch(s < t)
 end
 function jg(s, t)
-	--log('jg called...')
+	--log('jg: ')
 	branch(s > t)
 end
 function dec_chk(var, s)
-	--log('dec_chk called...')
+	--log('dec_chk: ')
 	local val = dec(var)
 	jl(val, s)
 end
 function inc_jg(var, s)
-	--log('inc_jg called...'..tohex(var)..', '..tohex(s))
+	--log('inc_jg: '..tohex(var)..', '..tohex(s))
 	local val = inc(var)
 	jg(val, s)
 end
 function jin(obj, n)
 	local parent = zobject_family(obj, zparent)
-	--log('jin called...'..obj..' with parent '..parent..', '..n)
+	--log('jin: '..obj..' with parent '..parent..', '..n)
 	local should_branch = ((parent == n) or (n==0 and parent == nil))
 	branch(should_branch)
 end
 
 function test(a, b)
-	--log('test called...')
+	--log('test: ')
 	branch((a & b) == b)
 end
 
 function _or(a, b)
-	--log('_or called...')
+	--log('_or: ')
 	set_var(a | b)
 end
 
 function _and(a, b)
-	--log('_and called...')
+	--log('_and: ')
 	set_var(a & b)
 end
 
 function test_attr(obj, attr)
-	--log('test_attr called...'..tohex(obj)..','..tohex(attr))
+	--log('test_attr: '..tohex(obj)..','..tohex(attr))
 	branch(zobject_has_attribute(obj, attr))
 end
 
 function set_attr(obj, attr)
-	--log('set_attr called...'..tohex(obj)..','..tohex(attr))
+	--log('set_attr: '..tohex(obj)..','..tohex(attr))
 	zobject_set_attribute(obj, attr, 1) --turn the bit on
 end
 function clear_attr(obj, attr)
-	--log('clear_attr called...'..tohex(obj)..','..tohex(attr))
+	--log('clear_attr: '..tohex(obj)..','..tohex(attr))
 	zobject_set_attribute(obj, attr, 0) --turn the bit off
 end
 
 function store(var, a)
-	--log('store called...'..tohex(var)..','..tohex(a))
+	--log('store: '..tohex(var)..','..tohex(a))
 	set_var(a, var, true)
 end
 
 function insert_obj(obj1, obj2)
-	--log('insert_obj called...'..zobject_name(obj1)..'('..obj1..')'..' into '..zobject_name(obj2)..'('..obj2..')')
+	--log('insert_obj: '..zobject_name(obj1)..'('..obj1..')'..' into '..zobject_name(obj2)..'('..obj2..')')
 	remove_obj(obj1)
 	local first_child = zobject_family(obj2, zchild)
 	zobject_set_family(obj2, zchild, obj1)
@@ -110,33 +110,33 @@ function insert_obj(obj1, obj2)
 end	
 
 function loadw(baddr, n)
-	--log('loadw called...'..tohex(baddr)..', '..n)
+	--log('loadw: '..tohex(baddr)..', '..n)
 	baddr = zword_to_zaddress(baddr) + (n >>> 15)
+	--log('  baddr now: '..tohex(baddr))
 	local zword = get_zword(baddr)
-	-- local var_address = decode_var_address(get_zbyte())
+	--log('  got zword: '..tohex(zword))
 	set_var(zword)
 end
 function loadb(baddr, n)
-	--log('loadb called...'..tohex(baddr)..', '..n)
 	baddr = zword_to_zaddress(baddr) + (n >>> 16)
 	local zbyte = get_zbyte(baddr)
 	--log('loadb fetched '..tohex(zbyte)..' from address '..tohex(baddr))
 	set_var(zbyte)
 end
 function get_prop(obj, prop)
-	--log('get_prop called...'..obj..','..prop)
+	--log('get_prop: '..obj..','..prop)
 	local p = zobject_prop(obj, prop)
 	set_var(p)
 end
 function get_prop_addr(obj, prop)
-	--log('get_prop_addr called...'..obj..','..prop)
+	--log('get_prop_addr: '..obj..','..prop)
 	set_var(zobject_prop_address(obj, prop) << 16)
 end
 function get_next_prop(obj, prop)
-	--log('get_next_prop called...'..obj)
-	--If prop is 0, the result is the highest numbered prop on obj
-	--Otherwise, the number of its next lower numbered property.
-	--Otherwise, 0.
+	--log('get_next_prop: '..obj)
+	--If prop is 0, the result is highest numbered prop on obj
+	--Else, the number of its next lower numbered property
+	--Else, 0
 	local next_prop = 0
 	local prop_list = zobject_prop_list(obj)
 	if prop == 0 then 
@@ -154,22 +154,22 @@ function get_next_prop(obj, prop)
 end
 
 function _add(a, b)
-	--log('add called...('..a..' + '..b..')')
+	--log('add: ('..a..' + '..b..')')
 	set_var(a + b)
 end
 
 function _sub(a, b)
-	--log('sub called...('..a..' - '..b..')')
+	--log('sub: ('..a..' - '..b..')')
 	_add(a, -b)
 end
 
 function _mul(a, b)
-	--log('mul called...('..a..' * '..b..')')
+	--log('mul: ('..a..' * '..b..')')
 	set_var(a * b)
 end
 
 function _div(a, b)
-	--log('div called...('..a..' / '..b..')')
+	--log('div: ('..a..' / '..b..')')
 	local d = a/b
 	if ((a > 0 and b > 0) or (a < 0 and b < 0)) then
 		d = flr(d)
@@ -180,9 +180,9 @@ function _div(a, b)
 end
 
 function _mod(a, b)
-	--log('mod called...('..a..' % '..b..')')
-	--standard % function gives non-compliant results
-	--ex: -13 % -5, p8 says "2" but google and zmachine say "-3"
+	--log('mod: ('..a..' % '..b..')')
+	--p8 mod gives non-compliant results
+	--ex: -13 % -5, p8: "2", google and zmachine: "-3"
 	local m
 	if ((a > 0 and b > 0) or (a < 0 and b < 0)) then
 		m = a - (flr(a/b) * b)
@@ -194,12 +194,12 @@ end
 
 --short ops
 function jz(a)
-	--log('jz called...')
+	--log('jz: ')
 	branch(a == 0)
 end
 
 function get_family_member(obj, fam)
-	--log('get_family_member called...'..obj..','..fam)
+	--log('get_family_member: '..obj..','..fam)
 	local member = zobject_family(obj, fam)
 	if (not member) member = 0
 	set_var(member)
@@ -215,38 +215,36 @@ function get_parent(obj)
 	get_family_member(obj, zparent) 
 end
 function get_prop_len(baddr)
-	--log('get_prop_len called...'..tohex(baddr))
+	--log('get_prop_len: '..tohex(baddr))
 	local baddr = zword_to_zaddress(baddr)
 	local size_byte = zobject_prop_length(baddr)
 	set_var(size_byte)
 end
 function inc(var)
-	--log('inc called...'..tohex(var))
 	local zword = get_var(var)
-	--log('  current value: '..zword)
+	--log('inc: '..tohex(var)..'; current value: '..zword)
 	zword += 1
-	--log('  after incrementing: '..zword)
 	set_var(zword, var)
-	return zword --to eliminate redundant memory fetch when chained with other functions, like jg (nee inc_jg)
+	return zword --eliminate redundant memory fetch when chained with other functions, like jg (nee inc_jg)
 end
 function dec(var)
-	--log('dec called...')
+	--log('dec: ')
 	local zword = get_var(var)
 	zword -= 1
 	set_var(zword, var)
-	return zword --to eliminate redundant memory fetch when chained with other functions (nee dec_chk)
+	return zword --eliminate redundant memory fetch when chained with other functions (nee dec_chk)
 end
 function print_addr(baddr)
-	--log('print_addr called...'..tohex(baddr))
+	--log('print_addr: '..tohex(baddr))
 	local zaddress = zword_to_zaddress(baddr)
 	local str = get_zstring(zaddress)
 	output(str)
 end
 function remove_obj(obj)
-	--log('remove_obj called...'..zobject_name(obj)..'('..obj..')')
-	--set the parent to 0 but also stitch up the sibling chain gap
+	--log('remove_obj: '..zobject_name(obj)..'('..obj..')')
+	--set parent to 0 and stitch up the sibling chain gap
 	--caused by removing this object from its family
-	--children move with the obj so there's nothing to do with them
+	--children move with the obj
 
 		local original_parent = zobject_family(obj, zparent)
 	if (original_parent != 0) then
@@ -271,42 +269,42 @@ function remove_obj(obj)
 end
 
 function print_obj(obj)
-	--log('print_obj called...'..obj..' with name: '..zobject_name(obj))
+	--log('print_obj: '..obj..' with name: '..zobject_name(obj))
 	output(zobject_name(obj))
 end
 
 function ret(a)
-	--log('===> ret called...'..tohex(a)..' <===')
+	--log('===> ret: '..tohex(a)..' <===')
 	call_stack_pop(a)
 end
 function jump(s)
-	--log('jump called...'..tohex(s))
+	--log('jump: '..tohex(s))
 	s -= 2
 	_program_counter += (s >> 16) --keep the sign
 end
 function print_paddr(saddr)
-	--log('print_paddr called...'..tohex(saddr))
+	--log('print_paddr: '..tohex(saddr))
 	local zaddress = saddr >>> 15
 	local str = get_zstring(zaddress)
 	output(str)
 end
 function load(var)
-	--log('load called...'..var)
+	--log('load: '..var)
 	local a = get_var(var,true)
 	set_var(a)
 end
 function _not(a)
-	--log('_not called...'..a)
+	--log('_not: '..a)
 	set_var(~a)
 end
 
 --zero ops
 function rtrue()
-	--log('rtrue called...')
+	--log('rtrue: ')
 	ret(1)
 end
 function rfalse()
-	--log('rfalse called...')
+	--log('rfalse: ')
 	ret(0)
 end
 function _print()
@@ -314,17 +312,17 @@ function _print()
 	output(str)
 end
 function print_ret()
-	--log('print_ret called...')
+	--log('print_ret: ')
 	_print()
 	new_line()
 	rtrue()
 end
 function nop()
-	--log('nop called...')
+	--log('nop: ')
 end
 
 function _save(did_save)
-	--log('_save called...')
+	--log('_save: ')
 	if _interrupt == nil then
 		_interrupt = save_game
 	else
@@ -333,54 +331,53 @@ function _save(did_save)
 	end
 end
 function restore()
-	--log('restore called...')
+	--log('restore: ')
 	local did_restore = restore_game()
 	branch(did_restore)
 end
 function restart()
-	--log('restart called...')
+	--log('restart: ')
 	reset_game()
 end
 function ret_popped()
-	--log('ret_popped called...')
+	--log('ret_popped: ')
 	local return_value = stack_pop()
 	ret(return_value)
 end
 function pop()
-	--log('pop called...')
+	--log('pop: ')
 	stack_pop()
 end
 
 function quit()
-	--log('quit called...')
+	--log('quit: ')
 	story_loaded = false
 end
 
 function new_line()
-	--log('new_line called...')
+	--log('new_line: ')
 	output('\n')
 end
 function show_status()
-	--log('show_status called...')
+	--log('show_status: ')
 	update_status_bar()
 end
 
---verify() needs to compute a checksum
---I may address this in a later update
+--verify() computes a checksum
 function verify()
-	--log('verify called...cheating on this...')
+	--log('verify: cheating on this')
 	branch(true)
 end
 
 function put_prop(obj, prop, a)
-	--log('put_prop called...'..obj..','..prop..','..a)
+	--log('put_prop: '..obj..','..prop..','..a)
 	zobject_set_prop(obj, prop, a)
 end
 
-function sread(baddr1, baddr2)
+function read(baddr1, baddr2)
 	if (_interrupt == nil) then
-		--log('sread called...'..tohex(baddr1)..','..tohex(baddr2))
-		--cache off the addresses for capture_input to access
+		--log('s/read: '..tohex(baddr1)..','..tohex(baddr2))
+		--cache off addresses for capture_input to access
 		text_buffer, parse_buffer = zword_to_zaddress(baddr1), zword_to_zaddress(baddr2)
 		update_status_bar()
 		_interrupt = capture_input
@@ -390,31 +387,31 @@ function sread(baddr1, baddr2)
 	end
 end
 function print_char(n)
-	--log('print_char called...'..n)
+	--log('print_char: '..n)
 	local char = zscii_to_p8scii({n})
 	output(char)
 end
 function print_num(s)
-	--log('print_num called...'..s)
+	--log('print_num: '..s)
 	output(tostr(s))
 end
 function push(a)
-	--log('push called...'..a)
+	--log('push: '..a)
 	stack_push(a)
 end
 function pull(var)
-	--log('pull called...'..var)
+	--log('pull: '..var)
 	local a = stack_pop()
 	set_var(a, var, true)
 end
 function split_window(operands) 
-	--log('NI: split_window called...')
+	--log('split_window: NI')
 end
 function set_window(operands) 	
-	--log('NI: set_window called...')
+	--log('set_window: NI')
 end
 function output_stream(n) 
-	--log('NI: output_stream called...')
+	--log('output_stream: '..n)
 	if n == 2 then
 		local p_flag = get_zbyte(peripherals)
 		p_flag &= 0xf3 --clear bit 0; turn off transcription
@@ -422,15 +419,15 @@ function output_stream(n)
 	end
 end
 function input_stream(operands) 
-	--log('NI: input_stream called...')
+	--log('input_stream: NI')
 end
 function sound_effect(operands)
-	--log('NI: sound_effect called...')
+	--log('sound_effect: look at for v4')
 end
 
 --8.2 Reading and writing memory
 function storew(baddr, n, zword)
-	--log('storew called...')
+	--log('storew: ')
 	--Store a in the word at baddr +2∗ n
 	-->>>16 for addressing, then << 1 for "*2"
 	baddr = zword_to_zaddress(baddr) + (n >>> 15)
@@ -438,14 +435,14 @@ function storew(baddr, n, zword)
 end
 
 function storeb(baddr, n, zbyte)
-	--log('storeb called...')
+	--log('storeb: ')
 	baddr = zword_to_zaddress(baddr) + (n >>> 16)
 	set_zbyte(baddr, zbyte)
 end
 
 --8.5 Call and return, throw, catch
 function call_fv(raddr, a1, a2, a3)
-	--log('call_fv called...')
+	--log('call_fv: ')
 	--log('  received: '..tohex(raddr)..', '..tohex(a1)..', '..tohex(a2)..', '..tohex(a3))
 	if (raddr == 0x0) then
 		set_var(0)
@@ -470,7 +467,7 @@ function call_fv(raddr, a1, a2, a3)
 end
 
 function random(s, skip_set_var)
-	--log('random called...'..s)
+	--log('random: '..s)
 	if (s < 0) then
 		srand(s) 
 		if (not skip_set_var) set_var(0)
@@ -496,5 +493,5 @@ _zero_ops = {
 }
 
 _var_ops = {
-	call_fv, storew, storeb, put_prop, sread, print_char, print_num, random, push, pull, split_window, set_window, nil, nil, nil, nil, nil, nil, nil, output_stream, input_stream, sound_effect
+	call_fv, storew, storeb, put_prop, read, print_char, print_num, random, push, pull, split_window, set_window, nil, nil, nil, nil, nil, nil, nil, output_stream, input_stream, sound_effect
 }
