@@ -272,8 +272,7 @@ end
 
 function print_obj(obj)
 	local name, zchars = zobject_name(obj)
---log('print_obj with name: '..name)
-	-- memory(zchars)
+	-- --log('print_obj with name: '..name)
 	output(name)
 end
 
@@ -288,8 +287,7 @@ end
 function print_paddr(saddr)
 	local zaddress = zword_to_zaddress(saddr, true)
 	local str, zchars = get_zstring(zaddress)
---log('print_paddr: '..str)
-	-- memory(zchars)
+	-- --log('print_paddr: '..str)
 	output(str)
 end
 function load(var)
@@ -312,7 +310,7 @@ function rfalse()
 end
 function _print(zstring)
 	local str, zchars = get_zstring(zstring)
---log('_print: '..str)
+	-- --log('_print: '..str)
 	-- memory(zchars)
 	output(str)
 end
@@ -336,12 +334,21 @@ function _save(did_save)
 		_interrupt = save_game
 	else
 		_interrupt = nil
-		branch(did_save)
+		if _z_machine_version == 3 then
+			branch(did_save)
+		else 
+			set_var(did_save)
+		end
 	end
 end
 function restore()
 	--log('restore: ')
-	branch(restore_game())
+	local rg = restore_game()
+	if _z_machine_version == 3 then
+		 branch(rg)
+	else
+		set_var(rg)
+	end
 end
 function restart()
 	--log('restart: ')
@@ -393,7 +400,7 @@ end
 function print_char(n)
 	-- local char = zscii_to_p8scii({n})
 	if (n == 10) n = 13
---log('print_char '..n..': '..chr(n))
+	-- --log('print_char '..n..': '..chr(n))
 	output(chr(n))
 end
 function print_num(s)
@@ -410,7 +417,7 @@ function pull(var)
 	set_var(a, var, true)
 end
 function split_window(lines)
---log('split_window called: '..lines)
+	-- --log('split_window called: '..lines)
 	flush_line_buffer(0)
 	local win0 = windows[0]
 	local win1 = windows[1]
@@ -436,16 +443,14 @@ function split_window(lines)
 end
 
 function set_window(win)
---log('set_window: '..win)
+	-- --log('set_window: '..win)
 	flush_line_buffer()
-	-- lines_shown = 0
-	-- draw_cursor(win) --any value sent to draw_cursor should clear it
 	active_window = win
 	if (win == 1) set_zcursor(1,1)
 end
 
 function erase_window(win)
---log('erase_window: '..win)
+	-- --log('erase_window: '..win)
 	if win >= 0 then
 		local a,b,c,d = unpack(windows[win].screen_rect)
 		rectfill(a,b,c,d,current_bg)
@@ -468,7 +473,7 @@ end
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
 --autosplitting on z4 Nord & Bert reveals a status line bug in the game (!)
 function set_zcursor(lin, col)
---log('set_zcursor to line '..lin..', col '..col)
+	-- --log('set_zcursor to line '..lin..', col '..col)
 	flush_line_buffer()
 	if ((_z_machine_version == 5) and (lin > windows[1].h)) split_window(lin)
 	windows[1].z_cursor = {x=col, y=lin}
@@ -476,7 +481,7 @@ function set_zcursor(lin, col)
 end
 
 function get_cursor(baddr)
---log('get_cursor called')
+-- --log('get_cursor called')
 	baddr = zword_to_zaddress(baddr)
 	local zc = windows[active_window].z_cursor
 	set_zword(baddr, zc.y)
@@ -485,12 +490,12 @@ end
 
 function set_text_style(n)
 	-- current_style = n
---log('set_text_style: '..n)
+-- --log('set_text_style: '..n)
 	update_current_format(n)
 end
 
 function buffer_mode(bit)
---log('buffer_mode: '..tostr(bit))
+-- --log('buffer_mode: '..tostr(bit))
 	--ignore; we have to buffer regardless
 end
 
@@ -513,12 +518,12 @@ function output_stream(n, baddr)
 end
 
 function input_stream(operands)
-	--log('input_stream: NI')
+	-- --log('input_stream: NI')
 end
 
 function sound_effect(number)
 	--experimental
-	--log('sound_effect: '..number)
+	-- --log('sound_effect: '..number)
 	-- if (number == 1) print("\ac7")
 	-- if (number == 2) print("\ac1")
 end
@@ -543,7 +548,7 @@ function scan_table(a, baddr, n, byte) --<result> <branch>
 	for i = 0, n-1 do
 		local check_addr = base_addr + ((i * entry_len)>>>16)
 		local value = getter(check_addr)
-		--log('  check addr: '..tohex(check_addr)..', found: '..tohex(value))
+		-- --log('  check addr: '..tohex(check_addr)..', found: '..tohex(value)..', compare against: '..tohex(a))
 		if (value == a) then
 			--log('    FOUND!')
 			found_addr = check_addr

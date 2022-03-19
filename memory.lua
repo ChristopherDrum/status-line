@@ -151,7 +151,7 @@ end
 
 function local_var_addr(index)
 	--log(' getting address for local var: '..tohex(index))
-	assert(index > 0 and index < 16, 'ERR: asked to retrieve local var '..tostr(index))
+	-- assert(index > 0 and index < 16, 'ERR: asked to retrieve local var '..tostr(index))
 	return _local_var_table_addr + (index >>> 16)
 end
 

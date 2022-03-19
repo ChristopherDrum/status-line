@@ -11,7 +11,7 @@ origin_y = nil
 screen_height = nil
 
 --io control
-emit_rate = 1 --the lower the faster
+emit_code = "" --the lower the faster
 clock_type = nil
 cursor_type = nil
 make_bold = false
@@ -58,19 +58,21 @@ function update_screen_rect(zwin_num)
 	local win = windows[zwin_num]
 	local py = (win.y-1)*6
 	local ph = (win.h)*6
-	log('setting screen rect '..zwin_num..': 0, '..(origin_y + py)..', 128,'..(origin_y+ph))
+	-- log('setting screen rect '..zwin_num..': 0, '..(origin_y + py)..', 128,'..(origin_y+ph))
 	win.screen_rect = {0, origin_y + py, 128, origin_y+ph}
 end
 
 function update_p_cursor()
 	-- log('update_p_cursor ('..active_window..'):')
 	local win = windows[active_window]
-	local px, py, w, h = unpack(win.screen_rect)
+	local _, py, w, h = unpack(win.screen_rect)
 	local cx, cy = win.z_cursor.x, win.z_cursor.y
-	px += (cx - 1)<<2
+	px = 1 + ((cx - 1)<<2)
 	py += (cy - 1)*6
 	if (_z_machine_version > 3 and active_window == 0) py += 1
+	-- px += 1
 	win.p_cursor = {px, py}
+	log(' p_cursor set to: '..px..','..py)
 	return px, py
 end
 
@@ -181,15 +183,9 @@ function flush_line_buffer()
 	if (win.buffer == nil or win.buffer == current_format or win.h == 0) return
 
 	if active_window == 0 then
-		while flip_count < emit_rate do
-			flip()
-			flip_count += 1
-		end
-			-- log('  active window == 0')
 		if sub(win.buffer, -1) != '>' then
 			-- log('  '..sub(win.buffer, -1)..' != <')
 			if lines_shown == (win.h - 1) then
-				
 				wait_for_any_key("\^i          - - MORE - -          ")
 			end
 		end
@@ -208,21 +204,15 @@ function screen(str)
 	-- log('output to screen '..active_window..': '..str)
 	if active_window == 0 then
 		lines_shown += 1
-		add(win.screen_buffer, str)
-		if #win.screen_buffer > (screen_height + 4) then
-			deli(win.screen_buffer, 1)
-		end
-		refresh_screen()
+		refresh_screen(str)
 	else
 		-- log(':: asked to print to window 1 ('..win.z_cursor.x..','..win.z_cursor.y..'): |'..str..'|')
 		if win.z_cursor.y <= win.h then
 			local px, py = unpack(win.p_cursor)
 			print(str, px, py)
 			local x = print(str,0,-20)
-			-- cursor()
-			local char_width = (make_bold == true) and 3 or 2
 			-- log('    x: '..x..' pixels wide? (make_bold: '..tostr(make_bold)..')')
-			local cx = win.z_cursor.x + (x>>>char_width)
+			local cx = win.z_cursor.x + (x>>>2)
 			local cy = win.z_cursor.y
 			-- log('    now at: '..cx..', '..cy)
 			if nl == true then
@@ -238,22 +228,43 @@ function screen(str)
 	flip()
 end
 
-function refresh_screen()
-	--only available on windows[0]
-	-- log('refresh_screen')
+function refresh_screen(str)
+	log('refresh_screen: '..tostr(str))
 	local win = windows[0]
 	local sbuffer = win.screen_buffer
-	if (#sbuffer == 0) return
 
-	clip(unpack(win.screen_rect))
-	rectfill(0,0,128,128,current_bg)
-	local loop_count, x = min(#sbuffer, screen_height), 0
-	for i = loop_count, 1, -1 do
-		cursor(0, (screen_height - (i-1)) * 6 + 2)
-		x = print(sbuffer[#sbuffer - (i-1)])
+	local x1, y1, x2, y2 = unpack(win.screen_rect)
+	clip(x1, y1, x2, y2)
+	rectfill(x1, y1, x2, y2, current_bg)
+	-- log(x1..','..y1..','..x2..','..y2)
+
+	local x = 0
+	local num_lines = min(screen_height, #sbuffer)
+	if (str and (num_lines == screen_height)) num_lines -= 1
+	if num_lines > 0 then
+		log('num_lines: '..num_lines)
+		for i = num_lines - 1, 0, -1 do
+			local y = y2 - 6 - (i*6)
+			if (str) y -= 6
+			x = print(sbuffer[#sbuffer - i], 1, y)
+			log('buffer x: '..tostr(x))
+		end
 	end
-	win.z_cursor.x = (x>>2)+1
-	update_p_cursor()
+
+	if str then
+		x = print(str, 0, -20)
+		log('str x: '..tostr(x))
+		print(emit_code..str, 1, y2-6)
+		add(sbuffer, str)
+		if #sbuffer > (screen_height + 4) then
+			deli(sbuffer, 1)
+		end
+	end
+
+	if (x > 0) then
+		win.z_cursor.x = (x>>>2)+1
+		update_p_cursor()
+	end
 	clip()
 end
 
@@ -270,6 +281,7 @@ function tokenise(str)
 
 	for i = 1, #str do
 		local char = sub(str,i,_)
+		-- log('  char '..i..': '..ord(char))
 		add(bytes, ord(char))
 
 		if char == ' ' then
@@ -279,8 +291,8 @@ function tokenise(str)
 			commit(i)
 			add(tokens, {char,i})
 
-		else
-			if (index == 0) index = i
+		elseif index == 0 then
+			index = i
 		end
 	end
 	commit(#str+1)
@@ -320,25 +332,19 @@ end
 z_text_buffer, z_parse_buffer = 0x0, 0x0
 local current_input = ''
 
+--called by read; buffer addresses must be non-zero
 function capture_input(c)
 	lines_shown = 0
 	if (not c) return
 	poke(0x5f30,1)
 
-	--normalize char to lowercase
+	--normalize to lowercase
 	local char = lowercase(c)
-
-	--called by read so buffer addresses must be non-zero
-	-- assert(z_text_buffer != 0, 'text buffer address has not been captured')
-	-- assert(z_parse_buffer != 0, 'parse buffer address has not been captured')
 
 	if (max_input_length == 0) max_input_length = get_zbyte(z_text_buffer) - 1
 	if (z_parse_buffer_length == 0) z_parse_buffer_length = get_zbyte(z_parse_buffer)
 
 	-- log('current input: '..current_input)
-	-- if (char == '\r' and current_input == '') then
-	-- 	read()
-
 	if char == '\r' then
 
 		--normalize the current input
@@ -404,6 +410,8 @@ end
 
 local show_warning = true
 function save_game(char)
+
+	if (not char) return
 	--can the keyboard handler be shared with capture_input()?
 	if show_warning == true then
 		output('Enter filename (max 30 chars; careful, do NOT press "ESC")\n\n>\n')
@@ -411,17 +419,16 @@ function save_game(char)
 	end
 
 	--process chars for the save game filename
-	if char and char != '\r' then
+	if char != '\r' then
 
 		if char == '\b' then
 			if #current_input > 0 then
 				current_input = sub(current_input, 1, #current_input - 1)
 			end
-		elseif not in_set(char, {'', '\r'}) then
-			if (#current_input < 30) current_input ..= char
-		end
 
-		if char != '' then 
+		else
+			if (#current_input < 30) current_input ..= char
+
 			local sbuffer = windows[active_window].screen_buffer
 			sbuffer[#sbuffer] = '>'..current_input
 			windows[active_window].screen_buffer = sbuffer
@@ -429,12 +436,14 @@ function save_game(char)
 		end
 
 	--do the save
-	elseif char == '\r' then
+	else
+		capture_state(_current_state)
 		local filename = current_input..'_'..game_id()..'_save'
 		printh(_current_state, filename, true)
 		current_input = ''
 		show_warning = true
-		_save(true)
+		local s = (_z_machine_version == 3) and true or 1
+		_save(s)
 	end
 end
 
@@ -473,14 +482,14 @@ function restore_game()
 	if (save_checksum != this_checksum) then
 		output('This save file appears to be for a different game.\n')
 		output(save_checksum..' vs. '..this_checksum..'\n')
-		return false
+		return (_z_machine_version == 3) and false or 0
 	end
 
 	local offset = 1
 	local save_version = temp[offset]
 	if (save_version > tonum(_engine_version)) then
 		output('This save file requires v'..tostr(save_version)..' of Status Line or higher.\n')
-		return false
+		return (_z_machine_version == 3) and false or 0
 	end
 
 	offset += 1
@@ -535,37 +544,37 @@ function restore_game()
 	_program_counter = temp[#temp-1]
 	current_input = ''
 	process_header()
-	return true
+	return (_z_machine_version == 3) and true or 2
 end
 
 function show_status()
 
-	-- local obj = get_zword(global_var_addr(0))
-	-- local location = zobject_name(obj)
-	-- local scorea = get_zword(global_var_addr(1))
-	-- local scoreb = get_zword(global_var_addr(2))
-	-- local flag = get_zbyte(interpreter_flags)
-	-- local separator = '/'
-	-- if (flag & 2) == 2 then
-	-- 	local ampm = ''
-	-- 	if clock_type == 12 then
-	-- 		ampm = 'A'
-	-- 		if (scorea >= 12) then 
-	-- 			ampm = 'P'
-	-- 			scorea -= 12
-	-- 		end
-	-- 		if (scorea == 0) scorea = 12
-	-- 	end
-	-- 	separator = ':'
-	-- 	scoreb = sub('0'..scoreb, -2)..ampm
-	-- end
+	local obj = get_zword(global_var_addr(0))
+	local location = zobject_name(obj)
+	local scorea = get_zword(global_var_addr(1))
+	local scoreb = get_zword(global_var_addr(2))
+	local flag = get_zbyte(interpreter_flags)
+	local separator = '/'
+	if (flag & 2) == 2 then
+		local ampm = ''
+		if clock_type == 12 then
+			ampm = 'A'
+			if (scorea >= 12) then 
+				ampm = 'P'
+				scorea -= 12
+			end
+			if (scorea == 0) scorea = 12
+		end
+		separator = ':'
+		scoreb = sub('0'..scoreb, -2)..ampm
+	end
 
-	-- local score = scorea..separator..scoreb..' '
-	-- -- useful to use status bar for debug info
-	-- -- score = tostr(stat(0))
-	-- local loc = ' '..sub(location, 1, 30-#score-2)
-	-- if (#loc < #location) loc = sub(loc, 1, #loc-1)..chr(144)
-	-- local spacer_len = 32 - #loc - #score
-	-- local spacer = sub(blank_line,-spacer_len)
-	-- print('\^i\#'..current_bg..'\f'..current_fg..loc..spacer..score, 0, 1)
+	local score = scorea..separator..scoreb..' '
+	-- useful to use status bar for debug info
+	-- score = tostr(stat(0))
+	local loc = ' '..sub(location, 1, 30-#score-2)
+	if (#loc < #location) loc = sub(loc, 1, #loc-1)..chr(144)
+	local spacer_len = 32 - #loc - #score
+	local spacer = sub(blank_line,-spacer_len)
+	print('\^i\#'..current_bg..'\f'..current_fg..loc..spacer..score, 1, 1)
 end

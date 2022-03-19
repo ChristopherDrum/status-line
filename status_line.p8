@@ -21,8 +21,8 @@ local screen_types = {
 local scroll_speeds = {
 	default = 3,
 	values = {
-		{'slow', 30}, {'medium', 20}, {'fast', 10}, 
-		{'faster', 2}, {'fastest', -1}
+		{'slow', 8}, {'medium', 6}, {'fast', 4}, 
+		{'faster', 2}, {'fastest', 0}
 	}
 }
 local clock_types = {
@@ -202,7 +202,8 @@ function setup_user_prefs()
 	local ct = dget(2) or 1
 	local cur = dget(3) or 1
 
-	_, emit_rate = unpack(scroll_speeds.values[er])
+	local _, emit_rate = unpack(scroll_speeds.values[er])
+	if (emit_rate > 0) emit_code = "\^"..emit_rate
 	_, clock_type = unpack(clock_types.values[ct])
 	_, cursor_type = unpack(cursor_types.values[cur])
 end
@@ -227,7 +228,6 @@ function _update60()
 					_interrupt == nil and
 					story_loaded == true do
 				local func, operands = load_instruction()
-				if (func == _save) capture_state(_current_state)
 				func(unpack(operands))
 				count += 1
 				-- log('instruction count: '..count)
@@ -340,7 +340,7 @@ end
 
 function patch()
 	local checksum = get_zword(file_checksum)
-	log('checksum: '..tohex(checksum))
+	-- log('checksum: '..tohex(checksum))
 	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, @fredrick
 	if (in_set(checksum, {0x4860, 0xfc65})) set_zbyte(_screen_width, 40) --amfv, beau
 end
