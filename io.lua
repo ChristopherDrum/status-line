@@ -1,19 +1,18 @@
 current_bg = 0
 current_fg = 1
 current_font = 1
--- current_style = 0
--- current_style_hw = 0x11
+
+previous_format = ''
 current_format = ''
 current_format_updated = false
 window_attributes = 0b00000000.00001010
 
-screen_height = nil
-
 --io control
-emit_rate = 1 --the lower the faster
+emit_rate = 0 --the lower the faster
 clock_type = nil
 cursor_type = nil
 make_bold = false
+make_inverse = true
 
 screen_output = true
 memory_output = {}
@@ -31,7 +30,7 @@ windows = {
 		last_line = ''
 	},
 	{
-		y = 0,
+		y = 1,
 		h = 0,
 		z_cursor = {x=1,y=1},
 		p_cursor = {0,0},
@@ -43,8 +42,9 @@ windows = {
 function update_current_format(n)
 	local inverse, emphasis = '\^-i\^-b', '\015'
 	make_bold = (n&2 == 2)
+	make_inverse = (n&1 == 1)
 
-	if ((n & 1) == 1) inverse = '\^i'
+	if (make_inverse == true) inverse = '\^i'
 	if (n > 1) emphasis = '\014'
 	if checksum == 0xfc65 then -- Bureaucracy masterpiece
 		if (active_window == 1) and (n&2 == 2) then
@@ -69,17 +69,13 @@ function update_screen_rect(zwin_num)
 end
 
 function update_p_cursor()
-	log('update_p_cursor ('..active_window..'):')
 	local win = windows[active_window]
 	local px, py, w, h = unpack(win.screen_rect)
 	local cx, cy = win.z_cursor.x, win.z_cursor.y
-	log('   z_cursor says: '..cx..','..cy)
 	px = ((cx - 1)<<2) + 1
 	py += (cy - 1)*6 + 1
-	if (_z_machine_version == 3 and active_window == 1) py -= 1
-	-- if (_z_machine_version > 3 and active_window == 0) py += 1
+	if (_z_machine_version == 3) py -= 1
 	win.p_cursor = {px, py}
-	log('   p_cursor now: '..px..','..py)
 	return px, py
 end
 
@@ -120,14 +116,14 @@ function p8scii_to_zscii(str)
 	return zscii
 end
 
-function output(str)
+function output(str, flush_now)
 	-- log('('..active_window..') output str: '..str)
 	if (#memory_output > 0) then
 		-- log('   redirected to memory')
 		memory(str) 
 	else
 		if (screen_output == false) return
-		-- log('   output to screen: '..str)
+		log('   output to screen '..active_window..': '..str)
 		local buffer = windows[active_window].buffer
 		local current_line = nil
 		if (#buffer > 0) current_line = deli(buffer)
@@ -140,10 +136,11 @@ function output(str)
 		local visual_len = print(current_line, 0, -20)
 
 		for i = 1 , #str do
-			local char = flipcase(ord(str,i))
+			local char = case_setter(ord(str,i), flipcase)
 
 			-- log('considering char: '..char)
 			if current_format_updated == true then
+				previous_format = current_format
 				current_line ..= current_format
 				current_format_updated = false
 			end
@@ -180,6 +177,7 @@ function output(str)
 		-- buffer[#buffer] = current_line
 		if (current_line) add(buffer, current_line)
 	end
+	if (flush_now) flush_line_buffer()
 end
 
 flip_count = 0
@@ -187,7 +185,7 @@ clear_last_line = false
 function flush_line_buffer()
 	local win = windows[active_window]
 	local buffer = win.buffer
-	log('flush_line_buffer '..active_window..', '..tostr(#buffer)..' lines')
+	-- log('flush_line_buffer '..active_window..', '..tostr(#buffer)..' lines')
 	-- log('  lines shown: '..lines_shown..' vs win height: '..win.h)
 	if (#buffer == 0 or win.h == 0) return
 	-- log('flush window '..active_window..' with line height: '..win.h)
@@ -195,13 +193,9 @@ function flush_line_buffer()
 		local str = win.buffer[i]
 		if (str == current_format) goto skip
 		if active_window == 0 then
-			while flip_count < emit_rate do
-				flip()
-				flip_count += 1
-			end
 			if sub(str, -1) != '>' then
 				if lines_shown == (win.h - 1) then
-					screen("\^i          - - MORE - -          ")
+					screen("\^i\#0\f1          - - MORE - -          ")
 					clear_last_line = true
 					wait_for_any_key()
 					lines_shown = 0
@@ -209,7 +203,6 @@ function flush_line_buffer()
 			end
 		end
 		screen(str)
-		clear_last_line = false
 		win.last_line = str
 		::skip::
 	end
@@ -218,7 +211,7 @@ function flush_line_buffer()
 end
 
 function screen(str)
-	-- log('received str: '..str)
+	log('received str (len '..#str..'): '..str)
 	local win = windows[active_window]
 	local nl = sub(str,-1) == '\n'
 	if (nl == true) str = sub(str,1,#str-1)
@@ -228,17 +221,18 @@ function screen(str)
 	local x = print(str,0,-20)
 	local px, py = unpack(win.p_cursor)
 	cursor(px,py)
-	-- log('  screen cursor at '..px..','..py)
+	log(' screen cursor at line: '..win.z_cursor.y..', col:'..win.z_cursor.x)
 	local cx = x>>>2
 	local cy = win.z_cursor.y
 	if active_window == 0 then
 		if clear_last_line == true then
 			rectfill(0,121,128,128,current_bg)
+			clear_last_line = false
 		else
 			print('\n')
 		end
 		cursor(1,122)
-		print(str)
+		print('\^'..emit_rate..str)
 		cx += 1
 		lines_shown += 1
 
@@ -246,16 +240,16 @@ function screen(str)
 		if win.z_cursor.y <= win.h then
 			print(str, px, py)
 			cx += win.z_cursor.x
-			-- log('    now at: '..cx..', '..cy)
-			if nl == true then
-				cx = 1
-				cy += 1
-			-- log('    adjusted to: '..cx..', '..cy)
-			end
+			-- if nl == true then
+			-- 	cx = 1
+			-- 	cy += 1
+			-- 	log('   adjusted to line: '..win.z_cursor.y..', col:'..win.z_cursor.x)
+			-- end
 		end
 	end
 
 	win.z_cursor = {x=cx, y=cy}
+	log('  now at line: '..win.z_cursor.y..', col:'..win.z_cursor.x)
 	update_p_cursor()
 
 	flip()
@@ -300,46 +294,59 @@ function tokenise(str)
 	return bytes, tokens
 end
 
-function flipcase(zchar)
-	if in_range(zchar,97,122) then
-		zchar -= 32
-	elseif in_range(zchar,65,90) then
-		zchar += 32
-	elseif zchar == 13 then
-		zchar = 10
+
+lowercase, visual_case, flipcase = 1, 2, 3
+function case_setter(char, case)
+	local o = (case == flipcase) and char or ord(char)
+
+	if case == lowercase then
+		if (in_range(o,128,153)) o -= 31
+		if (in_range(o,65,90)) o += 32
+
+	elseif case == visual_case then
+		if (in_range(o,97,122)) o -= 32
+		if (in_range(o,128,153)) o -= 31
+	
+	elseif case == flipcase then
+		if in_range(o,97,122) then
+			o -= 32
+		elseif in_range(o,65,90) then
+			o += 32
+		elseif o == 13 then
+			o = 10
+		end
 	end
-	return chr(zchar)
-end
 
-function lowercase(c)
-	local o = ord(c)
-	-- log('lowercase: '..c..','..o)
-	if (in_range(o,128,153)) o -= 31
-	if (in_range(o,65,90)) o += 32
-	-- log(' to: '..chr(o)..','..o)
 	return chr(o)
 end
 
-function p8scii_trans(c)
-	local o = ord(c)
-	-- log('p8scii_trans:: '..c..','..o)
-	o = ord(flipcase(o))
-	if (in_range(o,128,153)) o -= 31
-	-- log(' to: '..chr(o)..','..o)
-	return chr(o)
-end
 
 z_text_buffer, z_parse_buffer = 0x0, 0x0
-local current_input, visible_input = '', ''
+current_input, visible_input = '', ''
+
+function process_input_char(real, visible, max_length)
+	if real == '\b' then
+		if #current_input > 0 then
+			current_input = sub(current_input, 1, #current_input - 1)
+			visible_input = sub(visible_input, 1, #visible_input - 1)
+		end
+	elseif real != '' then
+		if #current_input < max_length then
+			current_input ..= real
+			visible_input ..= case_setter(visible, visual_case)
+		end
+	end
+	clear_last_line = true
+	screen(windows[active_window].last_line..sub(visible_input, -30))
+end
 
 --called by read; buffer addresses must be non-zero
-function capture_input(c)
+function capture_input(char)
 	lines_shown = 0
-	if (not c) return
+	if (not char) draw_cursor(current_fg) return
 	poke(0x5f30,1)
 
-	--normalize to lowercase
-	local char = lowercase(c)
+	draw_cursor(current_bg)
 
 	if (max_input_length == 0) max_input_length = get_zbyte(z_text_buffer) - 1
 	if (z_parse_buffer_length == 0) z_parse_buffer_length = get_zbyte(z_parse_buffer)
@@ -348,9 +355,7 @@ function capture_input(c)
 	if char == '\r' then
 
 		--normalize the current input
-		-- log('current input before: '..current_input)
 		current_input = strip(current_input)
-		-- log('current input after: '..current_input)
 
 		--tokenize and byte it
 		local bytes, tokens = tokenise(current_input)
@@ -378,22 +383,7 @@ function capture_input(c)
 		read()
 
 	else
-		local win = windows[active_window]
-
-		if char == '\b' then
-			if #current_input > 0 then
-				current_input = sub(current_input, 1, #current_input - 1)
-				visible_input = sub(visible_input, 1, #visible_input - 1)
-			end
-		elseif char != '' then
-			if #current_input < max_input_length then
-				current_input ..= char
-				visible_input ..= p8scii_trans(c)
-			end
-		end
-
-		clear_last_line = true
-		screen(win.last_line..sub(visible_input, -30))
+		process_input_char(case_setter(char, lowercase), char, max_input_length)
 	end
 end
 
@@ -402,44 +392,38 @@ function dword_to_str(dword)
 	return sub(hex,3,6)..sub(hex,8)
 end
 
--- show_warning = true
--- function save_game(char)
--- 	-- log('save_game: '..tostr(char)..','..tostr(ord(char)))
--- 	--can the keyboard handler be shared with capture_input()?
--- 	if show_warning == true then
--- 		output('Enter filename (max 30 chars; careful, do NOT press "ESC")\n\n>\n')
--- 		show_warning = false
--- 	end
+show_warning = true
+function save_game(char)
+	-- log('save_game: '..tostr(char)..','..tostr(ord(char)))
+	--can the keyboard handler be shared with capture_input()?
+	if show_warning == true then
+		output('Enter filename (max 30 chars; careful, do NOT press "ESC")\n\n>', true)
+		flush_line_buffer()
+		show_warning = false
+	end
 
--- 	if char then
--- 		--process chars for the save game filename
--- 		if char != '\r' then
--- 			if char == '\b' then
--- 				current_input = sub(current_input, 1, #current_input - 1)
--- 			else
--- 				if (#current_input < 30) current_input ..= char
--- 			end
+	if (not char) return
 
--- 			local sbuffer = windows[active_window].screen_buffer
--- 			sbuffer[#sbuffer] = '>'..current_input
--- 			refresh_screen()
+	--do the save
+	if char == '\r' then
+		capture_state(_current_state)
+		local filename = current_input..'_'..game_id()..'_save'
+		printh(_current_state, filename, true)
+		current_input, visible_input = '', ''
+		show_warning = true
+		local s = (_z_machine_version == 3) and true or 1
+		_save(s)
 
--- 		--do the save
--- 		elseif char == '\r' then
--- 			capture_state(_current_state)
--- 			local filename = current_input..'_'..game_id()..'_save'
--- 			printh(_current_state, filename, true)
--- 			current_input = ''
--- 			show_warning = true
--- 			local s = (_z_machine_version == 3) and true or 1
--- 			_save(s)
--- 		end
--- 	end
--- end
+	else
+		char = case_setter(char, lowercase)
+		process_input_char(char, char, 30)
+	end
+
+end
 
 function restore_game()
 
-	output('Drag in a '..game_id()..'_save.p8l file or any key to exit.\n')
+	output('Drag in a '..game_id()..'_save.p8l file or any key to exit.\n', true)
 	extcmd("folder")
 
 	--hang out waiting for a file drop or keypress
@@ -471,14 +455,14 @@ function restore_game()
 
 	if (save_checksum != this_checksum) then
 		output('This save file appears to be for a different game.\n')
-		output(save_checksum..' vs. '..this_checksum..'\n')
+		output(save_checksum..' vs. '..this_checksum..'\n', true)
 		return (_z_machine_version == 3) and false or 0
 	end
 
 	local offset = 1
 	local save_version = temp[offset]
 	if (save_version > tonum(_engine_version)) then
-		output('This save file requires v'..tostr(save_version)..' of Status Line or higher.\n')
+		output('This save file requires v'..tostr(save_version)..' of Status Line or higher.\n', true)
 		return (_z_machine_version == 3) and false or 0
 	end
 
@@ -569,7 +553,7 @@ function show_status()
 	loc ..= spacer..score
 	local flipped = ""
 	for i = 1, #loc do
-		flipped ..= flipcase(ord(loc,i))
+		flipped ..= case_setter(ord(loc,i), flipcase)
 	end
-	print('\^i\#'..current_bg..'\f'..current_fg..flipped, 1, 1)
+	print('\^i'..flipped, 1, 1)
 end

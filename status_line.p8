@@ -24,8 +24,8 @@ local screen_types = {
 local scroll_speeds = {
 	default = 3,
 	values = {
-		{'slow', 30}, {'medium', 20}, {'fast', 10}, 
-		{'faster', 2}, {'fastest', -1}
+		{'slow', 7}, {'medium', 5}, {'fast', 4}, 
+		{'faster', 2}, {'fastest', 0}
 	}
 }
 local clock_types = {
@@ -48,10 +48,13 @@ z_parse_buffer_length = 0
 separators = {}
 _dictionary_lookup = {}
 blank_line = '                                '
-default_property_count = 0
-packed_shift = 0
-object_entry_size = 0
-dictionary_word_size = 0
+
+--default these to z4+ specs
+screen_height = 21
+packed_shift = 2
+default_property_count = 63
+object_entry_size = 0x.000e
+dictionary_word_size = 9
 
 --these literally make the engine run
 _program_counter = 0x0
@@ -86,10 +89,11 @@ end
 lines_shown = 0
 function wait_for_any_key()
 
-	draw_cursor(1)
-
+	local c = (make_inverse == false) and current_fg or current_bg
+	local clear = (c+1)%2
 	local keypress = ''
 	while (keypress == '') do
+		if (active_window == 1) draw_cursor(c)
 		if stat(30) then
 			poke(0x5f30,1)
 			keypress = stat(31)
@@ -97,30 +101,14 @@ function wait_for_any_key()
 	end
 
 	local o = ord(keypress)
+	if (active_window == 1 and in_set(o, {8, 10, 13, 32})) draw_cursor(clear)
 	if (in_range(o,128,153)) o -= 63
 	return chr(o)
 end
 
-local flip_time = t()
-local c = 1
-function draw_cursor(state)
-	if (not _interrupt) return
-	local win = windows[active_window]
-	local px, py = unpack(win.p_cursor)
-	-- log('draw_cursor at ('..win.z_cursor.x..','..win.z_cursor.y..') sees: '..px..','..py)
-	if state then
-		c = state
-	elseif active_window == 0 then
-		local blink = (t() - flip_time) >= 0.5
-		if (blink == true) then
-			flip_time = t()
-			c = (c+1)%2
-		end
-	end
-	local cur_col = (c == 0) and current_bg or current_fg
-	-- log('  cur_col: '..cur_col)
-	print(cursor_type, px, py, cur_col)
-	-- flip()
+function draw_cursor(c)
+	local px, py = unpack(windows[active_window].p_cursor)
+	print(cursor_type, px, py, c)
 end
 
 function build_menu(name, dval, table)
@@ -155,30 +143,31 @@ end
 function draw_splashscreen(did_load)
 	cls(0)
 
-	sspr(0,0,128,124,0,0)--monitor
-	rectfill(6,125,122,127,1)
-	sspr(90,125,7,3,83,124)--knobs
-	sspr(90,125,7,3,93,124)
+	-- sspr(0,0,128,124,0,0)--monitor
+	-- rectfill(6,125,122,127,1)
+	-- sspr(90,125,7,3,83,124)--knobs
+	-- sspr(90,125,7,3,93,124)
 
-	color(7)
-	line(33,83,93,83)
-	print('V'.._engine_version, 82, 69)
+	-- color(7)
+	-- line(33,83,93,83)
+	-- print('V'.._engine_version, 82, 69)
 
-	if (did_load == true) then
-		sspr(100,124,14,4,103,116)
-		print('sTORY IS LOADING', 31, 100)
-	else
-		sspr(114,124,14,4,103,116)
-		print('DRAG IN A Z3/4 STORY\n  TO START PLAYING', 24, 92)
-	end
+	-- if (did_load == true) then
+	-- 	sspr(100,124,14,4,103,116)
+	-- 	print('sTORY IS LOADING', 31, 100)
+	-- else
+	-- 	sspr(114,124,14,4,103,116)
+	-- 	print('DRAG IN A Z3/4 STORY\n  TO START PLAYING', 24, 92)
+	-- end
 
-	color()
-	flip()
+	-- color()
+	-- flip()
 end
 
 function game_id()
-	local id = zword_to_zaddress(get_zword(_static_mem_addr))
-	return tohex(id<<16, false)
+	local id = checksum
+	if (_z_machine_version == 3) id = (zword_to_zaddress(get_zword(_static_mem_addr))<<16)
+	return tohex(id, false)
 end
 
 function setup_palette()
@@ -211,9 +200,11 @@ function _update60()
 				poke(0x5f30,1)
 			end
 			_interrupt(key)
+			-- draw_cursor()
 		else
 			--I found this method of running multiple vm instructions
 			--per frame more consistent and easier to regulate
+			-- erase_cursor()
 			local count = 0
 			local max_instruction = 50
 			while count < max_instruction and 
@@ -225,7 +216,6 @@ function _update60()
 				-- log('instruction count: '..count)
 			end
 		end
-		draw_cursor()
 
 	else
 		if (stat(120)) then
@@ -234,8 +224,8 @@ function _update60()
 		else
 			if (_program_counter != 0x0) then
 				--let the player see end-of-game text
-				output("\^i       ~ END OF SESSION ~       ")
 				flush_line_buffer()
+				screen("\^i\#0\f1       ~ END OF SESSION ~       ")
 				wait_for_any_key()
 				reset_all_memory()
 			end
@@ -274,7 +264,7 @@ function fetch_parser_separators()
 	local num_separators = get_zbyte(_dictionary_addr)
 	local seps = get_zbytes(_dictionary_addr + 0x.0001, num_separators)
 	seps = zscii_to_p8scii(seps)
-	log('fetch_parser_separators: '..seps)
+	-- log('fetch_parser_separators: '..seps)
 	for i = 1, num_separators do
 		local k = sub(seps, i, i)
 		add(separators, k)
@@ -284,17 +274,12 @@ end
 function process_header()
 	_z_machine_version = get_zbyte(version)
 
-	screen_height = 20
-	packed_shift = 1
-	default_property_count = 31
-	object_entry_size = 0x.0009
-	dictionary_word_size = 6
-	if _z_machine_version > 3 then
-		screen_height = 21
-		packed_shift = 2
-		default_property_count = 63
-		object_entry_size = 0x.000e
-		dictionary_word_size = 9
+	if _z_machine_version == 3 then
+		screen_height = 20
+		packed_shift = 1
+		default_property_count = 31
+		object_entry_size = 0x.0009
+		dictionary_word_size = 6
 	end
 
 	set_zbyte(_screen_height, screen_height)
