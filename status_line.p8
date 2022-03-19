@@ -86,27 +86,45 @@ function log(str)
 	printh(str, 'status_line_log_20')
 end
 
-lines_shown = 0
 function wait_for_any_key()
-
+	--cursor blinking is suppressed because
+	--this routine is outside the t() measurement
+	lines_shown = 0
 	local c = (make_inverse == false) and current_fg or current_bg
-	local clear = (c+1)%2
 	local keypress = ''
 	while (keypress == '') do
-		if (active_window == 1) draw_cursor(c)
+		if (active_window == 1) draw_cursor()
 		if stat(30) then
 			poke(0x5f30,1)
 			keypress = stat(31)
 		end
+		flip()
 	end
 
 	local o = ord(keypress)
-	if (active_window == 1 and in_set(o, {8, 10, 13, 32})) draw_cursor(clear)
+	if (active_window == 1) then 
+		local clear = (c+1)%2
+		draw_cursor(clear)
+	else
+		-- log('wait for any key, window 0: ')
+		-- log('  did_trim_nl = '..tostr(did_trim_nl))
+		-- log('  reuse_last_line = '..tostr(reuse_last_line))
+		-- log('  last_line = '..windows[0].last_line)
+		-- log('  buffer len = '..#windows[0].buffer)
+		if did_trim_nl == false then
+			reuse_last_line = true
+			if #windows[0].buffer == 0 then
+				add(windows[0].buffer, windows[0].last_line)
+				windows[0].last_line = ''
+			end
+		end
+	end
 	if (in_range(o,128,153)) o -= 63
 	return chr(o)
 end
 
 function draw_cursor(c)
+	local c = c or (stat(85) % 2)
 	local px, py = unpack(windows[active_window].p_cursor)
 	print(cursor_type, px, py, c)
 end
@@ -196,8 +214,8 @@ function _update60()
 		if _interrupt then
 			local key = nil
 			if stat(30) and not key then
-				key = stat(31)
 				poke(0x5f30,1)
+				key = stat(31)
 			end
 			_interrupt(key)
 			-- draw_cursor()

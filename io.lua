@@ -123,7 +123,7 @@ function output(str, flush_now)
 		memory(str) 
 	else
 		if (screen_output == false) return
-		log('   output to screen '..active_window..': '..str)
+		-- log('   output to screen '..active_window..': '..str)
 		local buffer = windows[active_window].buffer
 		local current_line = nil
 		if (#buffer > 0) current_line = deli(buffer)
@@ -180,8 +180,9 @@ function output(str, flush_now)
 	if (flush_now) flush_line_buffer()
 end
 
-flip_count = 0
+did_trim_nl = false
 clear_last_line = false
+lines_shown = 0
 function flush_line_buffer()
 	local win = windows[active_window]
 	local buffer = win.buffer
@@ -189,45 +190,44 @@ function flush_line_buffer()
 	-- log('  lines shown: '..lines_shown..' vs win height: '..win.h)
 	if (#buffer == 0 or win.h == 0) return
 	-- log('flush window '..active_window..' with line height: '..win.h)
-	for i = 1, #win.buffer do
-		local str = win.buffer[i]
+	while #buffer > 0 do
+		local str = deli(buffer, 1)
 		if (str == current_format) goto skip
 		if active_window == 0 then
-			if sub(str, -1) != '>' then
+			-- if sub(str, -1) != '>' then
+			if #buffer != 0 then
 				if lines_shown == (win.h - 1) then
 					screen("\^i\#0\f1          - - MORE - -          ")
-					clear_last_line = true
+					reuse_last_line = true
 					wait_for_any_key()
 					lines_shown = 0
 				end
 			end
 		end
-		screen(str)
+		-- log('last char: '..ord(sub(str,-1)))
+		local dtn = sub(str,-1) == '\n'
+		if (dtn == true) str = sub(str,1,#str-1)
+		if (active_window == 0) did_trim_nl = dtn
 		win.last_line = str
+		screen(str)
 		::skip::
 	end
-	win.buffer = {}
-	flip_count = 0
+	-- log('after flushing, buffer len is: '..#windows[active_window].buffer)
 end
 
 function screen(str)
-	log('received str (len '..#str..'): '..str)
+	-- log('screen '..active_window..': '..str)
 	local win = windows[active_window]
-	local nl = sub(str,-1) == '\n'
-	if (nl == true) str = sub(str,1,#str-1)
-	-- log('output to screen '..active_window..': '..str)
-	clip(unpack(win.screen_rect))
 
+	clip(unpack(win.screen_rect))
 	local x = print(str,0,-20)
-	local px, py = unpack(win.p_cursor)
-	cursor(px,py)
-	log(' screen cursor at line: '..win.z_cursor.y..', col:'..win.z_cursor.x)
 	local cx = x>>>2
-	local cy = win.z_cursor.y
+
+	cursor(unpack(win.p_cursor))
 	if active_window == 0 then
-		if clear_last_line == true then
+		if reuse_last_line == true then
 			rectfill(0,121,128,128,current_bg)
-			clear_last_line = false
+			reuse_last_line = false
 		else
 			print('\n')
 		end
@@ -235,21 +235,14 @@ function screen(str)
 		print('\^'..emit_rate..str)
 		cx += 1
 		lines_shown += 1
-
 	else
 		if win.z_cursor.y <= win.h then
-			print(str, px, py)
+			print(str)
 			cx += win.z_cursor.x
-			-- if nl == true then
-			-- 	cx = 1
-			-- 	cy += 1
-			-- 	log('   adjusted to line: '..win.z_cursor.y..', col:'..win.z_cursor.x)
-			-- end
 		end
 	end
 
-	win.z_cursor = {x=cx, y=cy}
-	log('  now at line: '..win.z_cursor.y..', col:'..win.z_cursor.x)
+	win.z_cursor.x = cx
 	update_p_cursor()
 
 	flip()
@@ -336,14 +329,14 @@ function process_input_char(real, visible, max_length)
 			visible_input ..= case_setter(visible, visual_case)
 		end
 	end
-	clear_last_line = true
+	reuse_last_line = true
 	screen(windows[active_window].last_line..sub(visible_input, -30))
 end
 
 --called by read; buffer addresses must be non-zero
 function capture_input(char)
 	lines_shown = 0
-	if (not char) draw_cursor(current_fg) return
+	if (not char) draw_cursor() return
 	poke(0x5f30,1)
 
 	draw_cursor(current_bg)
