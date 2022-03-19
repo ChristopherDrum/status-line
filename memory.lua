@@ -384,7 +384,7 @@ function zobject_has_attribute(index, attribute_id)
 end
 
 function zobject_set_attribute(index, attribute_id, val)
-	log('zobject_set_attribute object: '..index..', set attr '..attribute_id..' to: '..val)
+	-- log('zobject_set_attribute object: '..index..', set attr '..attribute_id..' to: '..val)
 	-- assert(val <= 1, 'can only set binary value on attributes,'..index..','..attribute_id..','..val)
 	local attr_byte, attr_bit, address = zobject_attributes_byte_bit(index, attribute_id)
 	-- log('    NEW current attributes: '..tohex(attr_byte))
@@ -566,8 +566,8 @@ end
 
 --the u(pper) and l(ower) are reversed for p8scii
 --set them to the same if you don't like mixed case
-local u_zchars = '     abcdefghijklmnopqrstuvwxyz'
-local l_zchars = '     ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+local l_zchars = '     abcdefghijklmnopqrstuvwxyz'
+local u_zchars = '     ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 local p_zchars = '      \n0123456789.,!?_#'.."'"..'"/\\-:()'
 local zchar_tables = {l_zchars, u_zchars, p_zchars}
 
@@ -615,11 +615,6 @@ function zscii_to_p8scii(zchars)
 			zscii_decode = true
 
 		elseif zchar > 31 then
-			if in_range(zchar,97,122) then
-				zchar -= 32
-			elseif in_range(zchar,65,90) then
-				zchar += 32
-			end
 			zstring ..= chr(zchar)
 			active_table = 1
 

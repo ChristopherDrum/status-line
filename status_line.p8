@@ -80,45 +80,44 @@ end
 
 lines_shown = 0
 function wait_for_any_key(message)
-	if (message) screen(message)
-	local keypress = ''
-	while (keypress == '') do
-		draw_cursor()
-		if stat(30) then
-			poke(0x5f30,1)
-			keypress = p8scii_trans(stat(31))
-		end
+	if message then 
+		screen(message)
+	else
+		-- log('wait_for_any_key turning ON cursor?')
+		draw_cursor(1)
 		flip()
 	end
-	if not message then
-		local win = windows[active_window]
-		local px, py = unpack(win.p_cursor)
-		if (ord(keypress) != 8) then
-			print(current_format..keypress, px, py)
-			win.z_cursor.x += 1
-			update_p_cursor()
-		else
-			win.z_cursor.x -= 1
-			px, py = update_p_cursor()
-			print('\^i ', px, py)
+
+	local keypress = ''
+	while (keypress == '') do
+		-- draw_cursor(1)
+		if stat(30) then
+			poke(0x5f30,1)
+			keypress = stat(31)
 		end
-		lines_shown = 0
-		return keypress
-	elseif active_window == 0 then
-		deli(windows[active_window].screen_buffer)
+		-- flip()
 	end
+	-- log('keypress: '..keypress..' ('..ord(keypress))
+	if (active_window == 0) deli(windows[active_window].screen_buffer)
 	lines_shown = 0
+	if not message then
+		local o = ord(keypress)
+		if (in_range(o,128,153)) o -= 63
+		-- log('wait_for_any_key turning OFF cursor?')
+		draw_cursor(0)
+		return chr(o)
+	end
 end
 
 local flip_time = t()
 local c = 1
-function draw_cursor(clear)
+function draw_cursor(state)
 	local win = windows[active_window]
 	local px, py = unpack(win.p_cursor)
 	-- log('draw_cursor at ('..win.z_cursor.x..','..win.z_cursor.y..') sees: '..px..','..py)
-	if clear then
-		c = 1
-	else
+	if state then
+		c = state
+	elseif active_window == 0 then
 		local blink = (t() - flip_time) >= 0.5
 		if (blink == true) then
 			flip_time = t()
@@ -126,7 +125,9 @@ function draw_cursor(clear)
 		end
 	end
 	local cur_col = (c == 0) and current_bg or current_fg
+	-- log('  cur_col: '..cur_col)
 	print(cursor_type, px, py, cur_col)
+	-- flip()
 end
 
 function build_menu(name, dval, table)
@@ -212,16 +213,16 @@ function _update60()
 		--_interrupt is set when _read() is called
 		if _interrupt then
 			local key = nil
-			if (stat(30)) then
-				poke(0x5f30,1)
+			if stat(30) and not key then
 				key = stat(31)
+				poke(0x5f30,1)
 			end
 			_interrupt(key)
 		else
 			--I found this method of running multiple vm instructions
 			--per frame more consistent and easier to regulate
 			local count = 0
-			local max_instruction = 20
+			local max_instruction = 50
 			while count < max_instruction and 
 					_interrupt == nil and
 					story_loaded == true do
@@ -229,6 +230,7 @@ function _update60()
 				if (func == _save) capture_state(_current_state)
 				func(unpack(operands))
 				count += 1
+				-- log('instruction count: '..count)
 			end
 		end
 		draw_cursor()
@@ -322,7 +324,8 @@ function process_header()
 	-- p_flag &= 0xff --no transcription
 	set_zbyte(peripherals, 0x03)
 
-	set_zbyte(interpreter_number, 0) --amiga
+	set_zbyte(interpreter_number, 4) --amiga
+	set_zbyte(interpreter_version, ord('P'))
 end
 
 function cache_memory_addresses()

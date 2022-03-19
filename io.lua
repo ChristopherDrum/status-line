@@ -58,7 +58,7 @@ function update_screen_rect(zwin_num)
 	local win = windows[zwin_num]
 	local py = (win.y-1)*6
 	local ph = (win.h)*6
-	-- log('setting screen rect '..zwin_num..': 0, '..(origin_y + py)..', 128,'..(origin_y+ph))
+	log('setting screen rect '..zwin_num..': 0, '..(origin_y + py)..', 128,'..(origin_y+ph))
 	win.screen_rect = {0, origin_y + py, 128, origin_y+ph}
 end
 
@@ -117,16 +117,18 @@ function output(str)
 		memory(str) 
 	else
 		if (screen_output == false) return
-		log('('..active_window..') output str: '..str)
+		-- log('('..active_window..') output str: '..str)
 		local current_line = windows[active_window].buffer
 		if (not current_line) then
 			current_line = current_format
 			current_format_updated = false
 		end
+
 		local visual_len = print(current_line, 0, -20)
 
 		for i = 1 , #str do
-			local char = sub(str,i,_)
+			local char = flipcase(ord(str,i))
+
 			-- log('considering char: '..char)
 			if current_format_updated == true then
 				current_line ..= current_format
@@ -159,6 +161,12 @@ function output(str)
 				current_format_updated = false
 
 				break_index = 0
+			-- elseif active_window == 1 and i == #str then
+				-- windows[1].buffer = current_line
+				-- current_line = current_format
+				-- flush_line_buffer()
+				-- screen(current_line)
+				-- current_line = nil
 			end
 		end
 		windows[active_window].buffer = current_line
@@ -169,21 +177,19 @@ flip_count = 0
 function flush_line_buffer()
 	local win = windows[active_window]
 	-- log('flush window '..active_window..' with line height: '..win.h)
-	-- log('  lines shown so far: '..lines_shown)
-	-- log('  about to show: '..tostr(win.buffer))
+	-- log('  lines shown: '..lines_shown..' vs win height: '..win.h)
 	if (win.buffer == nil or win.buffer == current_format or win.h == 0) return
 
-	while flip_count < emit_rate do
-		flip()
-		flip_count += 1
-	end
-
 	if active_window == 0 then
-		-- log('  active window == 0')
+		while flip_count < emit_rate do
+			flip()
+			flip_count += 1
+		end
+			-- log('  active window == 0')
 		if sub(win.buffer, -1) != '>' then
 			-- log('  '..sub(win.buffer, -1)..' != <')
 			if lines_shown == (win.h - 1) then
-				-- log('  '..lines_shown..' == '..(win.h - 1))
+				
 				wait_for_any_key("\^i          - - MORE - -          ")
 			end
 		end
@@ -208,15 +214,21 @@ function screen(str)
 		end
 		refresh_screen()
 	else
-		-- log(':: asked to print to window 1 ('..win.z_cursor.x..','..win.z_cursor.y..'): '..str)
+		-- log(':: asked to print to window 1 ('..win.z_cursor.x..','..win.z_cursor.y..'): |'..str..'|')
 		if win.z_cursor.y <= win.h then
-			cursor(unpack(win.p_cursor))
-			local x = print(str)
-			local cx = win.z_cursor.x + ((x>>2)+1)
+			local px, py = unpack(win.p_cursor)
+			print(str, px, py)
+			local x = print(str,0,-20)
+			-- cursor()
+			local char_width = (make_bold == true) and 3 or 2
+			-- log('    x: '..x..' pixels wide? (make_bold: '..tostr(make_bold)..')')
+			local cx = win.z_cursor.x + (x>>>char_width)
 			local cy = win.z_cursor.y
-			if (cx > 32 or nl == true) then
+			-- log('    now at: '..cx..', '..cy)
+			if nl == true then
 				cx = 1
 				cy += 1
+			-- 	log('    adjusted to: '..cx..', '..cy)
 			end
 			win.z_cursor = {x=cx, y=cy}
 			update_p_cursor()
@@ -276,10 +288,32 @@ function tokenise(str)
 	return bytes, tokens
 end
 
-function p8scii_trans(c)
+function flipcase(zchar)
+	if in_range(zchar,97,122) then
+		zchar -= 32
+	elseif in_range(zchar,65,90) then
+		zchar += 32
+	elseif zchar == 13 then
+		zchar = 10
+	end
+	return chr(zchar)
+end
+
+function lowercase(c)
 	local o = ord(c)
+	-- log('lowercase: '..c..','..o)
 	if (in_range(o,128,153)) o -= 31
 	if (in_range(o,65,90)) o += 32
+	-- log(' to: '..chr(o)..','..o)
+	return chr(o)
+end
+
+function p8scii_trans(c)
+	local o = ord(c)
+	-- log('p8scii_trans:: '..c..','..o)
+	o = ord(flipcase(o))
+	if (in_range(o,128,153)) o -= 31
+	-- log(' to: '..chr(o)..','..o)
 	return chr(o)
 end
 
@@ -291,8 +325,8 @@ function capture_input(c)
 	if (not c) return
 	poke(0x5f30,1)
 
-	--normalize char to p8scii lowercase
-	local char = p8scii_trans(c)
+	--normalize char to lowercase
+	local char = lowercase(c)
 
 	--called by read so buffer addresses must be non-zero
 	-- assert(z_text_buffer != 0, 'text buffer address has not been captured')
@@ -302,10 +336,10 @@ function capture_input(c)
 	if (z_parse_buffer_length == 0) z_parse_buffer_length = get_zbyte(z_parse_buffer)
 
 	-- log('current input: '..current_input)
-	if (char == '\r' and current_input == '') then
-		read()
+	-- if (char == '\r' and current_input == '') then
+	-- 	read()
 
-	elseif (char == '\r') then
+	if char == '\r' then
 
 		--normalize the current input
 		-- log('current input before: '..current_input)
@@ -347,16 +381,7 @@ function capture_input(c)
 		elseif char != '' then
 			if #current_input < max_input_length then
 				current_input ..= char
-
-				o = ord(c)
-				if in_range(o,65,90) then
-					o += 32
-				elseif in_range(o,97,122) then
-					o -= 32
-				elseif in_range(o,128,153) then
-					o -= 31
-				end
-				l ..= chr(o)
+				l ..= p8scii_trans(c)
 			end
 		end
 
@@ -381,7 +406,7 @@ local show_warning = true
 function save_game(char)
 	--can the keyboard handler be shared with capture_input()?
 	if show_warning == true then
-		output('eNTER FILENAME (30 CHARACTERS) (careful: dO not PRESS "ESC")\n\n>\n')
+		output('Enter filename (max 30 chars; careful, do NOT press "ESC")\n\n>\n')
 		show_warning = false
 	end
 
@@ -415,7 +440,7 @@ end
 
 function restore_game()
 
-	output('dRAG IN A '..game_id()..'_SAVE.P8L FILE OR ANY KEY TO EXIT\n')
+	output('Drag in a '..game_id()..'_save.p8l file or any key to exit.\n')
 	extcmd("folder")
 
 	--hang out waiting for a file drop or keypress
@@ -446,7 +471,7 @@ function restore_game()
 	local this_checksum = dword_to_str(get_zword(file_checksum))
 
 	if (save_checksum != this_checksum) then
-		output('tHIS SAVE FILE APPEARS TO BE FOR A DIFFERENT GAME.\n')
+		output('This save file appears to be for a different game.\n')
 		output(save_checksum..' vs. '..this_checksum..'\n')
 		return false
 	end
@@ -454,7 +479,7 @@ function restore_game()
 	local offset = 1
 	local save_version = temp[offset]
 	if (save_version > tonum(_engine_version)) then
-		output('tHIS SAVE FILE REQUIRES v'..tostr(save_version)..' OF sTATUS lINE OR HIGHER.\n')
+		output('This save file requires v'..tostr(save_version)..' of Status Line or higher.\n')
 		return false
 	end
 
