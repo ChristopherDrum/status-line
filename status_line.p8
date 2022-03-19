@@ -161,25 +161,25 @@ end
 function draw_splashscreen(did_load)
 	cls(0)
 
-	-- sspr(0,0,128,124,0,0)--monitor
-	-- rectfill(6,125,122,127,1)
-	-- sspr(90,125,7,3,83,124)--knobs
-	-- sspr(90,125,7,3,93,124)
+	sspr(0,0,128,124,0,0)--monitor
+	rectfill(6,125,122,127,1)
+	sspr(90,125,7,3,83,124)--knobs
+	sspr(90,125,7,3,93,124)
 
-	-- color(7)
-	-- line(33,83,93,83)
-	-- print('V'.._engine_version, 82, 69)
+	color(7)
+	line(33,83,93,83)
+	print('V'.._engine_version, 82, 69)
 
-	-- if (did_load == true) then
-	-- 	sspr(100,124,14,4,103,116)
-	-- 	print('sTORY IS LOADING', 31, 100)
-	-- else
-	-- 	sspr(114,124,14,4,103,116)
-	-- 	print('DRAG IN A Z3/4 STORY\n  TO START PLAYING', 24, 92)
-	-- end
+	if (did_load == true) then
+		sspr(100,124,14,4,103,116)
+		print('sTORY IS LOADING', 31, 100)
+	else
+		sspr(114,124,14,4,103,116)
+		print('DRAG IN A Z3/4 STORY\n  TO START PLAYING', 24, 92)
+	end
 
-	-- color()
-	-- flip()
+	color()
+	flip()
 end
 
 function game_id()
@@ -334,7 +334,7 @@ end
 
 function patch()
 	checksum = get_zword(file_checksum)
-	log('checksum: '..tohex(checksum))
+	-- log('checksum: '..tohex(checksum))
 	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
 	if (in_set(checksum, {0x4860, 0xfc65})) set_zbyte(_screen_width, 40) --amfv, bur
 end

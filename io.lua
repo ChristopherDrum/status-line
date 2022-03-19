@@ -207,7 +207,8 @@ function flush_line_buffer()
 		-- log('last char: '..ord(sub(str,-1)))
 		local dtn = sub(str,-1) == '\n'
 		if (dtn == true) str = sub(str,1,#str-1)
-		if (active_window == 0) did_trim_nl = dtn
+		if (active_window == 0 or (active_window == 1 and _z_machine_version == 3)) did_trim_nl = dtn
+		-- if (active_window == 0) did_trim_nl = dtn
 		win.last_line = str
 		screen(str)
 		::skip::
@@ -239,7 +240,14 @@ function screen(str)
 		if win.z_cursor.y <= win.h then
 			print(str)
 			cx += win.z_cursor.x
+			if _z_machine_version == 3 then
+				if did_trim_nl == true then
+					cx = 1
+					win.z_cursor.y += 1
+				end
+			end
 		end
+
 	end
 
 	win.z_cursor.x = cx
@@ -548,5 +556,5 @@ function show_status()
 	for i = 1, #loc do
 		flipped ..= case_setter(ord(loc,i), flipcase)
 	end
-	print('\^i'..flipped, 1, 1)
+	print('\^i\#'..current_bg..'\f'..current_fg..flipped, 1, 1)
 end
