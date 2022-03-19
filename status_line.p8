@@ -1,11 +1,11 @@
 pico-8 cartridge // http://www.pico-8.com
-version 34
+version 35
 __lua__
---status line 1.2
+--status line 2.0
 --by christopher drum
 
 _z_machine_version = 0
-_engine_version = 1.2
+_engine_version = '2.0'
 story_loaded = false
 -- full_color = false
 
@@ -45,6 +45,10 @@ z_parse_buffer_length = 0
 separators = {}
 _dictionary_lookup = {}
 blank_line = '                                '
+default_property_count = 0
+packed_shift = 0
+object_entry_size = 0
+dictionary_word_size = 0
 
 --these literally make the engine run
 _program_counter = 0x0
@@ -71,37 +75,55 @@ function tohex(value, full)
 end
 
 function log(str)
-	-- printh(str, 'status_line_log_12')
+	printh(str, 'status_line_log_20')
 end
 
 lines_shown = 0
 function wait_for_any_key(message)
-	screen(message)
+	if (message) screen(message)
 	local keypress = ''
 	while (keypress == '') do
+		draw_cursor()
 		if stat(30) then
 			poke(0x5f30,1)
-			keypress = stat(31)
+			keypress = p8scii_trans(stat(31))
 		end
 		flip()
 	end
-	if active_window == 0 then
-		local buffer = windows[active_window].screen_buffer
-		deli(buffer, #buffer)
-		windows[active_window].screen_buffer = buffer
+	if not message then
+		local win = windows[active_window]
+		local px, py = unpack(win.p_cursor)
+		if (ord(keypress) != 8) then
+			print(current_format..keypress, px, py)
+			win.z_cursor.x += 1
+			update_p_cursor()
+		else
+			win.z_cursor.x -= 1
+			px, py = update_p_cursor()
+			print('\^i ', px, py)
+		end
+		lines_shown = 0
+		return keypress
+	elseif active_window == 0 then
+		deli(windows[active_window].screen_buffer)
 	end
 	lines_shown = 0
 end
 
 local flip_time = t()
 local c = 1
-function draw_cursor()
-	local px, py = unpack(windows[active_window].p_cursor)
-	-- log('draw_cursor sees: '..px..','..py)
-	local blink = (t() - flip_time) >= 0.5
-	if (blink == true) then
-		flip_time = t()
-		c = (c+1)%2
+function draw_cursor(clear)
+	local win = windows[active_window]
+	local px, py = unpack(win.p_cursor)
+	-- log('draw_cursor at ('..win.z_cursor.x..','..win.z_cursor.y..') sees: '..px..','..py)
+	if clear then
+		c = 1
+	else
+		local blink = (t() - flip_time) >= 0.5
+		if (blink == true) then
+			flip_time = t()
+			c = (c+1)%2
+		end
 	end
 	local cur_col = (c == 0) and current_bg or current_fg
 	print(cursor_type, px, py, cur_col)
@@ -121,10 +143,12 @@ end
 #include memory.lua
 #include ops.lua
 #include io.lua
+-- #include debug.lua
 
 function _init()
 	poke(0x5f2d, 1)
 	poke(0x5f36,0x4)
+	memcpy(0x5600,0x2000,0x800)
 
 	cartdata('drum_statusline_1')
 
@@ -137,29 +161,25 @@ end
 function draw_splashscreen(did_load)
 	cls(0)
 
-	sspr(0,0,128,124,0,0)--monitor
-	rectfill(6,125,122,127,1)
-	sspr(90,125,7,3,83,124)--knobs
-	sspr(90,125,7,3,93,124)
+	-- sspr(0,0,128,124,0,0)--monitor
+	-- rectfill(6,125,122,127,1)
+	-- sspr(90,125,7,3,83,124)--knobs
+	-- sspr(90,125,7,3,93,124)
 
-	color(7)
-	line(33,83,93,83)
-	print('V'.._engine_version, 82, 69)
+	-- color(7)
+	-- line(33,83,93,83)
+	-- print('V'.._engine_version, 82, 69)
 
-	if (did_load == true) then
-		sspr(100,124,14,4,103,116)
-		local msg = 'sTORY IS LOADING'
-		print(msg, 63-(#msg*2), 100)
-	else
-		sspr(114,124,14,4,103,116)
-		cursor(20,92)
-		print('DRAG IN A Z3 GAME', 30, 92)
-		print('TO START PLAYING', 32, 98) 
-	end
+	-- if (did_load == true) then
+	-- 	sspr(100,124,14,4,103,116)
+	-- 	print('sTORY IS LOADING', 31, 100)
+	-- else
+	-- 	sspr(114,124,14,4,103,116)
+	-- 	print('DRAG IN A Z3/4 STORY\n  TO START PLAYING', 24, 92)
+	-- end
 
-	color()
-	cursor()
-	flip()
+	-- color()
+	-- flip()
 end
 
 function game_id()
@@ -233,12 +253,16 @@ end
 function build_dictionary_lookup()
 	local addr = _dictionary_addr
 	local num_separators = get_zbyte(addr)
-	addr += 0x.0001 + (0x.0001 * num_separators) + 0x.0001
+	addr += 0x.0001 + (0x.0001 * num_separators)
+	local entry_length = (get_zbyte(addr) >>> 16)
+	-- log('entry length: '..entry_length)
+	addr += 0x.0001
 	local word_count = get_zword(addr)
+	-- log('dictionary entries: '..word_count)
 	addr += 0x.0002
 	-- log('start decoding at byte: '..tostr(unpack(get_zbytes(addr, 1)),true))
 	for i = 1, word_count do
-		local zstring = get_zstring(addr)
+		local zstring = get_zstring(addr,1)
 		local lower = ''
 		for j = 1, #zstring do
 			local c = ord(sub(zstring,j,j))
@@ -246,8 +270,8 @@ function build_dictionary_lookup()
 			lower ..= chr(c)
 		end
 		_dictionary_lookup[lower] = (addr << 16)
-		-- log('setting dictionary lookup: '..lower..', to '..tohex(addr))
-		addr += 0x.0007
+		-- log('  '..lower..', set to '..tohex(addr << 16)..'(was '..tohex(addr)..')')
+		addr += entry_length
 	end
 end
 
@@ -255,6 +279,7 @@ function fetch_parser_separators()
 	local num_separators = get_zbyte(_dictionary_addr)
 	local seps = get_zbytes(_dictionary_addr + 0x.0001, num_separators)
 	seps = zscii_to_p8scii(seps)
+	-- log('fetch_parser_separators: '..seps)
 	for i = 1, num_separators do
 		local k = sub(seps, i, i)
 		add(separators, k)
@@ -264,32 +289,40 @@ end
 function process_header()
 	_z_machine_version = get_zbyte(version)
 
-	origin_y = (_z_machine_version == 3) and 8 or 0
-	screen_height = (_z_machine_version == 3) and 20 or 21
+	origin_y = 8
+	screen_height = 20
+	packed_shift = 1
+	default_property_count = 31
+	object_entry_size = 0x.0009
+	dictionary_word_size = 6
+	if _z_machine_version > 3 then
+		origin_y = 1
+		screen_height = 21
+		packed_shift = 2
+		default_property_count = 63
+		object_entry_size = 0x.000e
+		dictionary_word_size = 9
+	end
 
 	set_zbyte(_screen_height, screen_height)
 	set_zbyte(_screen_width, 32)
 
 	local i_flag = get_zbyte(interpreter_flags)
 	if _z_machine_version == 3 then
-		i_flag &= 0xa6 --turn off some bits
+		i_flag &= 0x3b --turn off some bits
 		i_flag |= 0x20 --enable upper window
-	elseif _z_machine_version == 4 then
-		i_flag &= 0xd3
-		i_flag |= 0x92
-	elseif _z_machine_version == 5 then
-		i_flag &= 0x90
-		i_flag |= 0x90
+	else
+		i_flag = 0x9c
 		-- if (full_color == true) i_flag |= 0x01
 	end
 	-- log('interpreter flags set to: '..tohex(i_flag))
 	set_zbyte(interpreter_flags, i_flag)
 
-	local p_flag = get_zbyte(peripherals)
-	p_flag &= 0xfe --no transcription
-	set_zbyte(peripherals, p_flag)
+	-- local p_flag = get_zbyte(peripherals)
+	-- p_flag &= 0xff --no transcription
+	set_zbyte(peripherals, 0x03)
 
-	set_zbyte(interpreter_number, 8) --c64
+	set_zbyte(interpreter_number, 0) --amiga
 end
 
 function cache_memory_addresses()
@@ -302,6 +335,13 @@ function cache_memory_addresses()
 	_static_mem_addr = zword_to_zaddress(get_zword(static_mem_addr))
 end
 
+function patch()
+	local checksum = get_zword(file_checksum)
+	log('checksum: '..tohex(checksum))
+	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, @fredrick
+	if (in_set(checksum, {0x4860, 0xfc65})) set_zbyte(_screen_width, 40) --amfv, beau
+end
+
 function initialize_game()
 
 	setup_user_prefs()
@@ -310,7 +350,9 @@ function initialize_game()
 	cache_memory_addresses()
 	fetch_parser_separators()
 	build_dictionary_lookup()
-	
+
+	patch()
+
 	call_stack_push()
 	--special case at startup for the program counter
 	_call_stack[#_call_stack - 9] = _program_counter
@@ -319,9 +361,10 @@ function initialize_game()
 	windows[0].screen_buffer = {}
 	split_window(0)
 	if (_memory_start_state == nil) capture_state(_memory_start_state)
-	update_current_format()
+	update_current_format(0)
 	update_p_cursor()
 	story_loaded = true
+
 	cls()
 end
 __gfx__
@@ -450,6 +493,22 @@ __gfx__
 55666666d66666666d66666d6d666dd66d6666d6666d66d6666666666666666666666666666666d6666d6666666666666666d666d66666666666666666666655
 05555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555550
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000111111111677bbddddddddd6aa99
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000666666600016666666d67bbbd666666616a999
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000d66666d00016666666d6bbbbd6666666169999
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000666666600015555555d67bbbd666666616a999
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000d66666d00015555555d6bbbbd6666666169999
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ddddd0000ddddddddd6bbbb11111111169999
+
+__map__
+0405060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0707070707000000000707070000000000070507000000000005020500000000000500050000000000050505000000000406070604000000010307030100000007010101000000000004040407000000050702070200000000000200000000000000000000070e0000000000000303000b0b0000000000000205020000000000
+000000000000000004040200010000000a050000000000000a0e0a07050000000c060c07020000000a0806010500000006060c05070000000402000000000000080402020400000002040402010000000a040f020500000000040e0400000000000000040200000000000e000000000000000000040000000804040201000000
+0c0a0905030000000c080402070000000c080601030000000c080604030000000a090704020000000e020704030000000c020605030000000e080402020000000c0a0605030000000c0a060403000000000400020000000000040002010000000804020204000000000e00070000000002040402010000000e08040001000000
+040a0a0106000000000c0a060500000000060a0507000000000c02010600000000060a0907000000000c060106000000000e060101000000000c020507000000000a0a0705000000000e040207000000000e040403000000000a0605050000000002020106000000000e0e090500000000060a09050000000006090502000000
+000c0a0601000000000c0a070c00000000060a0605000000000c020403000000000e040202000000000a0a0506000000000a0a0602000000000a0a0707000000000a040205000000000a0a0403000000000e080207000000060202010300000001020202040000000c08080406000000040a0000000000000000000e00000000
+02040000000000000c0a0e0905000000060a0705030000000c02010106000000060a0a05070000000c020601070000000c020601010000000c020a09070000000a0a0705050000000e040202070000000e080405030000000a0a06050d00000004020201070000000e0e090505000000060a090505000000040a090502000000
+0c0a0601010000000609050604000000060a0605050000000c020408070000000e040202020000000a090505060000000a0a0606020000000a0a0507070000000a04020505000000080a0604030000000e080402070000000c04030206000000040402020200000006040c02030000000008060100000000040a040000000000
+000000000000000006060600060000000b0b0000000000000b0f0b0f0b0000000f070e0f060000000d0c06030b00000007070c090f00000006030000000000000603030306000000060c0c0c0600000009060f060900000000060f06000000000000000603000000000007000000000000000000060000000c06060603000000
+0f0b0b0b0f000000070606060f0000000f0c0f030f0000000f0c0e0c0f0000000b0b0f08080000000f030f0c0f00000003030f0b0f0000000f0c0c0c0c0000000f0b0f0b0f0000000f0d0f0c0c000000000600060000000000060006030000000c0603060c000000000f000f0000000003060c06030000000f0c0e0006000000
+060b0b030e000000000e0b0f0b00000000070f0b0f000000000e03030e00000000070b0b07000000000e07030e000000000f070303000000000e030b0f000000000b0b0f0b000000000f06060f000000000f060607000000000b070b0b000000000303030e000000000f0f0b0b00000000070b0b0b000000000e0b0b07000000
+000e0b0f0300000000060b070e00000000070b070b000000000e030c07000000000f060606000000000b0b0b0e000000000b0b0f06000000000b0b0f0f000000000b06060b000000000b0b0c07000000000f0c030f0000000703030307000000030606060c0000000e0c0c0c0e000000060b0000000000000000000007000000
+060c0000000000000f0b0f0b0b000000070b070b0f0000000e0303030e000000070b0b0b0f0000000f0307030f0000000f030703030000000e03030b0f0000000b0b0f0b0b0000000f0606060f0000000f060606030000000b070b0b0b000000030303030e0000000f0f0b0b0b000000070b0b0b0b0000000e0b0b0b07000000
+070b0f0303000000060b0b070e000000070b070b0b0000000e030f0c070000000f060606060000000b0b0b0b0e0000000b0b0b0e040000000b0b0b0f0f0000000b0b060b0b0000000b0b0e0c070000000f0c06030f0000000e0607060e000000060606060600000007060e0607000000000c0f030000000000060b0600000000

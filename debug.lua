@@ -1,4 +1,4 @@
-_function dump_call_stack()
+function dump_call_stack()
 	log('current call stack, frame depth: '..(#_call_stack/10))
 	for i = 1, (#_call_stack/10) do
 		dump_frame(i)
@@ -62,7 +62,7 @@ function infodump_header()
 	local file_size = zword_to_zaddress(get_zword(file_length),true)
 	log('file size: '..tohex(file_size))
 	log('checksum: '..tohex(get_zword(file_checksum)))
-	log('screen size: '..get_zbyte(screen_width)..'x'..get_zbyte(screen_height))
+	log('screen size: '..get_zbyte(_screen_width)..'x'..get_zbyte(_screen_height))
 	log('program_counter start: '..tohex(_program_counter))
 	log('\n')
 end
@@ -106,32 +106,39 @@ function infodump_abbreviations()
 end
 
 function infodump_object_tree(from, to)
-	local s = from and from or 1
-	local e = to and to or from or 255
+	local object_count = _z_machine_version == 3 and 255 or 286
+	local attr_count = _z_machine_version == 3 and 31 or 47
+	local s = from or 1
+	local e = to or object_count
 	if (e < s) s, e = e, s
-	s = max(1, s)
-	e = min(255, e)
 	log('dumping objects '..s..' to '..e)
 	for obj = s, e do
-		local za = zobject_attributes(obj)
 
 		local active_attributes = ''
-		for i = 0, 31 do
-			if ((za & (0x8000.0000>>>i)) != 0) active_attributes ..= i..' '
+		for i = 0, attr_count do
+			local check = zobject_has_attribute(obj, i)
+			if (check == true) active_attributes ..= tostr(i)..', '
 		end
-		log('attributes: '..active_attributes)
-		log('parent: '..zobject_family(obj, zparent)..'  sibling: '..zobject_family(obj, zsibling)..'  child: '..zobject_family(obj,zchild))
+		log(obj..'. Attributes: '..active_attributes)
+
+		log('Parent: '..zobject_family(obj, zparent)..'  Sibling: '..zobject_family(obj, zsibling)..'  Child: '..zobject_family(obj,zchild))
 		log('property address: '..tohex(zobject_prop_table_address(obj)))
 		log('  description: '..zobject_name(obj))
-		-- log('    properties: ')
-		-- for i = 1, #zobject.properties do
-		-- 	local prop = zobject.properties[i]
-		-- 	local prop_string = '['..prop[1]..'] '
-		-- 	for j = 2, #prop do
-		-- 		prop_string ..= sub(tohex(prop[j]),5,6)..' '
-		-- 	end
-		-- 	log('      '..prop_string)
-		-- end
+		log('    properties: ')
+		local prop_list = zobject_prop_data_addr_or_prop_list(obj)
+		for i = 1, #prop_list do
+			local p = prop_list[i]
+			local prop_string = '['..p..'] '
+			local prop_addr, prop_len = zobject_prop_data_addr_or_prop_list(obj, p)
+			-- local prop_len = extract_prop_len(prop_addr)
+			-- log('(prop_len '..prop_len..')')
+			local prop_bytes = get_zbytes(prop_addr, prop_len)
+			for j = 1, #prop_bytes do
+				local byte = prop_bytes[j]
+				prop_string ..= sub(tohex(byte),5,6)..' '
+			end
+			log('      '..prop_string)
+		end
 		log('\n')
 	end
 end

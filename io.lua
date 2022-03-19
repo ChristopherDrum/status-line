@@ -1,8 +1,8 @@
 current_bg = 0
 current_fg = 1
 current_font = 1
-current_style = 0
-current_style_hw = 0x11
+-- current_style = 0
+-- current_style_hw = 0x11
 current_format = ''
 current_format_updated = false
 window_attributes = 0b00000000.00001010
@@ -14,6 +14,10 @@ screen_height = nil
 emit_rate = 1 --the lower the faster
 clock_type = nil
 cursor_type = nil
+make_bold = false
+
+screen_output = true
+memory_output = {}
 
 --0-indexed windows to match z-machine index usage
 active_window = nil
@@ -37,11 +41,16 @@ windows = {
 	}
 }
 
-function update_current_format()
-	local style = (current_style > 0) and '\^i' or '\^-i'
-	local bg = '\#'..current_bg
-	local fg = '\f'..current_fg
-	current_format = style..bg..fg
+function update_current_format(n)
+	local inverse, emphasis = '\^-i\^-b', '\015'
+	make_bold = false
+
+	if ((n & 1) == 1) inverse = '\^i'
+	if (n > 1) emphasis = '\014'
+	if (active_window == 1 and (n&2 == 2)) inverse, emphasis = '\^i', '\015'
+	if (active_window == 0) make_bold = (n&2 == 2)
+
+	current_format = inverse..emphasis..'\f'..current_fg..'\#'..current_bg
 	current_format_updated = true
 end
 
@@ -49,6 +58,7 @@ function update_screen_rect(zwin_num)
 	local win = windows[zwin_num]
 	local py = (win.y-1)*6
 	local ph = (win.h)*6
+	-- log('setting screen rect '..zwin_num..': 0, '..(origin_y + py)..', 128,'..(origin_y+ph))
 	win.screen_rect = {0, origin_y + py, 128, origin_y+ph}
 end
 
@@ -59,7 +69,9 @@ function update_p_cursor()
 	local cx, cy = win.z_cursor.x, win.z_cursor.y
 	px += (cx - 1)<<2
 	py += (cy - 1)*6
+	if (_z_machine_version > 3 and active_window == 0) py += 1
 	win.p_cursor = {px, py}
+	return px, py
 end
 
 --remove extraneous white space from player input
@@ -75,102 +87,142 @@ function strip(str)
 end
 
 local break_chars = {'\n', ' ', ':', '-', '_', ';'}
-local visual_break_index = 99
-local real_break_index = 99
+local break_index = 0
+
+function memory(str)
+	-- log('==> memory at level: '..#memory_output)
+	if ((#memory_output == 0) or (#str == 0)) return
+	local table_addr = zword_to_zaddress(memory_output[#memory_output])
+	-- log('  memory asked to record '..#str..' zscii chars')
+	local table_len = get_zword(table_addr)
+	-- log('  current table len '..table_len)
+	local zscii = p8scii_to_zscii(str)
+	set_zbytes(table_addr + 0x.0002 + (table_len>>>16), zscii)
+	set_zword(table_addr, table_len + #zscii)
+end
+
+function p8scii_to_zscii(str)
+	local zscii = {}
+	for i = 1, #str do
+		local o = ord(str,i)
+		if (o == 13) o = 10
+		add(zscii, o)
+	end
+	return zscii
+end
+
 function output(str)
-
-	local current_line = windows[active_window].buffer
-	if (current_line == nil) current_line = ''
-	local visual_len = print(current_line, 0, -20) >> 2
-
-	if (#current_line == 0) then
-		current_line ..= current_format
-		current_format_updated = false
-	end
-
-	for i = 1 , #str do
-		local char = sub(str,i,_)
-		-- log('considering char: '..char)
-		if current_format_updated == true then
-			current_line ..= current_format
+	if (#memory_output > 0) then
+		-- log('output redirected to memory...')
+		memory(str) 
+	else
+		if (screen_output == false) return
+		log('('..active_window..') output str: '..str)
+		local current_line = windows[active_window].buffer
+		if (not current_line) then
+			current_line = current_format
 			current_format_updated = false
 		end
-		current_line ..= char
-		if (char != '\n') visual_len += 1
+		local visual_len = print(current_line, 0, -20)
 
-		if in_set(char, break_chars) then
-			visual_break_index = visual_len
-			real_break_index = #current_line
-		end
-
-		if visual_len > 32 or char == '\n' then
-			local next_line = current_format
-			current_format_updated = false
-
-			if visual_break_index < visual_len then
-				next_line ..= sub(current_line, real_break_index - #current_line)
-
-				local check = ord(current_line, visual_break_index)
-				if check == 32 then
-					visual_break_index -= 1
-					real_break_index -= 1
-				end
+		for i = 1 , #str do
+			local char = sub(str,i,_)
+			-- log('considering char: '..char)
+			if current_format_updated == true then
+				current_line ..= current_format
+				current_format_updated = false
 			end
-			windows[active_window].buffer = sub(current_line, 1, real_break_index)
-			flush_line_buffer()
 
-			current_line = next_line
-			visual_len = print(current_line, 0, -20) >> 2
+			local o = ord(char)
+			visual_len += 4
+			if (make_bold == true) then
+				if (o >= 32) o+=96
+				if (o != 10) visual_len += 1
+			end 
+			current_line ..= chr(o)
 
-			visual_break_index = 99
-			real_break_index = 99
+			if (in_set(char, break_chars)) break_index = #current_line
+			-- log('current line: '..current_line)
+			if visual_len > 128 or char == '\n' then
+
+				local next_line, next = current_format, nil
+				current_line, next = unpack(split(current_line, break_index, false))
+				if (next) next_line ..= next 
+				-- log('on split current: '..current_line)
+				-- log('on split next: '..next_line)
+
+				windows[active_window].buffer = current_line
+				flush_line_buffer()
+
+				visual_len = print(next_line, 0, -20)
+				current_line = next_line
+				current_format_updated = false
+
+				break_index = 0
+			end
 		end
+		windows[active_window].buffer = current_line
 	end
-	windows[active_window].buffer = current_line
 end
 
 flip_count = 0
 function flush_line_buffer()
 	local win = windows[active_window]
-	if (win.buffer == nil or win.h == 0) return
-	
+	-- log('flush window '..active_window..' with line height: '..win.h)
+	-- log('  lines shown so far: '..lines_shown)
+	-- log('  about to show: '..tostr(win.buffer))
+	if (win.buffer == nil or win.buffer == current_format or win.h == 0) return
+
 	while flip_count < emit_rate do
 		flip()
 		flip_count += 1
 	end
 
-	if (active_window == 0 and lines_shown == win.h-1)	wait_for_any_key("\^i          - - MORE - -          ")
+	if active_window == 0 then
+		-- log('  active window == 0')
+		if sub(win.buffer, -1) != '>' then
+			-- log('  '..sub(win.buffer, -1)..' != <')
+			if lines_shown == (win.h - 1) then
+				-- log('  '..lines_shown..' == '..(win.h - 1))
+				wait_for_any_key("\^i          - - MORE - -          ")
+			end
+		end
+	end
+
 	screen(win.buffer)
 	win.buffer = nil
-	lines_shown += 1
 	flip_count = 0
 end
 
 function screen(str)
+	-- log('received str: '..str)
 	local win = windows[active_window]
 	local nl = sub(str,-1) == '\n'
 	if (nl == true) str = sub(str,1,#str-1)
 	-- log('output to screen '..active_window..': '..str)
 	if active_window == 0 then
+		lines_shown += 1
 		add(win.screen_buffer, str)
 		if #win.screen_buffer > (screen_height + 4) then
 			deli(win.screen_buffer, 1)
 		end
 		refresh_screen()
 	else
-		clip(unpack(win.screen_rect))
-		cursor(unpack(win.p_cursor))
-		local x = print(str)
-		local cx = win.z_cursor.x + ((x>>2)+1)
-		local cy = win.z_cursor.y
-		if (cx > 32 or nl == true) then
-			cx = 1
-			cy += 1
+		-- log(':: asked to print to window 1 ('..win.z_cursor.x..','..win.z_cursor.y..'): '..str)
+		if win.z_cursor.y <= win.h then
+			cursor(unpack(win.p_cursor))
+			local x = print(str)
+			local cx = win.z_cursor.x + ((x>>2)+1)
+			local cy = win.z_cursor.y
+			if (cx > 32 or nl == true) then
+				cx = 1
+				cy += 1
+			end
+			win.z_cursor = {x=cx, y=cy}
+			update_p_cursor()
 		end
-		win.z_cursor = {x=cx, y=cy}
-		update_p_cursor()
-		clip()
 	end
+	-- print(tostr(stat(0)), 90,0,10)
 	flip()
 end
 
@@ -224,6 +276,13 @@ function tokenise(str)
 	return bytes, tokens
 end
 
+function p8scii_trans(c)
+	local o = ord(c)
+	if (in_range(o,128,153)) o -= 31
+	if (in_range(o,65,90)) o += 32
+	return chr(o)
+end
+
 z_text_buffer, z_parse_buffer = 0x0, 0x0
 local current_input = ''
 
@@ -233,14 +292,11 @@ function capture_input(c)
 	poke(0x5f30,1)
 
 	--normalize char to p8scii lowercase
-	local o = ord(c)
-	if (in_range(o,128,153)) o -= 31
-	if (in_range(o,65,90)) o += 32
-	local char = chr(o)
+	local char = p8scii_trans(c)
 
 	--called by read so buffer addresses must be non-zero
-	assert(z_text_buffer != 0, 'text buffer address has not been captured')
-	assert(z_parse_buffer != 0, 'parse buffer address has not been captured')
+	-- assert(z_text_buffer != 0, 'text buffer address has not been captured')
+	-- assert(z_parse_buffer != 0, 'parse buffer address has not been captured')
 
 	if (max_input_length == 0) max_input_length = get_zbyte(z_text_buffer) - 1
 	if (z_parse_buffer_length == 0) z_parse_buffer_length = get_zbyte(z_parse_buffer)
@@ -256,34 +312,28 @@ function capture_input(c)
 		current_input = strip(current_input)
 		-- log('current input after: '..current_input)
 
-		if in_set(current_input, {'script', 'unscript'}) then
-			current_input = ''
-			output('[NOT SUPPORTED]\n\n>\n')
+		--tokenize and byte it
+		local bytes, tokens = tokenise(current_input)
 
-		else
-			--tokenize and byte it
-			local bytes, tokens = tokenise(current_input)
+		--fill text buffer
+		local addr = z_text_buffer + 0x.0001
+		set_zbytes(addr, bytes)
 
-			--fill text buffer
-			local addr = z_text_buffer + 0x.0001
-			set_zbytes(addr, bytes)
-
-			local max_tokens = min(#tokens, z_parse_buffer_length)
-			set_zbyte(z_parse_buffer+0x.0001, max_tokens)
-			z_parse_buffer += 0x.0002
-			for i = 1, max_tokens do
-				local word, index = unpack(tokens[i])
-				-- log('looking up word: '..word)
-				local dict_addr = _dictionary_lookup[sub(word,1,6)] or 0x0
-				set_zword(z_parse_buffer, dict_addr)
-				set_zbyte(z_parse_buffer+0x.0002, #word)
-				set_zbyte(z_parse_buffer+0x.0003, index)
-				z_parse_buffer += 0x.0004
-			end
-			
-			current_input = ''
-			read()
+		local max_tokens = min(#tokens, z_parse_buffer_length)
+		set_zbyte(z_parse_buffer+0x.0001, max_tokens)
+		z_parse_buffer += 0x.0002
+		for i = 1, max_tokens do
+			local word, index = unpack(tokens[i])
+			-- log('looking up word: '..word)
+			local dict_addr = _dictionary_lookup[sub(word,1,dictionary_word_size)] or 0x0
+			set_zword(z_parse_buffer, dict_addr)
+			set_zbyte(z_parse_buffer+0x.0002, #word)
+			set_zbyte(z_parse_buffer+0x.0003, index)
+			z_parse_buffer += 0x.0004
 		end
+		
+		current_input = ''
+		read()
 
 	else
 		local sbuffer = windows[active_window].screen_buffer
@@ -403,7 +453,7 @@ function restore_game()
 
 	local offset = 1
 	local save_version = temp[offset]
-	if (save_version > _engine_version) then
+	if (save_version > tonum(_engine_version)) then
 		output('tHIS SAVE FILE REQUIRES v'..tostr(save_version)..' OF sTATUS lINE OR HIGHER.\n')
 		return false
 	end
@@ -465,32 +515,32 @@ end
 
 function show_status()
 
-	local obj = get_zword(global_var(0))
-	local location = zobject_name(obj)
-	local scorea = get_zword(global_var(1))
-	local scoreb = get_zword(global_var(2))
-	local flag = get_zbyte(interpreter_flags)
-	local separator = '/'
-	if (flag & 2) == 2 then
-		local ampm = ''
-		if clock_type == 12 then
-			ampm = 'A'
-			if (scorea >= 12) then 
-				ampm = 'P'
-				scorea -= 12
-			end
-			if (scorea == 0) scorea = 12
-		end
-		separator = ':'
-		scoreb = sub('0'..scoreb, -2)..ampm
-	end
+	-- local obj = get_zword(global_var_addr(0))
+	-- local location = zobject_name(obj)
+	-- local scorea = get_zword(global_var_addr(1))
+	-- local scoreb = get_zword(global_var_addr(2))
+	-- local flag = get_zbyte(interpreter_flags)
+	-- local separator = '/'
+	-- if (flag & 2) == 2 then
+	-- 	local ampm = ''
+	-- 	if clock_type == 12 then
+	-- 		ampm = 'A'
+	-- 		if (scorea >= 12) then 
+	-- 			ampm = 'P'
+	-- 			scorea -= 12
+	-- 		end
+	-- 		if (scorea == 0) scorea = 12
+	-- 	end
+	-- 	separator = ':'
+	-- 	scoreb = sub('0'..scoreb, -2)..ampm
+	-- end
 
-	local score = scorea..separator..scoreb..' '
-	-- useful to use status bar for debug info
-	-- score = tostr(stat(0))
-	local loc = ' '..sub(location, 1, 30-#score-2)
-	if (#loc < #location) loc = sub(loc, 1, #loc-1)..chr(144)
-	local spacer_len = 32 - #loc - #score
-	local spacer = sub(blank_line,-spacer_len)
-	print('\^i\#'..current_bg..'\f'..current_fg..loc..spacer..score, 0, 1)
+	-- local score = scorea..separator..scoreb..' '
+	-- -- useful to use status bar for debug info
+	-- -- score = tostr(stat(0))
+	-- local loc = ' '..sub(location, 1, 30-#score-2)
+	-- if (#loc < #location) loc = sub(loc, 1, #loc-1)..chr(144)
+	-- local spacer_len = 32 - #loc - #score
+	-- local spacer = sub(blank_line,-spacer_len)
+	-- print('\^i\#'..current_bg..'\f'..current_fg..loc..spacer..score, 0, 1)
 end
