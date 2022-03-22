@@ -35,19 +35,19 @@ interpreter_version = 0x.001f
 _screen_height = 0x.0020 --lines
 _screen_width = 0x.0021 --characters
 
-active_table = 1
+-- active_table = 1
 
 bank_size = 16384 -- (1024*64)/4; four 64K banks
-_memory = {{}}
+-- _memory = {{}}
 --call stack holds a flat list of frame data
 --a frame consists of 10 numbers:
 --   stack pointer, program counter, 8 zwords for in-scope local vars
-_call_stack = {}
-_stack = {}
+-- _call_stack = {}
+-- _stack = {}
 
 --these copies are used to grab a save state snapshot
-_memory_start_state = nil
-_current_state = ''
+-- _memory_start_state = nil
+-- _current_state = ''
 
 --we can't reset all memory otherwise the player
 --would have to drag the z3 game file in again
@@ -73,6 +73,7 @@ function flush_volatile_state()
 	_stack = {}
 	_program_counter = 0x0
 	_interrupt = nil
+	_current_state = ''
 	active_table = 1
 	max_input_length = 0
 	z_parse_buffer_length = 0

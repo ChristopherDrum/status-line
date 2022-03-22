@@ -293,18 +293,18 @@ end
 function process_header()
 	_z_machine_version = get_zbyte(version)
 
+	screen_height = 21
+	packed_shift = 2
+	default_property_count = 63
+	object_entry_size = 0x.000e
+	dictionary_word_size = 9
+	
 	if _z_machine_version == 3 then
 		screen_height = 20
 		packed_shift = 1
 		default_property_count = 31
 		object_entry_size = 0x.0009
 		dictionary_word_size = 6
-	else
-		screen_height = 21
-		packed_shift = 2
-		default_property_count = 63
-		object_entry_size = 0x.000e
-		dictionary_word_size = 9
 	end
 
 	set_zbyte(_screen_height, screen_height)
