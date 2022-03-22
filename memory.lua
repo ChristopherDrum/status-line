@@ -51,29 +51,31 @@ _current_state = ''
 
 --we can't reset all memory otherwise the player
 --would have to drag the z3 game file in again
-function reset_game()
+function reset_session()
 	for i = 1, #_memory_start_state do
 		local bank = _memory_start_state[i]
 		for j = 1, #bank do
 			_memory[i][j] = _memory_start_state[i][j]
 		end
 	end
-	_call_stack = {}
-	_stack = {}
-	_program_counter = 0x0
-	_interrupt = nil
-	story_loaded = false
+	flush_volatile_state()
 	initialize_game()
 end
 
-function reset_all_memory()
+function clear_all_memory()
 	_memory = {{}}
+	_memory_start_state = nil
+	flush_volatile_state()
+end
+
+function flush_volatile_state()
 	_call_stack = {}
 	_stack = {}
 	_program_counter = 0x0
 	_interrupt = nil
+	active_table = 1
 	max_input_length = 0
-	parse_buffer_length = 0
+	z_parse_buffer_length = 0
 	separators = {}
 	_dictionary_lookup = {}
 	story_loaded = false
@@ -786,6 +788,7 @@ function capture_state(state)
 end
 
 function load_story_file()
+	clear_all_memory()
 	while stat(120) do
 		if (#_memory[#_memory] == bank_size) add(_memory, {})
 		local bank_num = #_memory

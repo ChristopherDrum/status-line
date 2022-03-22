@@ -351,7 +351,7 @@ function restore()
 end
 function restart()
 	--log('restart: ')
-	reset_game()
+	reset_session()
 end
 function ret_popped()
 	--log('ret_popped: ')
