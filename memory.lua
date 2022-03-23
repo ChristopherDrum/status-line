@@ -483,7 +483,7 @@ function extract_prop_len(len_byte)
 		if (len_byte & 0x80) == 0 then
 			return ((len_byte >>> 6) & 0x1) + 1
 		else
-			return (len_byte & 0x3f)
+			return (len_byte & 0x7f)
 		end
 	end
 end
