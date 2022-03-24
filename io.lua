@@ -89,7 +89,7 @@ function update_current_format(n)
 	if (make_inverse == true) inverse = '\^i'
 	if (n > 1) emphasis = '\014'
 	if checksum == 0xfc65 then -- Bureaucracy masterpiece
-		if (active_window == 1) and (n&2 == 2) then
+		if (active_window == 1) and (make_bold == true) then
 			--suppress bold in window 1 because of form fields
 			inverse, emphasis, make_bold = '\^i', '\015', false
 		end
