@@ -497,48 +497,147 @@ end
 
 --8.8 Input and output streams
 
-function print_addr(baddr)
-	local zaddress = zword_to_zaddress(baddr)
-	local str, zchars = get_zstring(zaddress)
-	--log('print_addr: '..str)
-	-- memory(zchars)
-	output(str)
+function _output_stream(n, baddr)
+	--log('output_stream: '..n..', '..tohex(baddr))
+	if abs(n) == 1 then
+		screen_output = (n > 0)
+
+	elseif abs(n) == 2 then
+		local p_flag = get_zbyte(peripherals)
+		if (n > 0) p_flag |= 0x01 --turn on transcription
+		if (n < 0) p_flag &= 0xfe --turn off transcription
+		set_zbyte(peripherals, p_flag)
+
+	else
+		if n > 0 then
+			set_zword(zword_to_zaddress(baddr), 0x00)
+			add(memory_output, baddr)
+		else
+			deli(memory_output)
+		end
+	end
+end
+
+function _input_stream(operands)
+	--log('input_stream: NI')
+end
+
+--8.9 Input
+
+function _read(baddr1, baddr2, time, raddr)
+	--timer not yet implemented
+	if (not _interrupt) then
+		--log('s/read: '..tohex(baddr1)..','..tohex(baddr2)..', time: '..tohex(time)..', '..tohex(raddr))
+		flush_line_buffer()
+		--cache addresses for capture_input()
+		z_text_buffer = zword_to_zaddress(baddr1)
+		z_parse_buffer = zword_to_zaddress(baddr2)
+		_show_status()
+		_interrupt = capture_input
+
+	else
+		z_text_buffer, z_parse_buffer = 0x0, 0x0
+		_interrupt = nil
+	end
+end
+
+function _read_char(one, time, raddr)
+	--timer not yet implemented
+	--log('read_char: '..one..','..tohex(time)..','..tohex(raddr))
+	flush_line_buffer()
+	local char = wait_for_any_key()
+	set_var(ord(char))
 end
 
 
-function print_obj(obj)
+--8.10 Character based output
+
+function _print_char(n)
+	--log('print_char '..n..': '..chr(n))
+	if (n == 10) n = 13	
+	output(chr(n))
+end
+
+function _new_line()
+	--log('new_line')
+	_print_char(10)
+end
+
+function _print(string)
+	local zstring = get_zstring(string)
+	--log('_print: '..zstring)
+	output(zstring)
+end
+
+function _print_rtrue(string)
+	--log('_print_rtrue')
+	_print(string)
+	_new_line()
+	_rtrue()
+end
+
+function _print_addr(baddr, is_packed)
+	local is_packed = is_packed or false
+	local zaddress = zword_to_zaddress(baddr, is_packed)
+	local zstring = get_zstring(zaddress)
+	--log('print_addr: '..zstring)
+	output(zstring)
+end
+
+function _print_paddr(saddr)
+	_print_addr(saddr, true)
+end
+
+function _print_num(s)
+	--log('print_num: '..s)
+	output(tostr(s))
+end
+
+function _print_obj(obj)
 	local name, zchars = zobject_name(obj)
-		--log('print_obj with name: '..name)
+	--log('print_obj with name: '..name)
 	output(name)
 end
 
-
-
-function print_paddr(saddr)
-	local zaddress = zword_to_zaddress(saddr, true)
-	local str, zchars = get_zstring(zaddress)
-		--log('print_paddr: '..str)
-	output(str)
+function _print_table(baddr, x, y, n)
+	log('_print_table: Not Implemented')
 end
 
-function _print(zstring)
-	local str, zchars = get_zstring(zstring)
-	--log('_print: '..str)
-	output(str)
-end
-function print_ret(zstring)
-	--log('print_ret')
-	_print(zstring)
-	new_line()
-	rtrue()
-end
-function _show_status()
-	if (_z_machine_version == 3) show_status()
+--8.11 Miscellaneous screen output
+
+function _erase_line(val)
+	--log('erase_line: '..val)
+	if (val == 1) screen("\^i\#"..current_fg..'\f'..current_bg..blank_line)
 end
 
-function nop()
-	--log('nop: ')
+function _erase_window(win)
+	--log('erase_window: '..win)
+	if win >= 0 then
+		local a,b,c,d = unpack(windows[win].screen_rect)
+		rectfill(a,b,c,d,current_bg)
+
+	else
+		cls(current_bg)
+		_split_window(0)
+	end
+
+	if (win <= 0) then
+		windows[0].buffer = {}
+		lines_shown = 0
+	end
 end
+
+--8.12 Sound, mouse, and menus
+
+function _sound_effect(number)
+	--log('sound_effect: '..number)
+	if mid(1,number,2) == number then
+		local tone = (number == 1) and "7" or "1"
+		print("\ac"..tone)
+	end
+end
+
+--8.13 Save, restore, and undo
 
 function _save(did_save)
 	--log('_save: ')
@@ -553,6 +652,7 @@ function _save(did_save)
 		end
 	end
 end
+
 function restore()
 	--log('restore: ')
 	local rg = restore_game()
@@ -562,120 +662,22 @@ function restore()
 		set_var(rg)
 	end
 end
-function restart()
-	--log('restart: ')
-	reset_session()
+
+function _save_undo()
+	log('_save_undo: Not Implemented')
 end
 
-
-function quit()
-	story_loaded = false
+function _restore_undo()
+	log('_restore_undo: Not Implemented')
 end
 
-function new_line()
-	--log('new_line')
-	-- output('\n')
-	print_char(10)
+--8.14 Miscellaneous
+
+function _nop()
+	--log('nop: ')
 end
 
-function verify()
-	--log('verify: cheating on this')
-	_branch(true)
-end
-
-
---timer function turned off in header for now
-function read(baddr1, baddr2, time, raddr)
-	if (not _interrupt) then
-	--log('s/read: '..tohex(baddr1)..','..tohex(baddr2)..', time: '..tohex(time)..', '..tohex(raddr))
-		--cache addresses for capture_input()
-		flush_line_buffer()
-		z_text_buffer, z_parse_buffer = zword_to_zaddress(baddr1), zword_to_zaddress(baddr2)
-		_show_status()
-		_interrupt = capture_input
-	else
-		z_text_buffer, z_parse_buffer = 0x0, 0x0
-		_interrupt = nil
-	end
-end
-function print_char(n)
-	-- local char = zscii_to_p8scii({n})
-	if (n == 10) n = 13
-		--log('print_char '..n..': '..chr(n))
-	output(chr(n))
-end
-function print_num(s)
-	--log('print_num: '..s)
-	output(tostr(s))
-end
-
-
-
-function erase_window(win)
-	--log('erase_window: '..win)
-	if win >= 0 then
-		local a,b,c,d = unpack(windows[win].screen_rect)
-		rectfill(a,b,c,d,current_bg)
-	else
-		if (win == -1) split_window(0)
-		cls(current_bg)
-	end
-	if (win <= 0) then
-		windows[0].buffer = {}
-		lines_shown = 0
-	end
-end
-
-function erase_line(val)
-	--log('erase_line: '..val)
-	if (val == 1) screen("\^i\#"..current_fg..'\f'..current_bg..blank_line)
-end
-
-
-function output_stream(n, baddr)
-	--log('output_stream: '..n..', '..tohex(baddr))
-	if (n == 1) screen_output = true
-	if (n == -1) screen_output = false
-	if (n == 3) set_zword(zword_to_zaddress(baddr),0x00) add(memory_output,baddr)
-	if (n == -3) deli(memory_output)
-	if n == 2 then
-		local p_flag = get_zbyte(peripherals)
-		p_flag |= 0x01 --turn on transcription
-		set_zbyte(peripherals, p_flag)
-	end
-	if n == -2 then
-		local p_flag = get_zbyte(peripherals)
-		p_flag &= 0xfe --turn off transcription
-		set_zbyte(peripherals, p_flag)
-	end
-end
-
-function input_stream(operands)
-	--log('input_stream: NI')
-end
-
-function sound_effect(number)
-	--log('sound_effect: '..number)
-	if (number == 1) print("\ac7")
-	if (number == 2) print("\ac1")
-end
-
---timer is "OFF" in the header, until z5 Border Zone support
-function read_char(one, time, raddr)
-	--log('read_char: '..one..','..tohex(time)..','..tohex(raddr))
-	--if (active_window == 1) 
-	flush_line_buffer()
-	local char = wait_for_any_key()
-	set_var(ord(char))
-end
-
-
-
-
-
-
-
-function random(s, skip_set_var)
+function _random(s, skip_set_var)
 	if (s < 0) then
 		srand(s) 
 		if (not skip_set_var) set_var(0)
@@ -688,7 +690,37 @@ function random(s, skip_set_var)
 	end
 end
 
---call_f0, call_f1
+function _restart()
+	--log('restart: ')
+	reset_session()
+end
+
+function _quit()
+	story_loaded = false
+end
+
+function _show_status()
+	if (_z_machine_version == 3) show_status()
+end
+
+function _verify()
+	--log('_verify: cheating on this')
+	_branch(true)
+end
+
+function _piracy()
+	--log('_piracy: cheating on this')
+	_branch(true)
+end
+
+function _tokenise(baddr1, baddr2, baddr3, bit)
+	log('_tokenise: Not Implemented')
+end
+
+function _encode_text(baddr1, n, p, baddr2)
+	log('_encode_text: Not Implemented')
+end
+
 _long_ops = {
 	nil, _je, _jl, _jg, _dec_jl, _inc_jg, _jin, _test, _or, _and, _test_attr, _set_attr, _clear_attr, _store, _insert_obj, _loadw, _loadb, _get_prop, _get_prop_addr, _get_next_prop, _add, _sub, _mul, _div, _mod, _call_fv
 }
@@ -698,7 +730,7 @@ _short_ops = {
 }
 
 _zero_ops = {
-	_rtrue, _rfalse, _print, _print_ret, _nop, _save, _restore, _restart, _ret_popped, _pop, _quit, _new_line, _show_status, _verify
+	_rtrue, _rfalse, _print, _print_rtrue, _nop, _save, _restore, _restart, _ret_popped, _pop, _quit, _new_line, _show_status, _verify
 }
 
 _var_ops = {
