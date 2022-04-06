@@ -27,7 +27,7 @@ function _branch(should_branch)
 	if (should_branch == true) then
 		--log('should_branch is true')
 		if offset == 0 or offset == 1 then --same as rfalse/rtrue
-			ret(offset)
+			_ret(offset)
 		else 
 			offset >>= 16 --keep the sign!
 			_program_counter += (offset - 0x.0002)
@@ -113,9 +113,9 @@ function _scan_table(a, baddr, n, byte) --<result> <branch>
 	_branch(should_branch)
 end
 
-function _copy_table(baddr1, baddr2, s)
-	log('copy_table: Not Implemented')
-end
+-- function _copy_table(baddr1, baddr2, s)
+-- 	--log('copy_table: Not Implemented')
+-- end
 
 --8.3 Arithmetic
 
@@ -138,30 +138,29 @@ function _div(s, t, ret)
 	local op = ceil
 	if ((s&0x8000) == (t&0x8000)) op = flr
 	local v = op(s/t)
+	--log('_div: ('..s..' / '..t..') = '..v)
 	if (ret) return v
-	--log('_div: ('..s..' / '..t..') = '..(op(s/t)))
 	_result(v)
 end
 
 function _mod(s, t)
-	--log('_mod: ('..a..' % '..b..')')
 	--p8 gives non-compliant results
 	--ex: -13 % -5, p8: "2", zmachine: "-3"
-	-- local op = ceil
-	-- if ((s&0x8000) == (t&0x8000)) op = flr
-	_result(s - (_div(s, t, true) * t))
+	local r = (s - (_div(s, t, true) * t))
+	--log('_mod: ('..a..' % '..b..') = '..r)
+	_result(r)
 end
 
 function _inc(var, ret)
 	local v = get_var(var, true) + 1
-	if (ret) return v
 	_store(var, v)
+	if (ret) return v
 end
 
 function _dec(var, ret)
 	local v = get_var(var, true) - 1
-	if (ret) return v
 	_store(var, v)
+	if (ret) return v
 end
 
 function _inc_jg(var, s)
@@ -191,15 +190,15 @@ function _not(a)
 	_result(~a)
 end
 
-function _log_shift(a, t)
-	--log('_log_shift: '..a..','..t)
-	_result(a>>>t)
-end
+-- function _log_shift(a, t)
+-- 	--log('_log_shift: '..a..','..t)
+-- 	_result(a>>>t)
+-- end
 
-function _art_shift(s, t)
-	--log('_art_shift: '..s..','..t)
-	_result(s>>t)
-end
+-- function _art_shift(s, t)
+-- 	--log('_art_shift: '..s..','..t)
+-- 	_result(s>>t)
+-- end
 
 --8.4 Comparisons and jumps
 
@@ -231,19 +230,19 @@ function _jin(obj, n)
 	_branch(should_branch)
 end
 
-function test(a, b)
+function _test(a, b)
 	--log('test:('..a..'&'..b..') == '..b..'?')
 	_branch((a & b) == b)
 end
 
-function jump(s)
+function _jump(s)
 	--log('jump: '..tohex(s))
 	_program_counter += ((s - 2) >> 16) --keep the sign
 end
 
 --8.5 Call and return, throw and catch
 
-function call_fv(raddr, a1, a2, a3, a4, a5, a6, a7)
+function _call_fv(raddr, a1, a2, a3, a4, a5, a6, a7)
 	--log('call_fv: '..tohex(raddr)..', '..tohex(a1)..', '..tohex(a2)..', '..tohex(a3)..', '..tohex(a4)..', '..tohex(a5)..', '..tohex(a6)..', '..tohex(a7))
 	if (raddr == 0x0) then
 		set_var(0)
@@ -292,21 +291,21 @@ function _rfalse()
 end
 
 function _ret_pulled()
-	--log('ret_popped: ')
+	--log('_ret_pulled: ')
 	_ret(stack_pop())
 end
 
-function _check_arg_count(n)
-	log('_check_arg_count: Not Implemented')
-end
+-- function _check_arg_count(n)
+	-- log('_check_arg_count: Not Implemented')
+-- end
 
-function _catch()
-	log('_catch: Not Implemented')
-end
+-- function _catch()
+	-- log('_catch: Not Implemented')
+-- end
 
-function _throw(a, fp)
-	log('_throw: Not Implemented')
-end
+-- function _throw(a, fp)
+	-- log('_throw: Not Implemented')
+-- end
 
 --8.6 Objects, attributes, and properties
 
@@ -425,8 +424,8 @@ end
 
 --8.7 Windows
 
-function _split_window(lines)
-	--log('split_window called: '..lines)
+function _split_screen(lines)
+	--log('_split_screen called: '..lines)
 	flush_line_buffer(0)
 	local win0 = windows[0]
 	local win1 = windows[1]
@@ -463,7 +462,7 @@ end
 function _set_cursor(lin, col)
 	--log('set_zcursor to line '..lin..', col '..col)
 	flush_line_buffer()
-	if ((_z_machine_version == 5) and (lin > windows[1].h)) _split_window(lin)
+	if ((_z_machine_version == 5) and (lin > windows[1].h)) _split_screen(lin)
 	windows[1].z_cursor = {x=col, y=lin}
 	update_p_cursor()
 end
@@ -477,23 +476,23 @@ function _get_cursor(baddr)
 end
 
 --ignore; we have to buffer regardless
-function _buffer_mode(bit)
-	log('_buffer_mode: Not Implemented')
-end
+-- function _buffer_mode(bit)
+	-- log('_buffer_mode: Not Implemented')
+-- end
 
-function _set_color(byte0, byte1)
-	log('_set_color: Not Implemented')
-end
+-- function _set_color(byte0, byte1)
+	-- log('_set_color: Not Implemented')
+-- end
 
-function _set_text_style(n)
-	--log('set_text_style: '..n)
-	update_current_format(n)
-end
+-- function _set_text_style(n)
+	-- log('set_text_style: '..n)
+	-- update_current_format(n)
+-- end
 
-function _set_font(n)
-	log('_set_font: Not Implemented')
-	_result(0)
-end
+-- function _set_font(n)
+	-- log('_set_font: Not Implemented')
+	-- _result(0)
+-- end
 
 --8.8 Input and output streams
 
@@ -518,9 +517,9 @@ function _output_stream(n, baddr)
 	end
 end
 
-function _input_stream(operands)
-	--log('input_stream: NI')
-end
+-- function _input_stream(operands)
+-- 	--log('input_stream: NI')
+-- end
 
 --8.9 Input
 
@@ -599,9 +598,9 @@ function _print_obj(obj)
 	output(name)
 end
 
-function _print_table(baddr, x, y, n)
-	log('_print_table: Not Implemented')
-end
+-- function _print_table(baddr, x, y, n)
+	-- log('_print_table: Not Implemented')
+-- end
 
 --8.11 Miscellaneous screen output
 
@@ -618,7 +617,7 @@ function _erase_window(win)
 
 	else
 		cls(current_bg)
-		_split_window(0)
+		_split_screen(0)
 	end
 
 	if (win <= 0) then
@@ -629,13 +628,13 @@ end
 
 --8.12 Sound, mouse, and menus
 
-function _sound_effect(number)
-	--log('sound_effect: '..number)
-	if mid(1,number,2) == number then
-		local tone = (number == 1) and "7" or "1"
-		print("\ac"..tone)
-	end
-end
+-- function _sound_effect(number)
+-- 	--log('sound_effect: '..number)
+-- 	if mid(1,number,2) == number then
+-- 		local tone = (number == 1) and "7" or "1"
+-- 		print("\ac"..tone)
+-- 	end
+-- end
 
 --8.13 Save, restore, and undo
 
@@ -653,7 +652,7 @@ function _save(did_save)
 	end
 end
 
-function restore()
+function _restore()
 	--log('restore: ')
 	local rg = restore_game()
 	if _z_machine_version == 3 then
@@ -663,35 +662,35 @@ function restore()
 	end
 end
 
-function _save_undo()
-	log('_save_undo: Not Implemented')
-end
+-- function _save_undo()
+-- 	--log('_save_undo: Not Implemented')
+-- end
 
-function _restore_undo()
-	log('_restore_undo: Not Implemented')
-end
+-- function _restore_undo()
+-- 	--log('_restore_undo: Not Implemented')
+-- end
 
 --8.14 Miscellaneous
 
 function _nop()
-	--log('nop: ')
+	--log('_nop: ')
 end
 
-function _random(s, skip_set_var)
-	if (s < 0) then
-		srand(s) 
-		if (not skip_set_var) set_var(0)
-	elseif (s > 0) then
-		local rnd = flr(rnd(s)) + 1
-		if (not skip_set_var) set_var(rnd)
+function _random(s)
+	--log('_random: '..tostr(s))
+
+	if s > 0 then
+		set_var(flr(rnd(s)) + 1)
+
 	else
-		srand(tonum(tostr(stat(93))..tostr(stat(94))..tostr(stat(95))))
-		if (not skip_set_var) set_var(0)
+		srand(s)
+		if (s == 0) srand(stat(93)..stat(94)..stat(95))
+		set_var(0)
 	end
 end
 
 function _restart()
-	--log('restart: ')
+	-- log('restart: ')
 	reset_session()
 end
 
@@ -704,22 +703,22 @@ function _show_status()
 end
 
 function _verify()
-	--log('_verify: cheating on this')
+	-- log('_verify: cheating on this')
 	_branch(true)
 end
 
-function _piracy()
-	--log('_piracy: cheating on this')
-	_branch(true)
-end
+-- function _piracy()
+-- 	--log('_piracy: cheating on this')
+-- 	_branch(true)
+-- end
 
-function _tokenise(baddr1, baddr2, baddr3, bit)
-	log('_tokenise: Not Implemented')
-end
+-- function _tokenise(baddr1, baddr2, baddr3, bit)
+-- 	--log('_tokenise: Not Implemented')
+-- end
 
-function _encode_text(baddr1, n, p, baddr2)
-	log('_encode_text: Not Implemented')
-end
+-- function _encode_text(baddr1, n, p, baddr2)
+-- 	--log('_encode_text: Not Implemented')
+-- end
 
 _long_ops = {
 	nil, _je, _jl, _jg, _dec_jl, _inc_jg, _jin, _test, _or, _and, _test_attr, _set_attr, _clear_attr, _store, _insert_obj, _loadw, _loadb, _get_prop, _get_prop_addr, _get_next_prop, _add, _sub, _mul, _div, _mod, _call_fv
@@ -730,12 +729,12 @@ _short_ops = {
 }
 
 _zero_ops = {
-	_rtrue, _rfalse, _print, _print_rtrue, _nop, _save, _restore, _restart, _ret_popped, _pop, _quit, _new_line, _show_status, _verify
+	_rtrue, _rfalse, _print, _print_rtrue, _nop, _save, _restore, _restart, _ret_pulled, _pop, _quit, _new_line, _show_status, _verify
 }
 
 _var_ops = {
 	_call_fv, _storew, _storeb, _put_prop, _read, 
 	_print_char, _print_num, _random, _push, _pull, 
-	_split_window, _set_window, _call_fv, _erase_window, _erase_line, 
+	_split_screen, _set_window, _call_fv, _erase_window, _erase_line, 
 	_set_zcursor, _get_cursor, _set_text_style, _buffer_mode, _output_stream, _input_stream, _sound_effect, _read_char, _scan_table
 }

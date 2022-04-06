@@ -660,7 +660,7 @@ function load_instruction()
 		end
 
 	elseif (op_form == 0x02) then
-		-- log(' short instruction found')
+		log(' short instruction found')
 		-- The first byte of a short instruction is %10ttxxxx.
 		-- %tt is the type of the operand (or %11 if absent),
 		-- %xxxx is the 1OP (0OP if operand absent) opcode
@@ -674,7 +674,7 @@ function load_instruction()
 		elseif op_type == 2 then
 			operands = get_var()
 		elseif op_type == 3 then
-			-- log(' - a zero op')
+			log(' - a zero op')
 			op_table = _zero_ops
 			operands = nil
 		end
@@ -732,7 +732,7 @@ function load_instruction()
 		end
 		if ((op_table == _long_ops) and (#operands == 1) and (op_code > 1)) get_zbyte()
 	end
-	-- log('  opcode: '..op_code)
+	log('  opcode: '..op_code)
 	local func = op_table[op_code+1]
 	return func, operands
 end

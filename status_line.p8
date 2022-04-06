@@ -5,12 +5,13 @@ __lua__
 --by christopher drum
 
 _z_machine_version = 0
-_engine_version = '2.0'
+_engine_version = '2.1A'
 checksum = 0x0
 story_loaded = false
 -- full_color = false
 
-local punc = '.,!?_#'.."'"..'"/\\-:()'
+punc = '.,!?_#'.."'"..'"/\\-:()'
+blank_line = '                                '
 
 local screen_types = {
 	default = 1, 
@@ -42,20 +43,6 @@ local cursor_types = {
 	}
 }
 
--- --frequently used values we can cache before starting
--- max_input_length = 0
--- z_parse_buffer_length = 0
--- separators = {}
--- _dictionary_lookup = {}
-blank_line = '                                '
-
--- --default these to z4+ specs
--- screen_height = 21
--- packed_shift = 2
--- default_property_count = 63
--- object_entry_size = 0x.000e
--- dictionary_word_size = 9
-
 --these literally make the engine run
 _program_counter = 0x0
 _interrupt = nil
@@ -83,7 +70,7 @@ function tohex(value, full)
 end
 
 function log(str)
-	printh(str, 'status_line_log_20')
+	printh(str, 'status_line_log_21a')
 end
 
 function wait_for_any_key()
@@ -159,27 +146,27 @@ function _init()
 end
 
 function draw_splashscreen(did_load)
-	cls(0)
+	-- cls(0)
 
-	sspr(0,0,128,124,0,0)--monitor
-	rectfill(6,125,122,127,1)
-	sspr(90,125,7,3,83,124)--knobs
-	sspr(90,125,7,3,93,124)
+	-- sspr(0,0,128,124,0,0)--monitor
+	-- rectfill(6,125,122,127,1)
+	-- sspr(90,125,7,3,83,124)--knobs
+	-- sspr(90,125,7,3,93,124)
 
-	color(7)
-	line(33,83,93,83)
-	print('V'.._engine_version, 82, 69)
+	-- color(7)
+	-- line(33,83,93,83)
+	-- print('V'.._engine_version, 82, 69)
 
-	if (did_load == true) then
-		sspr(100,124,14,4,103,116)
-		print('sTORY IS LOADING', 31, 100)
-	else
-		sspr(114,124,14,4,103,116)
-		print('DRAG IN A Z3/4 STORY\n  TO START PLAYING', 24, 92)
-	end
+	-- if (did_load == true) then
+	-- 	sspr(100,124,14,4,103,116)
+	-- 	print('sTORY IS LOADING', 31, 100)
+	-- else
+	-- 	sspr(114,124,14,4,103,116)
+	-- 	print('DRAG IN A Z3/4 STORY\n  TO START PLAYING', 24, 92)
+	-- end
 
-	color()
-	flip()
+	-- color()
+	-- flip()
 end
 
 function game_id()
@@ -364,7 +351,7 @@ function initialize_game()
 	_call_stack[#_call_stack - 9] = _program_counter
 
 	if (_memory_start_state == nil) capture_state(_memory_start_state)
-	split_window(0)
+	_split_screen(0)
 	update_current_format(0)
 	update_p_cursor()
 	story_loaded = true
