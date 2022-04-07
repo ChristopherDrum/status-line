@@ -113,9 +113,9 @@ function _scan_table(a, baddr, n, byte) --<result> <branch>
 	_branch(should_branch)
 end
 
--- function _copy_table(baddr1, baddr2, s)
--- 	--log('copy_table: Not Implemented')
--- end
+function _copy_table(baddr1, baddr2, s)
+	--log('copy_table: Not Implemented')
+end
 
 --8.3 Arithmetic
 
@@ -190,15 +190,15 @@ function _not(a)
 	_result(~a)
 end
 
--- function _log_shift(a, t)
--- 	--log('_log_shift: '..a..','..t)
--- 	_result(a>>>t)
--- end
+function _log_shift(a, t)
+	--log('_log_shift: '..a..','..t)
+	_result(a>>>t)
+end
 
--- function _art_shift(s, t)
--- 	--log('_art_shift: '..s..','..t)
--- 	_result(s>>t)
--- end
+function _art_shift(s, t)
+	--log('_art_shift: '..s..','..t)
+	_result(s>>t)
+end
 
 --8.4 Comparisons and jumps
 
@@ -295,17 +295,17 @@ function _ret_pulled()
 	_ret(stack_pop())
 end
 
--- function _check_arg_count(n)
-	-- log('_check_arg_count: Not Implemented')
--- end
+function _check_arg_count(n)
+	log('_check_arg_count: Not Implemented')
+end
 
--- function _catch()
-	-- log('_catch: Not Implemented')
--- end
+function _catch()
+	log('_catch: Not Implemented')
+end
 
--- function _throw(a, fp)
-	-- log('_throw: Not Implemented')
--- end
+function _throw(a, fp)
+	log('_throw: Not Implemented')
+end
 
 --8.6 Objects, attributes, and properties
 
@@ -454,7 +454,7 @@ function _set_window(win)
 	--log('set_window: '..win)
 	flush_line_buffer()
 	active_window = win
-	if (win == 1) set_zcursor(1,1)
+	if (win == 1) _set_cursor(1,1)
 end
 
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
@@ -476,23 +476,23 @@ function _get_cursor(baddr)
 end
 
 --ignore; we have to buffer regardless
--- function _buffer_mode(bit)
-	-- log('_buffer_mode: Not Implemented')
--- end
+function _buffer_mode(bit)
+	log('_buffer_mode: Not Implemented')
+end
 
--- function _set_color(byte0, byte1)
-	-- log('_set_color: Not Implemented')
--- end
+function _set_color(byte0, byte1)
+	log('_set_color: Not Implemented')
+end
 
--- function _set_text_style(n)
-	-- log('set_text_style: '..n)
-	-- update_current_format(n)
--- end
+function _set_text_style(n)
+	log('set_text_style: '..n)
+	update_current_format(n)
+end
 
--- function _set_font(n)
-	-- log('_set_font: Not Implemented')
-	-- _result(0)
--- end
+function _set_font(n)
+	log('_set_font: Not Implemented')
+	_result(0)
+end
 
 --8.8 Input and output streams
 
@@ -517,9 +517,9 @@ function _output_stream(n, baddr)
 	end
 end
 
--- function _input_stream(operands)
--- 	--log('input_stream: NI')
--- end
+function _input_stream(operands)
+	--log('input_stream: NI')
+end
 
 --8.9 Input
 
@@ -598,9 +598,9 @@ function _print_obj(obj)
 	output(name)
 end
 
--- function _print_table(baddr, x, y, n)
-	-- log('_print_table: Not Implemented')
--- end
+function _print_table(baddr, x, y, n)
+	log('_print_table: Not Implemented')
+end
 
 --8.11 Miscellaneous screen output
 
@@ -628,13 +628,13 @@ end
 
 --8.12 Sound, mouse, and menus
 
--- function _sound_effect(number)
--- 	--log('sound_effect: '..number)
--- 	if mid(1,number,2) == number then
--- 		local tone = (number == 1) and "7" or "1"
--- 		print("\ac"..tone)
--- 	end
--- end
+function _sound_effect(number)
+	--log('sound_effect: '..number)
+	if mid(1,number,2) == number then
+		local tone = (number == 1) and "7" or "1"
+		print("\ac"..tone)
+	end
+end
 
 --8.13 Save, restore, and undo
 
@@ -662,13 +662,13 @@ function _restore()
 	end
 end
 
--- function _save_undo()
--- 	--log('_save_undo: Not Implemented')
--- end
+function _save_undo()
+	--log('_save_undo: Not Implemented')
+end
 
--- function _restore_undo()
--- 	--log('_restore_undo: Not Implemented')
--- end
+function _restore_undo()
+	--log('_restore_undo: Not Implemented')
+end
 
 --8.14 Miscellaneous
 
@@ -707,18 +707,18 @@ function _verify()
 	_branch(true)
 end
 
--- function _piracy()
--- 	--log('_piracy: cheating on this')
--- 	_branch(true)
--- end
+function _piracy()
+	--log('_piracy: cheating on this')
+	_branch(true)
+end
 
--- function _tokenise(baddr1, baddr2, baddr3, bit)
--- 	--log('_tokenise: Not Implemented')
--- end
+function _tokenise(baddr1, baddr2, baddr3, bit)
+	--log('_tokenise: Not Implemented')
+end
 
--- function _encode_text(baddr1, n, p, baddr2)
--- 	--log('_encode_text: Not Implemented')
--- end
+function _encode_text(baddr1, n, p, baddr2)
+	--log('_encode_text: Not Implemented')
+end
 
 _long_ops = {
 	nil, _je, _jl, _jg, _dec_jl, _inc_jg, _jin, _test, _or, _and, _test_attr, _set_attr, _clear_attr, _store, _insert_obj, _loadw, _loadb, _get_prop, _get_prop_addr, _get_next_prop, _add, _sub, _mul, _div, _mod, _call_fv
@@ -736,5 +736,5 @@ _var_ops = {
 	_call_fv, _storew, _storeb, _put_prop, _read, 
 	_print_char, _print_num, _random, _push, _pull, 
 	_split_screen, _set_window, _call_fv, _erase_window, _erase_line, 
-	_set_zcursor, _get_cursor, _set_text_style, _buffer_mode, _output_stream, _input_stream, _sound_effect, _read_char, _scan_table
+	_set_cursor, _get_cursor, _set_text_style, _buffer_mode, _output_stream, _input_stream, _sound_effect, _read_char, _scan_table
 }
