@@ -13,35 +13,26 @@ story_loaded = false
 punc = '.,!?_#'.."'"..'"/\\-:()'
 blank_line = '                                '
 
-local screen_types = {
-	default = 1, 
-	values = {
-		{'b&w', {6,0}}, {'green', {138, 131}}, 
-		{'amber', {9,128}}, {'blue', {12,129}}, 
-		{'oldlcd', {131,129}}, {'plasma', {8,130}}, 
-		{'invert', {0,6}}--, {'ega', {7,0}}
-	}
-}
-local scroll_speeds = {
-	default = 3,
-	values = {
-		{'slow', 7}, {'medium', 5}, {'fast', 4}, 
-		{'faster', 2}, {'fastest', 0}
-	}
-}
-local clock_types = {
-	default = 1,
-	values = {
-		{'24-hour', 24}, {'12-hour', 12}
-	}
-}
-local cursor_types = {
-	default = 1,
-	values = {
-		{'block', '▮'}, {'square', '■'}, 
-		{'bar', '|'}, {'under', '_'}, {'dotted', '\^:150a150a15000000'}
-	}
-}
+
+
+function rehydrate_menu_vars()
+	raw_menu_strings = [[
+screen_types`1`b&w,6,0`green,138,131`amber,9,128`blue,12,129`oldlcd,131,129`plasma,8,130`invert,0,6/scroll_speeds`3`slow,7`medium,5`fast,4`faster,2`fastest,0/clock_types`1`24-hour,24`12-hour,12/cursor_types`1`block,▮`square,■`bar,|`under,_`dotted,\^:150a150a15000000
+	]]
+	local menu_strings = split(raw_menu_strings, '/')
+	for str in all(menu_strings) do
+		local def = split(str, '`')
+		local menu = {}
+		menu['default'] = def[2]
+		local values = {}
+		for i = 3, #def do
+			add(values, split(def[i], ','))
+		end
+		menu['values'] = values
+		_𝘦𝘯𝘷[def[1]] = menu
+	end
+end
+
 
 --these literally make the engine run
 _program_counter = 0x0
@@ -139,6 +130,7 @@ function _init()
 
 	cartdata('drum_statusline_1')
 
+	rehydrate_menu_vars()
 	build_menu('screen', 0, screen_types)
 	build_menu('scroll', 1, scroll_speeds)
 	build_menu('clock', 2, clock_types)
@@ -180,7 +172,7 @@ function setup_palette()
 	local st = dget(0) or 1
 	local type = screen_types.values[st]
 	full_color = type[1] == 'ega'
-	fg, bg = unpack(type[2])
+	fg, bg = type[2], type[3]
 	pal({fg,0,8,139,10,140,136,12,7,10,11,12,13,14,15,bg},1)
 	palt(0,false)
 end
