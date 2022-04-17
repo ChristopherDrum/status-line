@@ -1,51 +1,47 @@
 -- memory address markers
-_paged_memory_addr = 0x0
-_dictionary_addr = 0x0
-_object_table_addr = 0x0
-_global_var_table_addr = 0x0
-_abbr_table_addr = 0x0
-_static_mem_addr = 0x0
-_dynamic_mem_addr = 0x0
-_high_mem_addr = 0x0
+_paged_memory_mem_addr = 0x0
+_dictionary_mem_addr = 0x0
+_object_table_mem_addr = 0x0
+_global_var_table_mem_addr = 0x0
+_static_memory_mem_addr = 0x0
+_abbr_table_mem_addr = 0x0
+_dynamic_memory_mem_addr = 0x0
+_high_memory_mem_addr = 0x0
 
-_program_counter_addr = 0xa
-_local_var_table_addr = 0xb
-_stack_var_addr = 0xc.0001 -- +.0001 to disambiguate from real number 0xc
+_program_counter_mem_addr = 0xa
+_local_var_table_mem_addr = 0xb
+_stack_var_mem_addr = 0xc.0001 -- +.0001 to disambiguate from real number 0xc
 --just need the above to be higher than _memory can reach. 
 --On a 256K z5 game, we'll have memory addresses potentially as high as 0x7.fff8
 
 -- header locations 3+
-version = 0x.0000
-interpreter_flags = 0x.0001
-release_number_addr = 0x.0002
-paged_memory_addr = 0x.0004
-program_counter_addr = 0x.0006
-dictionary_addr = 0x.0008
-object_table_addr = 0x.000a
-global_var_table_addr = 0x.000c
-static_mem_addr = 0x.000e
-peripherals = 0x.0010
-serial_code = 0x.0012
-abbr_table_addr = 0x.0018
-file_length = 0x.001a
-file_checksum = 0x.001c
+_version_header_addr = 0x.0000
+_interpreter_flags_header_addr = 0x.0001
+_release_number_header_addr = 0x.0002
+_paged_memory_header_addr = 0x.0004
+_program_counter_header_addr = 0x.0006
+_dictionary_header_addr = 0x.0008
+_object_table_header_addr = 0x.000a
+_global_var_table_header_addr = 0x.000c
+_static_memory_header_addr = 0x.000e
+_peripherals_header_addr = 0x.0010
+_serial_code_header_addr = 0x.0012
+_abbr_table_mem_addr = 0x.0018
+_file_length_header_addr = 0x.001a
+_file_checksum_header_addr = 0x.001c
 -- header locations v4+
-interpreter_number = 0x.001e
-interpreter_version = 0x.001f
-_screen_height = 0x.0020 --lines
-_screen_width = 0x.0021 --characters
+_interpreter_number_header_addr = 0x.001e
+_interpreter_version_header_addr = 0x.001f
+_screen_height_header_addr = 0x.0020 --lines
+_screen_width_header_addr = 0x.0021 --characters
 
--- active_table = 1
+_memory_bank_size = 16384 -- (1024*64)/4; four 64K banks
 
-bank_size = 16384 -- (1024*64)/4; four 64K banks
--- _memory = {{}}
 --call stack holds a flat list of frame data
 --a frame consists of 10 numbers:
 --   stack pointer, program counter, 8 zwords for in-scope local vars
--- _call_stack = {}
--- _stack = {}
 
---these copies are used to grab a save state snapshot
+--these  are used to grab a save state snapshot
 -- _memory_start_state = nil
 -- _current_state = ''
 
@@ -141,26 +137,26 @@ end
 
 function abbr_address(index)
 	--abbreviation addresses are word addresses (2*addr)
-	return zword_to_zaddress(get_zword(_abbr_table_addr + (index >>> 15))<<1)
+	return zword_to_zaddress(get_zword(_abbr_table_mem_addr + (index >>> 15))<<1)
 end 
 
 function zobject_address(index)
 	-- skip first 31/63 zwords of "default property table"
-	local address = _object_table_addr + (default_property_count>>>15)
+	local address = _object_table_mem_addr + (_zm_object_property_count>>>15)
 	-- log('zobject_address old: '..tohex(old_address)..' new: '..tohex(address))
-	address += (index-1)*object_entry_size
+	address += (index-1)*_zm_object_entry_size
 	return address
 end
 
 function local_var_addr(index)
 	--log(' getting address for local var: '..tohex(index))
 	-- assert(index > 0 and index < 16, 'ERR: asked to retrieve local var '..tostr(index))
-	return _local_var_table_addr + (index >>> 16)
+	return _local_var_table_mem_addr + (index >>> 16)
 end
 
 function global_var_addr(index)
 	-- index*0x.0002 == (index>>>15)
-	local addr = _global_var_table_addr + (index >>> 15)
+	local addr = _global_var_table_mem_addr + (index >>> 15)
 	--log(' address for G'..sub(tostr(index,true),5,6)..' is: '..tohex(addr))
 	return addr
 end
@@ -179,14 +175,14 @@ end
 function decode_var_address(var_byte)
 	local var_byte = var_byte or get_zbyte()
 	-- log('decode_var_address: '..var_byte)
-	if (var_byte == 0) return _stack_var_addr
+	if (var_byte == 0) return _stack_var_mem_addr
 	if (var_byte < 16) return local_var_addr(var_byte)
 	if (var_byte >= 16) return global_var_addr(var_byte-16) -- -16 ONLY when decoding var byte
 end
 
 function zword_to_zaddress(zaddress, is_packed)
 	local shift = 16
-	if (is_packed) shift -= packed_shift
+	if (is_packed) shift -= _zm_packed_shift
 	return (zaddress >>> shift)
 end
 
@@ -213,12 +209,12 @@ function get_dword(zaddress, indirect)
 		return _memory[bank][index], bank, index, cell
 	end
 
-	if (base == _local_var_table_addr) then
+	if (base == _local_var_table_mem_addr) then
 		index = stack_index(zaddress)
 		return _call_stack[index], nil, index
 	end
 
-	if (zaddress == _stack_var_addr) then
+	if (zaddress == _stack_var_mem_addr) then
 		if (indirect) return _stack[#_stack]
 		return stack_pop()
 	end
@@ -243,12 +239,12 @@ function get_zbyte(zaddress)
 		else
 			dword <<= (2 << cell)
 		end
-	elseif (base == _local_var_table_addr) then
+	elseif (base == _local_var_table_mem_addr) then
 		if (zaddress & 0x.0001 == 0x.0001) dword <<= 16
 	end
-	-- if (zaddress == _screen_width) then
+	-- if (zaddress == _screen_width_header_addr) then
 	-- 	log('screen width called, returning: '..(dword & 0xff))
-	-- elseif zaddress == interpreter_flags then
+	-- elseif zaddress == _interpreter_flags_header_addr then
 	-- 	log('interpreter flags, returning: '..tohex(dword))
 	-- end
 	return dword & 0xff
@@ -270,7 +266,7 @@ function set_zbyte(zaddress, byte)
 	local byte &= 0xff --filter off zword garbage
 	local base = (zaddress & 0xffff)
 
-	if (zaddress == _stack_var_addr) then
+	if (zaddress == _stack_var_mem_addr) then
 		-- log(' setting stack var byte: '..byte)
 		stack_push(byte)
 	else
@@ -319,7 +315,7 @@ function get_zword(zaddress, indirect)
 			-- log('  consecutive dword '..tohex(dwordb))
 			dword |= (dwordb >>> 8)
 		end
-	elseif (base == _local_var_table_addr) then
+	elseif (base == _local_var_table_mem_addr) then
 		if (zaddress & 0x.0001 == 0x.0001) dword <<= 16
 	end
 	return dword & 0xffff
@@ -331,7 +327,7 @@ function set_zword(zaddress, zword, indirect)
 	-- local base = (zaddress & 0xffff)
 	--log('set_zword at '..tohex(zaddress)..' to value: '..tohex(zword))
 	
-	if (zaddress == _stack_var_addr) then
+	if (zaddress == _stack_var_mem_addr) then
 		-- log(' setting stack var zword: '..tohex(zword))
 		if indirect then
 			_stack[#_stack] = zword
@@ -369,7 +365,7 @@ end
 function zobject_attributes_byte_bit(index, attribute_id)
 	-- old_zobject_attributes(index)
 	local address = zobject_address(index)
-	-- local byte_count = (_z_machine_version == 3) and 4 or 6
+	-- local byte_count = (_zm_version == 3) and 4 or 6
 	local byte_index = flr(attribute_id>>3)
 	local attr_bit = attribute_id % 8
 	address += (0x.0001 * byte_index)
@@ -401,8 +397,8 @@ end
 --so the table address is pointing at property #1
 --therefore, offsets are (property - 1) * offset
 function zobject_default_property(property)
-	assert(property <= default_property_count, 'ERR: default object property '..property)
-	local address = _object_table_addr + ((property - 1) * 0x.0002)
+	assert(property <= _zm_object_property_count, 'ERR: default object property '..property)
+	local address = _object_table_mem_addr + ((property - 1) * 0x.0002)
 	return get_zword(address)
 end
 
@@ -410,20 +406,20 @@ zparent, zsibling, zchild = 0, 1, 2
 function zfamily_address(index, family_member)
 	local address = zobject_address(index)
 	local attr_size, member_size = 0x.0004, 0x.0001
-	if (_z_machine_version > 3) attr_size, member_size = 0x.0006, 0x.0002 
+	if (_zm_version > 3) attr_size, member_size = 0x.0006, 0x.0002 
 	address += attr_size + (family_member * member_size)
 	return address
 end
 
 function zobject_family(index, family_member)
 	local address = zfamily_address(index, family_member)
-	if (_z_machine_version == 3) return get_zbyte(address)
+	if (_zm_version == 3) return get_zbyte(address)
 	return get_zword(address)
 end
 
 function zobject_set_family(index, family_member, family_index)
 	local address = zfamily_address(index, family_member)
-	if _z_machine_version == 3 then
+	if _zm_version == 3 then
 		set_zbyte(address, family_index)
 	else
 		set_zword(address, family_index)
@@ -432,7 +428,7 @@ end
 
 -- 12.3.1
 function zobject_prop_table_address(index)
-	local offset = (_z_machine_version == 3) and 0x.0007 or 0x.000c
+	local offset = (_zm_version == 3) and 0x.0007 or 0x.000c
 	local prop_table_address = zobject_address(index) + offset
 	local zword = get_zword(prop_table_address)
 	return zword_to_zaddress(zword)
@@ -458,7 +454,7 @@ end
 function zobject_prop_num_len(prop_num_len_address)
 	local raw_byte = get_zbyte(prop_num_len_address)
 	local prop_num, prop_len, offset = 0, 0, 1
-	if _z_machine_version == 3 then
+	if _zm_version == 3 then
 		prop_num = raw_byte & 0x1f
 		prop_len = extract_prop_len(raw_byte)
 	else
@@ -479,7 +475,7 @@ end
 
 -- 12.4.2
 function extract_prop_len(len_byte)
-	if _z_machine_version == 3 then
+	if _zm_version == 3 then
 		-- log('extract_prop_len: '..len_byte)
 		return ((len_byte >>> 5) & 0x7) + 1
 	else
@@ -692,7 +688,7 @@ function load_instruction()
 		-- A %11 pair means ‘no operand’
 
 		op_table = _var_ops
-		-- if _z_machine_version > 3 then
+		-- if _zm_version > 3 then
 			if (op_definition & 0x20 == 0) then
 				-- log('  (2OP actually)')
 				op_table = _long_ops
@@ -701,7 +697,7 @@ function load_instruction()
 		op_code = (op_definition & 0x1f)
 
 		local type_information, num_bytes, filter
-		if (_z_machine_version > 3 and (in_set(op_definition, {0xec, 0xfa}))) then
+		if (_zm_version > 3 and (in_set(op_definition, {0xec, 0xfa}))) then
 			-- log('double var op_code')
 			type_information = get_zword()
 			num_bytes = 7 -- for the loop; 8 bytes really
@@ -739,14 +735,14 @@ end
 
 function capture_state(state)
 
-	local mem_max_bank, mem_max_index, _ = get_memory_location( _static_mem_addr - 0x.0001)
+	local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
 
 	if state == _memory_start_state then
 		-- log('capture _memory_start_state')
 		_memory_start_state = {}
 		for i = 1, mem_max_bank do
 			add(_memory_start_state, {})
-			local max_j = bank_size
+			local max_j = _memory_bank_size
 			if (i == mem_max_bank) max_j = mem_max_index
 			for j = 1, max_j do
 				_memory_start_state[i][j] = _memory[i][j]
@@ -759,7 +755,7 @@ function capture_state(state)
 		-- log('saving memory up to bank: '..mem_max_bank..', index: '..mem_max_index)
 		memory_dump ..= dword_to_str(mem_max_index)
 		for i = 1, mem_max_bank do
-			local max_j = bank_size
+			local max_j = _memory_bank_size
 			if (i == mem_max_bank) max_j = mem_max_index
 			for j = 1, max_j do
 				memory_dump ..= dword_to_str(_memory[i][j])
@@ -781,7 +777,7 @@ function capture_state(state)
 		-- log('saving pc: '..(tohex(_program_counter,true)))
 		memory_dump ..= dword_to_str(_program_counter)
 		-- log('saving checksum: '..(tohex(checksum,true)))
-		local checksum = get_zword(file_checksum)
+		local checksum = get_zword(_file_checksum_header_addr)
 		memory_dump ..= dword_to_str(checksum)
 
 		_current_state = memory_dump
@@ -791,7 +787,7 @@ end
 function load_story_file()
 	clear_all_memory()
 	while stat(120) do
-		if (#_memory[#_memory] == bank_size) add(_memory, {})
+		if (#_memory[#_memory] == _memory_bank_size) add(_memory, {})
 		local bank_num = #_memory
 		local chunk = serial(0x800, 0x4300, 1024)
 		for j = 0, chunk-1, 4 do

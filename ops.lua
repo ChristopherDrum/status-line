@@ -260,7 +260,7 @@ function _call_fv(raddr, a1, a2, a3, a4, a5, a6, a7)
 		-- if #a_vars > 0 then
 		for i = 1, l do -- "L"
 			local zword = 0
-			if _z_machine_version < 5 then
+			if _zm_version < 5 then
 				if (i <= #a_vars) then 
 					zword = a_vars[i]
 				else
@@ -434,12 +434,12 @@ function _split_screen(lines)
 		win1.y = 1
 		win1.h = 0
 		win0.y = 1
-		win0.h = screen_height
+		win0.h = _zm_screen_height
 	else
 		win1.y = 1
 		win1.h = lines
 		win0.y = lines + 1
-		win0.h = max(0, screen_height - win1.h)
+		win0.h = max(0, _zm_screen_height - win1.h)
 	end
 	win0.z_cursor.y = win0.h - cur_y_offset
 	if (win0.z_cursor.y < 1) then
@@ -447,7 +447,7 @@ function _split_screen(lines)
 	end
 	update_screen_rect(1)
 	update_screen_rect(0)
-	if (lines > 0 and _z_machine_version == 3) _erase_window(1)
+	if (lines > 0 and _zm_version == 3) _erase_window(1)
 end
 
 function _set_window(win)
@@ -462,7 +462,7 @@ end
 function _set_cursor(lin, col)
 	--log('set_zcursor to line '..lin..', col '..col)
 	flush_line_buffer()
-	if ((_z_machine_version == 5) and (lin > windows[1].h)) _split_screen(lin)
+	if ((_zm_version == 5) and (lin > windows[1].h)) _split_screen(lin)
 	windows[1].z_cursor = {x=col, y=lin}
 	update_p_cursor()
 end
@@ -502,10 +502,10 @@ function _output_stream(n, baddr)
 		screen_output = (n > 0)
 
 	elseif abs(n) == 2 then
-		local p_flag = get_zbyte(peripherals)
+		local p_flag = get_zbyte(_peripherals_header_addr)
 		if (n > 0) p_flag |= 0x01 --turn on transcription
 		if (n < 0) p_flag &= 0xfe --turn off transcription
-		set_zbyte(peripherals, p_flag)
+		set_zbyte(_peripherals_header_addr, p_flag)
 
 	else
 		if n > 0 then
@@ -644,7 +644,7 @@ function _save(did_save)
 		_interrupt = save_game
 	else
 		_interrupt = nil
-		if _z_machine_version == 3 then
+		if _zm_version == 3 then
 			_branch(did_save)
 		else 
 			set_var(did_save)
@@ -655,7 +655,7 @@ end
 function _restore()
 	--log('restore: ')
 	local rg = restore_game()
-	if _z_machine_version == 3 then
+	if _zm_version == 3 then
 		_branch(rg)
 	else
 		set_var(rg)
@@ -699,7 +699,7 @@ function _quit()
 end
 
 function _show_status()
-	if (_z_machine_version == 3) show_status()
+	if (_zm_version == 3) show_status()
 end
 
 function _verify()

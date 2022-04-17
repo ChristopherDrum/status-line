@@ -1,11 +1,16 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
---status line 2.0
+--status line 2.1
 --by christopher drum
 
-_z_machine_version = 0
+-- _zm_version = 0
 _engine_version = '2.1A'
+
+--these literally make the engine run
+_program_counter = 0x0
+_interrupt = nil
+
 checksum = 0x0
 story_loaded = false
 -- full_color = false
@@ -32,11 +37,6 @@ screen_types`1`b&w,6,0`green,138,131`amber,9,128`blue,12,129`oldlcd,131,129`plas
 		_𝘦𝘯𝘷[def[1]] = menu
 	end
 end
-
-
---these literally make the engine run
-_program_counter = 0x0
-_interrupt = nil
 
 
 --useful functions
@@ -163,7 +163,7 @@ end
 
 function game_id()
 	local id = checksum
-	if (_z_machine_version == 3) id = (zword_to_zaddress(get_zword(_static_mem_addr))<<16)
+	if (_zm_version == 3) id = (zword_to_zaddress(get_zword(_static_memory_mem_addr))<<16)
 	return tohex(id, false)
 end
 
@@ -234,7 +234,7 @@ function _update60()
 end
 
 function build_dictionary_lookup()
-	local addr = _dictionary_addr
+	local addr = _dictionary_mem_addr
 	local num_separators = get_zbyte(addr)
 	addr += 0x.0001 + (0x.0001 * num_separators)
 	local entry_length = (get_zbyte(addr) >>> 16)
@@ -259,8 +259,8 @@ function build_dictionary_lookup()
 end
 
 function fetch_parser_separators()
-	local num_separators = get_zbyte(_dictionary_addr)
-	local seps = get_zbytes(_dictionary_addr + 0x.0001, num_separators)
+	local num_separators = get_zbyte(_dictionary_mem_addr)
+	local seps = get_zbytes(_dictionary_mem_addr + 0x.0001, num_separators)
 	seps = zscii_to_p8scii(seps)
 	-- log('fetch_parser_separators: '..seps)
 	for i = 1, num_separators do
@@ -270,59 +270,54 @@ function fetch_parser_separators()
 end
 
 function process_header()
-	_z_machine_version = get_zbyte(version)
+	_zm_version = get_zbyte(_version_header_addr)
 
-	screen_height = 21
-	packed_shift = 2
-	default_property_count = 63
-	object_entry_size = 0x.000e
-	dictionary_word_size = 9
-	
-	if _z_machine_version == 3 then
-		screen_height = 20
-		packed_shift = 1
-		default_property_count = 31
-		object_entry_size = 0x.0009
-		dictionary_word_size = 6
-	end
+	local i_flag = get_zbyte(_interpreter_flags_header_addr)
 
-	set_zbyte(_screen_height, screen_height)
-	set_zbyte(_screen_width, 32)
+	if _zm_version == 3 then
+		_zm_screen_height = 20
+		_zm_packed_shift = 1
+		_zm_object_property_count = 31
+		_zm_object_entry_size = 0x.0009
+		_zm_dictionary_word_size = 6
 
-	local i_flag = get_zbyte(interpreter_flags)
-	if _z_machine_version == 3 then
 		i_flag &= 0x3b --turn off some bits
 		i_flag |= 0x20 --enable upper window
+
 	else
+		_zm_screen_height = 21
+		_zm_packed_shift = 2
+		_zm_object_property_count = 63
+		_zm_object_entry_size = 0x.000e
+		_zm_dictionary_word_size = 9
+
+		set_zbyte(_interpreter_number_header_addr, 4) --amiga
+		set_zbyte(_interpreter_version_header_addr, ord('P'))		set_zbyte(_screen_height_header_addr, _zm_screen_height)
+		set_zbyte(_screen_width_header_addr, 32)
+
 		i_flag = 0x9c
 		-- if (full_color == true) i_flag |= 0x01
 	end
-	-- log('interpreter flags set to: '..tohex(i_flag))
-	set_zbyte(interpreter_flags, i_flag)
-
-	-- local p_flag = get_zbyte(peripherals)
-	-- p_flag &= 0xff --no transcription
-	set_zbyte(peripherals, 0x03)
-
-	set_zbyte(interpreter_number, 4) --amiga
-	set_zbyte(interpreter_version, ord('P'))
+	set_zbyte(_interpreter_flags_header_addr, i_flag)
+	set_zbyte(_peripherals_header_addr, 0x03)
 end
 
+
 function cache_memory_addresses()
-	_program_counter = zword_to_zaddress(get_zword(program_counter_addr))
-	_paged_memory_addr = zword_to_zaddress(get_zword(paged_memory_addr))
-	_dictionary_addr = zword_to_zaddress(get_zword(dictionary_addr))
-	_object_table_addr = zword_to_zaddress(get_zword(object_table_addr))
-	_global_var_table_addr = zword_to_zaddress(get_zword(global_var_table_addr))
-	_abbr_table_addr = zword_to_zaddress(get_zword(abbr_table_addr))
-	_static_mem_addr = zword_to_zaddress(get_zword(static_mem_addr))
+	_program_counter = zword_to_zaddress(get_zword(_program_counter_header_addr))
+	_paged_memory_mem_addr = zword_to_zaddress(get_zword(_paged_memory_header_addr))
+	_dictionary_mem_addr = zword_to_zaddress(get_zword(_dictionary_header_addr))
+	_object_table_mem_addr = zword_to_zaddress(get_zword(_object_table_header_addr))
+	_global_var_table_mem_addr = zword_to_zaddress(get_zword(_global_var_table_header_addr))
+	_abbr_table_mem_addr = zword_to_zaddress(get_zword(_abbr_table_mem_addr))
+	_static_memory_mem_addr = zword_to_zaddress(get_zword(_static_memory_header_addr))
 end
 
 function patch()
-	checksum = get_zword(file_checksum)
+	checksum = get_zword(_file_checksum_header_addr)
 	-- log('checksum: '..tohex(checksum))
 	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
-	if (in_set(checksum, {0x4860, 0xfc65})) set_zbyte(_screen_width, 40) --amfv, bur
+	if (in_set(checksum, {0x4860, 0xfc65})) set_zbyte(_screen_width_header_addr, 40) --amfv, bur
 end
 
 function initialize_game()

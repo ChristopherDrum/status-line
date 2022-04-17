@@ -5,9 +5,6 @@ function reset_screen_state()
 
 	current_format = ''
 	current_format_updated = false
-
-	current_format = ''
-	current_format_updated = false
 	window_attributes = 0b00000000.00001010
 
 	emit_rate = 0 --the lower the faster
@@ -61,10 +58,10 @@ end
 
 origin_y = nil
 function update_screen_rect(zwin_num)
-	if (not origin_y) origin_y = (_z_machine_version == 3) and 8 or 1
+	if (not origin_y) origin_y = (_zm_version == 3) and 8 or 1
 	local win = windows[zwin_num]
 	local py = (win.y-1)*6 + origin_y
-	if (_z_machine_version > 3 and zwin_num == 1) py = 0
+	if (_zm_version > 3 and zwin_num == 1) py = 0
 	local ph = (win.h)*6
 	-- log('setting screen rect '..zwin_num..': 0, '..py..', 128,'..(origin_y+ph))
 	win.screen_rect = {0, py, 128, origin_y+ph}
@@ -76,7 +73,7 @@ function update_p_cursor()
 	local cx, cy = win.z_cursor.x, win.z_cursor.y
 	px = ((cx - 1)<<2) + 1
 	py += (cy - 1)*6 + 1
-	if (_z_machine_version == 3) py -= 1
+	if (_zm_version == 3) py -= 1
 	win.p_cursor = {px, py}
 	return px, py
 end
@@ -208,7 +205,7 @@ function flush_line_buffer()
 		-- log('last char: '..ord(sub(str,-1)))
 		local dtn = sub(str,-1) == '\n'
 		if (dtn == true) str = sub(str,1,#str-1)
-		if (active_window == 0 or (active_window == 1 and _z_machine_version == 3)) did_trim_nl = dtn
+		if (active_window == 0 or (active_window == 1 and _zm_version == 3)) did_trim_nl = dtn
 		-- if (active_window == 0) did_trim_nl = dtn
 		win.last_line = str
 		screen(str)
@@ -241,7 +238,7 @@ function screen(str)
 		if win.z_cursor.y <= win.h then
 			print(str)
 			cx += win.z_cursor.x
-			if _z_machine_version == 3 then
+			if _zm_version == 3 then
 				if did_trim_nl == true then
 					cx = 1
 					win.z_cursor.y += 1
@@ -372,8 +369,8 @@ function capture_input(char)
 		for i = 1, max_tokens do
 			local word, index, z_adjust = unpack(tokens[i])
 			-- log('looking up word: '..word)
-			-- log('  substring: '..sub(word,1,dictionary_word_size-z_adjust))
-			local dict_addr = _dictionary_lookup[sub(word,1,dictionary_word_size-z_adjust)] or 0x0
+			-- log('  substring: '..sub(word,1,_zm_dictionary_word_size-z_adjust))
+			local dict_addr = _dictionary_lookup[sub(word,1,_zm_dictionary_word_size-z_adjust)] or 0x0
 			-- log('  received: '..tohex(dict_addr))
 			set_zword(z_parse_buffer, dict_addr)
 			set_zbyte(z_parse_buffer+0x.0002, #word)
@@ -413,7 +410,7 @@ function save_game(char)
 		printh(_current_state, filename, true)
 		current_input, visible_input = '', ''
 		show_warning = true
-		local s = (_z_machine_version == 3) and true or 1
+		local s = (_zm_version == 3) and true or 1
 		_save(s)
 
 	else
@@ -453,29 +450,29 @@ function restore_game()
 	end
 
 	local save_checksum = dword_to_str(temp[#temp])
-	local this_checksum = dword_to_str(get_zword(file_checksum))
+	local this_checksum = dword_to_str(get_zword(_file_checksum_header_addr))
 
 	if (save_checksum != this_checksum) then
 		output('This save file appears to be for a different game.\n')
 		output(save_checksum..' vs. '..this_checksum..'\n', true)
-		return (_z_machine_version == 3) and false or 0
+		return (_zm_version == 3) and false or 0
 	end
 
 	local offset = 1
 	local save_version = temp[offset]
 	if (save_version > tonum(_engine_version)) then
 		output('This save file requires v'..tostr(save_version)..' of Status Line or higher.\n', true)
-		return (_z_machine_version == 3) and false or 0
+		return (_zm_version == 3) and false or 0
 	end
 
 	offset += 1
 	local memory_length = temp[offset]
-	local mem_max_bank = (memory_length\bank_size)+1
-	local mem_max_index = memory_length - ((mem_max_bank-1)*bank_size)
+	local mem_max_bank = (memory_length\_memory_bank_size)+1
+	local mem_max_index = memory_length - ((mem_max_bank-1)*_memory_bank_size)
 	-- log('memory_length ('..mem_max_bank..','..mem_max_index..'): '..memory_length)
 	local temp_index = 1
 	for i = 1, mem_max_bank do
-		local max_j = bank_size
+		local max_j = _memory_bank_size
 		if (i == mem_max_bank) max_j = mem_max_index
 		for j = 1, max_j do
 			_memory[i][j] = temp[offset+temp_index]
@@ -520,7 +517,7 @@ function restore_game()
 	_program_counter = temp[#temp-1]
 	current_input = ''
 	process_header()
-	return (_z_machine_version == 3) and true or 2
+	return (_zm_version == 3) and true or 2
 end
 
 function show_status()
@@ -529,7 +526,7 @@ function show_status()
 	local location = zobject_name(obj)
 	local scorea = get_zword(global_var_addr(1))
 	local scoreb = get_zword(global_var_addr(2))
-	local flag = get_zbyte(interpreter_flags)
+	local flag = get_zbyte(_interpreter_flags_header_addr)
 	local separator = '/'
 	if (flag & 2) == 2 then
 		local ampm = ''

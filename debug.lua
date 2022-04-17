@@ -41,35 +41,35 @@ end
 
 function infodump_header()
 	log('     ***  Header  ***')
-	log('z-code version: '..get_zbyte(version))
-	local int_flags = get_zbyte(interpreter_flags)
+	log('z-code version: '..get_zbyte(_version_header_addr))
+	local int_flags = get_zbyte(_interpreter_flags_header_addr)
 	local flag = (int_flags & 2 == 2) and 'time' or 'score/moves'
 	log('int flags: display '..flag)
-	log('release number: '..get_zword(release_number_addr))
-	log('start paged mem: '..tohex(_paged_memory_addr))
-	log('dict add: '..tohex(_dictionary_addr))
-	log('obj add: '..tohex(_object_table_addr))
-	log('global add: '..tohex(_global_var_table_addr))
-	log('size of dyn mem: '..tohex(_static_mem_addr))
+	log('release number: '..get_zword(_release_number_header_addr))
+	log('start paged mem: '..tohex(_paged_memory_mem_addr))
+	log('dict add: '..tohex(_dictionary_mem_addr))
+	log('obj add: '..tohex(_object_table_mem_addr))
+	log('global add: '..tohex(_global_var_table_mem_addr))
+	log('size of dyn mem: '..tohex(_static_memory_mem_addr))
 
 	local serial_num = ""
 	for i = 0, 5 do
-		local byte = get_zbyte(serial_code + (0x.0001 * i))
+		local byte = get_zbyte(_serial_code_header_addr + (0x.0001 * i))
 		serial_num ..= chr(byte)
 	end
 	log('serial number: '..serial_num)
-	log('abbr addr: '..tohex(_abbr_table_addr))
-	local file_size = zword_to_zaddress(get_zword(file_length),true)
+	log('abbr addr: '..tohex(_abbr_table_mem_addr))
+	local file_size = zword_to_zaddress(get_zword(_file_length_header_addr),true)
 	log('file size: '..tohex(file_size))
-	log('checksum: '..tohex(get_zword(file_checksum)))
-	log('screen size: '..get_zbyte(_screen_width)..'x'..get_zbyte(_screen_height))
+	log('checksum: '..tohex(get_zword(_file_checksum_header_addr)))
+	log('screen size: '..get_zbyte(_screen_width_header_addr)..'x'..get_zbyte(_screen_height_header_addr))
 	log('program_counter start: '..tohex(_program_counter))
 	log('\n')
 end
 
 function infodump_dictionary()
 	log('     ***  Dictionary  ***')
-	local addr = _dictionary_addr
+	local addr = _dictionary_mem_addr
 	local num_separators = get_zbyte(addr)
 	addr += 0x.0001
 	log('num separators: '..num_separators)
@@ -106,8 +106,8 @@ function infodump_abbreviations()
 end
 
 function infodump_object_tree(from, to)
-	local object_count = _z_machine_version == 3 and 255 or 286
-	local attr_count = _z_machine_version == 3 and 31 or 47
+	local object_count = _zm_version == 3 and 255 or 286
+	local attr_count = _zm_version == 3 and 31 or 47
 	local s = from or 1
 	local e = to or object_count
 	if (e < s) s, e = e, s
@@ -147,20 +147,20 @@ function test_system_memory_correctness()
 
 	--fill up the _stack for push/pop correctness check
 	for i = 1, 9 do
-		set_zword(_stack_var_addr, i)
+		set_zword(_stack_var_mem_addr, i)
 	end
 
-	--repeatedly calling get_zbyte or get_zword at _stack_var_addr
+	--repeatedly calling get_zbyte or get_zword at _stack_var_mem_addr
 	-- should pop off values from the stack; we get a new value each call
 	dump_stack()
-	log(get_zbyte(_stack_var_addr))
-	log(get_zbyte(_stack_var_addr))
-	log(get_zbyte(_stack_var_addr))
-	log(get_zbyte(_stack_var_addr))
-	set_zbyte(_stack_var_addr, 99)
-	log(get_zbyte(_stack_var_addr))
-	log(get_zbyte(_stack_var_addr))
-	log(get_zbyte(_stack_var_addr))
+	log(get_zbyte(_stack_var_mem_addr))
+	log(get_zbyte(_stack_var_mem_addr))
+	log(get_zbyte(_stack_var_mem_addr))
+	log(get_zbyte(_stack_var_mem_addr))
+	set_zbyte(_stack_var_mem_addr, 99)
+	log(get_zbyte(_stack_var_mem_addr))
+	log(get_zbyte(_stack_var_mem_addr))
+	log(get_zbyte(_stack_var_mem_addr))
 
 	dump_call_stack()
 	dump_stack()
@@ -168,8 +168,8 @@ function test_system_memory_correctness()
 	call_stack_push()
 	set_zword(local_var_address(5), 0x5555)
 	set_zword(local_var_address(13), 0xcccc)
-	set_zword(_stack_var_addr, 0xaaaa)
-	set_zword(_stack_var_addr, 0xbbbb)
+	set_zword(_stack_var_mem_addr, 0xaaaa)
+	set_zword(_stack_var_mem_addr, 0xbbbb)
 	_program_counter += 0x.0005
 	call_stack_push()
 	dump_call_stack()
@@ -178,7 +178,7 @@ function test_system_memory_correctness()
 	dump_call_stack()
 	dump_stack()
 	log('pc: '..tohex(_program_counter)..', sp: '.._stack_pointer)
-	get_zword(_stack_var_addr) --should error
+	get_zword(_stack_var_mem_addr) --should error
 end
 
 -- function test_split_screen()
