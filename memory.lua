@@ -61,7 +61,7 @@ end
 
 function frame:push(val)
 	add(self.stack,val)
-	log("pushing "..tostr(val)..", and now "..tostr(self.stack[#self.stack]))
+	-- log("pushing "..tostr(val)..", and now "..tostr(self.stack[#self.stack]))
 end
 
 function frame:pop()
@@ -355,7 +355,6 @@ function set_zword(zaddress, zword, indirect)
 		else
 			stack_push(zword)
 		end
-		log("local stack top value is: "..stack_top())
 	else
 		local dword, bank, index, cell  = get_dword(zaddress, indirect)
 		if (zaddress < 0xa) then
@@ -380,7 +379,6 @@ function set_zword(zaddress, zword, indirect)
 				dword = (dword & 0xffff) | (zword >>> 16)
 			end
 			_call_stack[#_call_stack].vars[index] = dword
-			log(dword.." set to local var "..index..": ".._call_stack[#_call_stack].vars[index])
 		end
 	end
 end
@@ -787,22 +785,17 @@ function capture_state(state)
 		end
 
 		-- log('saving call stack: '..(#_call_stack))
-		--save call stack size
 		memory_dump ..= dword_to_str(#_call_stack)
 		for i = 1, #_call_stack do
 			local f = _call_stack[i]
-			--save pc
 			memory_dump ..= dword_to_str(f.pc)
-			--save call type
 			memory_dump ..= dword_to_str(f.call)
-			--save number of args
 			memory_dump ..= dword_to_str(f.args)
 			--save local stack size and values
 			memory_dump ..= dword_to_str(#f.stack)
 			for i = 1, #f.stack do
 				memory_dump ..= dword_to_str(f.stack[i])
 			end
-			--save local vars (always 16)
 			for i = 1, #f.vars do
 				memory_dump ..= dword_to_str(f.vars[i])
 			end
