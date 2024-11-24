@@ -39,11 +39,40 @@ active_table = 1
 
 bank_size = 16384 -- (1024*64)/4; four 64K banks
 _memory = {{}}
---call stack holds a flat list of frame data
---a frame consists of 10 numbers:
---   stack pointer, program counter, 8 zwords for in-scope local vars
+
+-- used for throw/catch
+call_type = {
+	none = 0, func = 1, proc = 2, intr = 3
+}
+
+-- frame prototype: program_counter, call_type, num_args
+frame = {
+	pc = 0, call = nil, args = 0
+}
+
+-- proper concept of a "frame" now 
+function frame:new()
+ local obj = {
+ 	stack = {},
+	vars = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+ }
+ return setmetatable(obj, {__index=self})
+end
+
+function frame:push(val)
+	add(self.stack,val)
+	log("pushing "..tostr(val)..", and now "..tostr(self.stack[#self.stack]))
+end
+
+function frame:pop()
+	if #self.stack == 0 then
+		log("ERR: asked to pop beyond the this frame's stack count")
+		return nil
+	end
+	log("popping "..tostr(self.stack[#self.stack]))
+	return deli(self.stack)
+end
 _call_stack = {}
-_stack = {}
 
 --these copies are used to grab a save state snapshot
 _memory_start_state = nil
@@ -59,7 +88,6 @@ function reset_game()
 		end
 	end
 	_call_stack = {}
-	_stack = {}
 	_program_counter = 0x0
 	_interrupt = nil
 	story_loaded = false
@@ -69,7 +97,6 @@ end
 function reset_all_memory()
 	_memory = {{}}
 	_call_stack = {}
-	_stack = {}
 	_program_counter = 0x0
 	_interrupt = nil
 	max_input_length = 0
@@ -83,44 +110,36 @@ end
 --there is no such thing as popping individual bytes from words
 function stack_push(zword)
 	-- log('+ + stack_push: '..tohex(zword))
-	add(_stack, zword)
+	_call_stack[#_call_stack]:push(zword)
 end
 
 function stack_pop()
 	-- log('- - stack_pop: '..tohex(_stack[#_stack]))
-	--assert(#_stack > 0, 'ERR: asked to pop from an empty stack!')
-	if (#_stack == _call_stack[#_call_stack - 8]) then
-		--log('ERR: asked to pop beyond the limit of this frames base sp')
-		return nil
-	end
-	return deli(_stack, #_stack)
+	return _call_stack[#_call_stack]:pop()
 end
 
-function stack_pop_to(index)
-	--log('- - stack_pop_to: '..index)
-	-- assert(index <= #_stack, 'ERR: asked to pop to an index > stack size')
-	if index == 0 then
-		_stack = {}
-	else
-		while (#_stack > index) deli(_stack, #_stack)
-	end
-	-- assert(#_stack == index, "didn't pop stack to the right index:"..#_stack.." vs. "..index)
+function stack_top()
+	local st = _call_stack[#_call_stack].stack
+	return st[#st]
+end
+
+function stack_set_top(val)
+	local st = _call_stack[#_call_stack].stack
+	st[#st] = val
+	_call_stack[#_call_stack].stack = st
 end
 
 function call_stack_push()
-	_call_stack[#_call_stack - 9] = _program_counter
-	for i = 1, 10 do
-		add(_call_stack, 0x0)
-	end
-	_call_stack[#_call_stack - 8] = #_stack
+	if (#_call_stack > 0) _call_stack[#_call_stack].pc = _program_counter
+	local new_frame = frame:new()
+	add(_call_stack, new_frame)
+	log("call_stack size: "..#_call_stack)
+
 end
 
 function call_stack_pop(ret_value)
-	stack_pop_to(_call_stack[#_call_stack - 8])
-	for i = 1, 10 do
-		deli(_call_stack, #_call_stack)
-	end
-	_program_counter = _call_stack[#_call_stack - 9]
+	deli(_call_stack)
+	_program_counter = _call_stack[#_call_stack].pc
 	if ret_value != nil then
 		local var_byte = get_zbyte()
 		local ret_address = decode_var_address(var_byte)
@@ -129,11 +148,11 @@ function call_stack_pop(ret_value)
 	end
 end
 
-
-function stack_index(zaddress)
-	local si = #_call_stack - (flr((0xf - (zaddress << 16)) >>> 1))
-	--log('call_stack_index for zaddress: '..tohex(zaddress)..' is: '..si)
-	return si
+function local_var_at_zindex(zaddress)
+	local index = zaddress << 16
+	local var = _call_stack[#_call_stack].vars[index]
+	-- log('local_var_at_zindex for zaddress: '..tohex(zaddress)..' is: '..var)
+	return var, index
 end
 
 function abbr_address(index)
@@ -211,12 +230,12 @@ function get_dword(zaddress, indirect)
 	end
 
 	if (base == _local_var_table_addr) then
-		index = stack_index(zaddress)
-		return _call_stack[index], nil, index
+		local var, index = local_var_at_zindex(zaddress)
+		return var, nil, index
 	end
 
 	if (zaddress == _stack_var_addr) then
-		if (indirect) return _stack[#_stack]
+		if (indirect) return stack_top()
 		return stack_pop()
 	end
 end
@@ -233,7 +252,7 @@ function get_zbyte(zaddress)
 	end
 	local base = (zaddress & 0xffff)
 	local dword, _, _, cell  = get_dword(zaddress)
-
+	-- log("Got dword: "..dword.." @address: "..zaddress)
 	if (base < 0xa) then
 		if cell < 2 then
 			dword >>>= (8 - (8*cell))
@@ -285,7 +304,8 @@ function set_zbyte(zaddress, byte)
 			else
 				dword = (dword & 0xffff) | (byte >>> 16)
 			end
-			_call_stack[index] = dword
+			_call_stack[#_call_stack].vars[index] = dword
+			-- log("zbyte "..dword.." set at index "..index..": ".._call_stack[#_call_stack].vars[index])
 		end
 	end
 end
@@ -331,10 +351,11 @@ function set_zword(zaddress, zword, indirect)
 	if (zaddress == _stack_var_addr) then
 		-- log(' setting stack var zword: '..tohex(zword))
 		if indirect then
-			_stack[#_stack] = zword
+			stack_set_top(zword)
 		else
 			stack_push(zword)
 		end
+		log("local stack top value is: "..stack_top())
 	else
 		local dword, bank, index, cell  = get_dword(zaddress, indirect)
 		if (zaddress < 0xa) then
@@ -358,7 +379,8 @@ function set_zword(zaddress, zword, indirect)
 			else
 				dword = (dword & 0xffff) | (zword >>> 16)
 			end
-			_call_stack[index] = dword
+			_call_stack[#_call_stack].vars[index] = dword
+			log(dword.." set to local var "..index..": ".._call_stack[#_call_stack].vars[index])
 		end
 	end
 end
@@ -765,18 +787,28 @@ function capture_state(state)
 		end
 
 		-- log('saving call stack: '..(#_call_stack))
+		--save call stack size
 		memory_dump ..= dword_to_str(#_call_stack)
 		for i = 1, #_call_stack do
-			memory_dump ..= dword_to_str(_call_stack[i])
+			local f = _call_stack[i]
+			--save pc
+			memory_dump ..= dword_to_str(f.pc)
+			--save call type
+			memory_dump ..= dword_to_str(f.call)
+			--save number of args
+			memory_dump ..= dword_to_str(f.args)
+			--save local stack size and values
+			memory_dump ..= dword_to_str(#f.stack)
+			for i = 1, #f.stack do
+				memory_dump ..= dword_to_str(f.stack[i])
+			end
+			--save local vars (always 16)
+			for i = 1, #f.vars do
+				memory_dump ..= dword_to_str(f.vars[i])
+			end
 		end
 
-		-- log('saving stack: '..(#_stack))
-		memory_dump ..= dword_to_str(#_stack)
-		for i = 1, #_stack do
-			memory_dump ..= dword_to_str(_stack[i])
-		end
-
-		-- log('saving pc: '..(tohex(_program_counter,true)))
+		-- log('saving current pc: '..(tohex(_program_counter,true)))
 		memory_dump ..= dword_to_str(_program_counter)
 		-- log('saving checksum: '..(tohex(checksum,true)))
 		local checksum = get_zword(file_checksum)

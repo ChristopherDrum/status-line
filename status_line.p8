@@ -1,11 +1,11 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
---status line 2.0
+--status line 3.0
 --by christopher drum
 
 _z_machine_version = 0
-_engine_version = '2.0'
+_engine_version = '3.0'
 checksum = 0x0
 story_loaded = false
 -- full_color = false
@@ -83,7 +83,7 @@ function tohex(value, full)
 end
 
 function log(str)
-	printh(str, 'status_line_log_30', true)
+	printh(str, 'status_line_log_30', false)
 end
 
 function wait_for_any_key()
@@ -350,8 +350,9 @@ function initialize_game()
 	patch()
 
 	call_stack_push()
+	_call_stack[#_call_stack].pc = _program_counter
 	--special case at startup for the program counter
-	_call_stack[#_call_stack - 9] = _program_counter
+	-- _call_stack[#_call_stack - 9] = _program_counter
 
 	active_window = 0
 	split_window(0)
