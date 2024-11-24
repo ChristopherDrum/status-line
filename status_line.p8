@@ -18,7 +18,7 @@ local screen_types = {
 		{'b&w', {6,0}}, {'green', {138, 131}}, 
 		{'amber', {9,128}}, {'blue', {12,129}}, 
 		{'oldlcd', {131,129}}, {'plasma', {8,130}}, 
-		{'invert', {0,6}}--, {'ega', {7,0}}
+		{'invert', {0,6}}, {'ega', {7,0}}
 	}
 }
 local scroll_speeds = {
@@ -175,7 +175,7 @@ function draw_splashscreen(did_load)
 		print('sTORY IS LOADING', 31, 100)
 	else
 		sspr(114,124,14,4,103,116)
-		print('DRAG IN A Z3/4 STORY\n  TO START PLAYING', 24, 92)
+		print('DRAG IN A Z3/4/5 STORY\n  TO START PLAYING', 24, 92)
 	end
 
 	color()
