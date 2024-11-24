@@ -264,7 +264,7 @@ end
 
 function set_zbyte(zaddress, byte)
 	--log('set_zbyte at '..tohex(zaddress)..' to value: '..byte)
-	local byte &= 0xff --filter off zword garbage
+	local byte = byte & 0xff --filter off zword garbage
 	local base = (zaddress & 0xffff)
 
 	if (zaddress == _stack_var_addr) then
@@ -324,7 +324,7 @@ end
 
 function set_zword(zaddress, zword, indirect)
 	-- log(' setting zword: '..tohex(zword))
-	local zword &= 0xffff --filter off dword garbage
+	local zword = zword & 0xffff --filter off dword garbage
 	-- local base = (zaddress & 0xffff)
 	--log('set_zword at '..tohex(zaddress)..' to value: '..tohex(zword))
 	
@@ -615,12 +615,13 @@ function zscii_to_p8scii(zchars)
 			zscii_decode = true
 
 		elseif zchar > 31 then
+			-- log('append: '..zchar..' as: '..chr(zchar))
 			zstring ..= chr(zchar)
 			active_table = 1
 
 		else
 			local lookup_string = zchar_tables[active_table]
-			zstring ..= sub(lookup_string, zchar, _)
+			zstring ..= lookup_string[zchar]
 			active_table = 1
 		end
 	end
@@ -792,9 +793,9 @@ function load_story_file()
 		local chunk = serial(0x800, 0x4300, 1024)
 		for j = 0, chunk-1, 4 do
 			local a, b, c, d = peek(0x4300+j, 4)
-			local a <<= 8
-			local c >>>= 8
-			local d >>>= 16
+			a <<= 8
+			c >>>= 8
+			d >>>= 16
 			local dword = (a|b|c|d)
 			add(_memory[bank_num], dword)
 		end

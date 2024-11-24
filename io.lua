@@ -205,7 +205,7 @@ function flush_line_buffer()
 			end
 		end
 		-- log('last char: '..ord(sub(str,-1)))
-		local dtn = sub(str,-1) == '\n'
+		local dtn = str[-1] == '\n'
 		if (dtn == true) str = sub(str,1,#str-1)
 		if (active_window == 0 or (active_window == 1 and _z_machine_version == 3)) did_trim_nl = dtn
 		-- if (active_window == 0) did_trim_nl = dtn
@@ -272,7 +272,7 @@ function tokenise(str)
 	end
 
 	for i = 1, #str do
-		local char = sub(str,i,_)
+		local char = str[i]
 		-- log('  char '..i..': '..ord(char))
 		add(bytes, ord(char))
 

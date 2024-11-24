@@ -83,7 +83,7 @@ function tohex(value, full)
 end
 
 function log(str)
-	printh(str, 'status_line_log_20')
+	printh(str, 'status_line_log_30', true)
 end
 
 function wait_for_any_key()
@@ -284,8 +284,7 @@ function fetch_parser_separators()
 	seps = zscii_to_p8scii(seps)
 	-- log('fetch_parser_separators: '..seps)
 	for i = 1, num_separators do
-		local k = sub(seps, i, i)
-		add(separators, k)
+		add(separators, seps[i])
 	end
 end
 
