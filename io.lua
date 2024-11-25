@@ -353,7 +353,7 @@ function capture_input(char)
 	if (z_parse_buffer_length == 0) z_parse_buffer_length = get_zbyte(z_parse_buffer)
 
 	-- log('current input: '..current_input)
-	if char == '\r' then
+	if (char == '\n') or (char == '\r') then
 
 		--normalize the current input
 		current_input = strip(current_input)
@@ -363,7 +363,14 @@ function capture_input(char)
 
 		--fill text buffer
 		local addr = z_text_buffer + 0x.0001
-		set_zbytes(addr, bytes)
+		if _z_machine_version < 5 then
+			local zadd = set_zbytes(addr, bytes)
+			-- set_zbyte(zadd,0x0)
+		else
+			local n = get_zbyte(addr)
+			set_zbyte(addr, n+#bytes)
+			set_zbytes(addr+0x.0001+(n>>>16), bytes)
+		end
 
 		local max_tokens = min(#tokens, z_parse_buffer_length)
 		set_zbyte(z_parse_buffer+0x.0001, max_tokens)
@@ -381,7 +388,7 @@ function capture_input(char)
 		end
 		
 		current_input, visible_input = '', ''
-		read()
+		read(char) --co-opting the return value for v5
 
 	else
 		process_input_char(case_setter(char, lowercase), char, max_input_length)

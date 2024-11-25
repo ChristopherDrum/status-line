@@ -47,20 +47,24 @@ function jl(s, t)
 	--log('jl: '..s..' < '..t) 
 	branch(s < t)
 end
+
 function jg(s, t)
 	--log('jg: '..s..' > '..t)
 	branch(s > t)
 end
+
 function dec_chk(var, s)
 	--log('dec_chk: ')
 	local val = dec(var)
 	jl(val, s)
 end
+
 function inc_jg(var, s)
 	--log('inc_jg: '..tohex(var)..', '..tohex(s))
 	local val = inc(var)
 	jg(val, s)
 end
+
 function jin(obj, n)
 	local parent = zobject_family(obj, zparent)
 	--log('jin: '..obj..' with parent '..parent..', '..n)
@@ -205,15 +209,19 @@ function get_family_member(obj, fam)
 	set_var(member)
 	if (fam != zparent) branch(member != 0)
 end
+
 function get_sibling(obj) 
 	get_family_member(obj, zsibling) 
 end	
+
 function get_child(obj) 
 	get_family_member(obj, zchild) 
 end
+
 function get_parent(obj) 
 	get_family_member(obj, zparent) 
 end
+
 function get_prop_len(baddr)
 	--log('get_prop_len: '..tohex(baddr))
 	local baddr = zword_to_zaddress(baddr)
@@ -221,6 +229,7 @@ function get_prop_len(baddr)
 	local len = extract_prop_len(len_byte)
 	set_var(len)
 end
+
 function inc_dec(var, amt)
 	local zword = get_var(var)
 	--log('inc_dec: '..tohex(var)..'; current value: '..zword..' by '..amt)
@@ -232,6 +241,7 @@ end
 function inc(var)
 	return inc_dec(var,1)
 end
+
 function dec(var)
 	return inc_dec(var,-1)
 end
@@ -243,6 +253,7 @@ function print_addr(baddr)
 	-- memory(zchars)
 	output(str)
 end
+
 function remove_obj(obj)
 	--log('remove_obj: '..zobject_name(obj)..'('..obj..')')
 	--set parent to 0 and stitch up the sibling chain gap
@@ -280,21 +291,33 @@ function ret(a)
 	--log('===> ret: '..tohex(a)..' <===')
 	call_stack_pop(a)
 end
+
 function jump(s)
 	--log('jump: '..tohex(s))
 	_program_counter += ((s - 2) >> 16) --keep the sign
 end
+
 function print_paddr(saddr)
 	local zaddress = zword_to_zaddress(saddr, true)
 	local str, zchars = get_zstring(zaddress)
 		--log('print_paddr: '..str)
 	output(str)
 end
+
 function load(var)
 	--log('load: '..var)
 	local a = get_var(var,true)
 	set_var(a)
 end
+
+function not_call_p(a)
+	if _z_machine_version < 5 then
+		_not(a)
+	else
+		call_p(a)
+	end
+end
+
 function _not(a)
 	--log('_not: '..a)
 	set_var(~a)
@@ -304,21 +327,25 @@ function rtrue()
 	--log('rtrue: ')
 	ret(1)
 end
+
 function rfalse()
 	--log('rfalse: ')
 	ret(0)
 end
+
 function _print(zstring)
 	local str, zchars = get_zstring(zstring)
 	--log('_print: '..str)
 	output(str)
 end
+
 function print_ret(zstring)
 	--log('print_ret')
 	_print(zstring)
 	new_line()
 	rtrue()
 end
+
 function _show_status()
 	if (_z_machine_version == 3) show_status()
 end
@@ -333,33 +360,44 @@ function _save(did_save)
 		_interrupt = save_game
 	else
 		_interrupt = nil
-		if _z_machine_version == 3 then
+		if _z_machine_version < 4 then
 			branch(did_save)
 		else 
 			set_var(did_save)
 		end
 	end
 end
+
 function restore()
 	--log('restore: ')
 	local rg = restore_game()
-	if _z_machine_version == 3 then
-		 branch(rg)
+	if _z_machine_version < 4 then
+		branch(rg)
 	else
 		set_var(rg)
 	end
 end
+
 function restart()
 	--log('restart: ')
 	reset_game()
 end
+
 function ret_popped()
 	--log('ret_popped: ')
 	ret(stack_pop())
 end
-function pop()
-	--log('pop: ')
-	stack_pop()
+
+function pop_catch()
+	if _z_machine_version < 5 then 
+		stack_pop()
+	else 
+		catch() 
+	end
+end
+
+function catch()
+	--log('v5 catch: ')
 end
 
 function quit()
@@ -384,7 +422,9 @@ end
 
 --timer function turned off in header for now
 function read(baddr1, baddr2, time, raddr)
-	if (not _interrupt) then
+	if (_z_machine_version >= 5 and baddr2 == 0) then
+		-- tokenise(baddr1, baddr2)
+	elseif (not _interrupt) then
 	--log('s/read: '..tohex(baddr1)..','..tohex(baddr2)..', time: '..tohex(time)..', '..tohex(raddr))
 		--cache addresses for capture_input()
 		flush_line_buffer()
@@ -392,29 +432,36 @@ function read(baddr1, baddr2, time, raddr)
 		_show_status()
 		_interrupt = capture_input
 	else
+		--on return from capture_input we re-use baddr1 for v5 return values
 		z_text_buffer, z_parse_buffer = 0x0, 0x0
 		_interrupt = nil
+		if (_z_machine_version >= 5) set_var(baddr1)
 	end
 end
+
 function print_char(n)
 	-- local char = zscii_to_p8scii({n})
 	if (n == 10) n = 13
 		--log('print_char '..n..': '..chr(n))
 	output(chr(n))
 end
+
 function print_num(s)
 	--log('print_num: '..s)
 	output(tostr(s))
 end
+
 function push(a)
 	--log('push: '..a)
 	stack_push(a)
 end
+
 function pull(var)
 	--log('pull: '..var)
 	local a = stack_pop()
 	set_var(a, var, true)
 end
+
 function split_window(lines)
 	--log('split_window called: '..lines)
 	flush_line_buffer(0)
@@ -571,36 +618,46 @@ function storeb(baddr, n, zbyte)
 	set_zbyte(baddr, zbyte)
 end
 
-function call_fv(raddr, a1, a2, a3, a4, a5, a6, a7)
-	--log('call_fv: '..tohex(raddr)..', '..tohex(a1)..', '..tohex(a2)..', '..tohex(a3)..', '..tohex(a4)..', '..tohex(a5)..', '..tohex(a6)..', '..tohex(a7))
+function call_f(raddr, a1, a2, a3, a4, a5, a6, a7)
+	call(raddr, call_type.func, a1, a2, a3, a4, a5, a6, a7)
+end
+
+function call_p(raddr, a1, a2, a3, a4, a5, a6, a7)
+	call(raddr, call_type.proc, a1, a2, a3, a4, a5, a6, a7)
+end
+
+function call(raddr, call, a1, a2, a3, a4, a5, a6, a7)
+	--log('call: '..tohex(raddr)..', '..tohex(a1)..', '..tohex(a2)..', '..tohex(a3)..', '..tohex(a4)..', '..tohex(a5)..', '..tohex(a6)..', '..tohex(a7))
 	if (raddr == 0x0) then
 		set_var(0)
 	else 
 		--z3/4 formula is "r = r + 2 ∗ L + 1"
 		--z5 formula is "r = r + 1"
 		local r = zword_to_zaddress(raddr, true)
-		--log('  unpacked raddr: '..tohex(r))
 		local l = get_zbyte(r) --num local vars
-		--log('  revealed l value: '..l)
-		r += 0x.0001 -- "1"
-		call_stack_push()
-
+		r += 0x.0001 --move past l (we've consumed 1 byte)
 		local a_vars = {a1, a2, a3, a4, a5, a6, a7}
-		-- if #a_vars > 0 then
-		for i = 1, l do -- "L"
-			local zword = 0
+		local n = #a_vars --this will not include any unbound a_vars
+
+		local zword = 0
+		for i = 1, l do
 			if _z_machine_version < 5 then
-				if (i <= #a_vars) then 
+				if (i < n) then 
 					zword = a_vars[i]
 				else
 					zword = get_zword(r)
 				end
-				r += 0x.0002 --"2"
+				r += 0x.0002 -- 2 bytes for a word, looped l times == 2*l
 			end
 			set_zword(local_var_addr(i), zword)
 		end
-			--r should be pointing to the start of the routine
-		-- end
+
+		--setup the call stack with this information
+		--r should be pointing to the start of the routine identified by raddr
+		call_stack_push()
+		_call_stack[#_call_stack].pc = r
+		_call_stack[#_call_stack].call = call --func or proc
+		_call_stack[#_call_stack].args = n
 		_program_counter = r
 	end
 end
@@ -618,23 +675,36 @@ function random(s, skip_set_var)
 	end
 end
 
---call_f0, call_f1
-_long_ops = {
-	nil, je, jl, jg, dec_chk, inc_jg, jin, test, _or, _and, test_attr, set_attr, clear_attr, store, insert_obj, loadw, loadb, get_prop, get_prop_addr, get_next_prop, _add, _sub, _mul, _div, _mod, call_fv
+function piracy()
+	branch(true)
+end
+
+--see color table, Plotkin, 4.3 #11
+function set_color(a,b)
+	current_fg = get_zbyte(a)
+	current_bg = get_zbyte(b)
+end
+
+function throw(a, fp)
+end
+
+--these are $0-indexed
+_zero_ops = {
+	rtrue, rfalse, _print, print_ret, nop, _save, restore, restart, ret_popped, pop_catch, quit, new_line, _show_status, verify, nil, piracy
 }
 
 _short_ops = {
-	jz, get_sibling, get_child, get_parent, get_prop_len, inc, dec, print_addr, call_fv, remove_obj, print_obj, ret, jump, print_paddr, load, _not
+	jz, get_sibling, get_child, get_parent, get_prop_len, inc, dec, print_addr, call_f, remove_obj, print_obj, ret, jump, print_paddr, load, not_call_p
 }
 
-_zero_ops = {
-	rtrue, rfalse, _print, print_ret, nop, _save, restore, restart, ret_popped, pop, quit, new_line, _show_status, verify
+_long_ops = {
+	nil, je, jl, jg, dec_chk, inc_jg, jin, test, _or, _and, test_attr, set_attr, clear_attr, store, insert_obj, loadw, loadb, get_prop, get_prop_addr, get_next_prop, _add, _sub, _mul, _div, _mod, call_f, call_p, set_color, throw
 }
 
 _var_ops = {
-	call_fv, storew, storeb, put_prop, read, 
+	call_f, storew, storeb, put_prop, read, 
 	print_char, print_num, random, push, pull, 
-	split_window, set_window, call_fv, erase_window, erase_line, 
+	split_window, set_window, call_f, erase_window, erase_line, 
 	set_zcursor, get_cursor, set_text_style, buffer_mode, output_stream, 
 	input_stream, sound_effect, read_char, scan_table
 }

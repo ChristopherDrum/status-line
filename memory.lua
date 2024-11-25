@@ -10,8 +10,7 @@ _high_mem_addr = 0x0
 
 _program_counter_addr = 0xa
 _local_var_table_addr = 0xb
-_stack_var_addr = 0xc.0001 -- +.0001 to disambiguate from real number 0xc
---just need the above to be higher than _memory can reach. 
+_stack_var_addr = 0xc.0001
 --On a 256K z5 game, we'll have memory addresses potentially as high as 0x7.fff8
 
 -- header locations 3+
@@ -200,10 +199,10 @@ function decode_var_address(var_byte)
 	if (var_byte >= 16) return global_var_addr(var_byte-16) -- -16 ONLY when decoding var byte
 end
 
-function zword_to_zaddress(zaddress, is_packed)
+function zword_to_zaddress(zword, is_packed)
 	local shift = 16
 	if (is_packed) shift -= packed_shift
-	return (zaddress >>> shift)
+	return (zword >>> shift)
 end
 
 
@@ -312,10 +311,10 @@ end
 
 function set_zbytes(zaddress, bytes)
 	for i = 1, #bytes do
-		local byte = bytes[i]
-		set_zbyte(zaddress, byte)
+		set_zbyte(zaddress, bytes[i])
 		zaddress += 0x.0001
 	end
+	return zaddress --points to the byte immediately after the set bytes
 end
 
 function get_zword(zaddress, indirect)
