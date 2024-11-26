@@ -14,7 +14,7 @@ _stack_var_mem_addr = 0xc.0001 -- +.0001 to disambiguate from real number 0xc
 --just need the above to be higher than _memory can reach. 
 --On a 256K z5 game, we'll have memory addresses potentially as high as 0x7.fff8
 
--- header locations 3+
+-- header locations z3+
 _version_header_addr = 0x.0000
 _interpreter_flags_header_addr = 0x.0001
 _release_number_header_addr = 0x.0002
@@ -29,11 +29,21 @@ _serial_code_header_addr = 0x.0012
 _abbr_table_mem_addr = 0x.0018
 _file_length_header_addr = 0x.001a
 _file_checksum_header_addr = 0x.001c
--- header locations v4+
+-- header locations z4+
 _interpreter_number_header_addr = 0x.001e
 _interpreter_version_header_addr = 0x.001f
 _screen_height_header_addr = 0x.0020 --lines
 _screen_width_header_addr = 0x.0021 --characters
+-- header locations z5+
+_screen_width_units_addr = 0x.0022
+_screen_height_units_addr = 0x.0024
+_font_width_units_addr = 0x.0026
+_font_height_units_addr = 0x.0027
+_default_bg_color_addr = 0x.002c
+_default_fg_color_addr = 0x.002d
+_terminating_chars_table_addr = 0x.002e
+_alphabet_table_addr = 0x.0034
+_header_extension_table_addr = 0x.0036
 
 _memory_bank_size = 16384 -- (1024*64)/4; four 64K banks
 
@@ -659,7 +669,7 @@ function load_instruction()
 		end
 
 	elseif op_form == 0x02 then
-		log(' short instruction found')
+		-- log(' short instruction found')
 		-- The first byte of a short instruction is %10ttxxxx.
 		-- %tt is the type of the operand (or %11 if absent),
 		-- %xxxx is the 1OP (0OP if operand absent) opcode
