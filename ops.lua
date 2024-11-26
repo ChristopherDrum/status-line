@@ -15,7 +15,7 @@ function _branch(should_branch)
 
 	if (reverse_arg == true) should_branch = not should_branch
 
-	if (big_branch == true) then
+	if big_branch == true then
 		--log('big_branch evaluated')
 		if (offset > 31) offset -= 64
 		offset <<= 8
@@ -24,7 +24,7 @@ function _branch(should_branch)
 
 	--log('_program_counter at: '..tohex(_program_counter))
 	--log('branch offset at: '..offset)
-	if (should_branch == true) then
+	if should_branch == true then
 		--log('should_branch is true')
 		if offset == 0 or offset == 1 then --same as rfalse/rtrue
 			_ret(offset)
@@ -102,7 +102,7 @@ function _scan_table(a, baddr, n, byte) --<result> <branch>
 		local check_addr = base_addr + ((i * entry_len)>>>16)
 		local value = getter(check_addr)
 			--log('  check addr: '..tohex(check_addr)..', found: '..tohex(value)..', compare against: '..tohex(a))
-		if (value == a) then
+		if value == a then
 			--log('    FOUND!')
 			found_addr = check_addr
 			should_branch = true
@@ -244,7 +244,7 @@ end
 
 function _call_fv(raddr, a1, a2, a3, a4, a5, a6, a7)
 	--log('call_fv: '..tohex(raddr)..', '..tohex(a1)..', '..tohex(a2)..', '..tohex(a3)..', '..tohex(a4)..', '..tohex(a5)..', '..tohex(a6)..', '..tohex(a7))
-	if (raddr == 0x0) then
+	if raddr == 0x0 then
 		set_var(0)
 	else 
 		--z3/4 formula is "r = r + 2 ∗ L + 1"
@@ -261,7 +261,7 @@ function _call_fv(raddr, a1, a2, a3, a4, a5, a6, a7)
 		for i = 1, l do -- "L"
 			local zword = 0
 			if _zm_version < 5 then
-				if (i <= #a_vars) then 
+				if i <= #a_vars then 
 					zword = a_vars[i]
 				else
 					zword = get_zword(r)
@@ -334,15 +334,15 @@ function _remove_obj(obj)
 	--set parent to 0 and stitch up the sibling chain gap
 	--children always move with their parent
 	local original_parent = zobject_family(obj, zparent)
-	if (original_parent != 0) then
+	if original_parent != 0 then
 
 		local next_child = zobject_family(original_parent, zchild)
 		local next_sibling = zobject_family(obj, zsibling)
-		if (next_child == obj) then
+		if next_child == obj then
 			zobject_set_family(original_parent, zchild, next_sibling)
 		else
-			while (next_child != 0) do
-				if (zobject_family(next_child, zsibling) == obj) then
+			while next_child != 0 do
+				if zobject_family(next_child, zsibling) == obj then
 					zobject_set_family(next_child, zsibling, next_sibling)
 					next_child = 0
 				else
@@ -404,7 +404,7 @@ function _get_next_prop(obj, prop)
 		if (#prop_list > 0) next_prop = prop_list[1]
 	else
 		for i = 1, #prop_list do
-			if (prop_list[i] == prop and i+1 <= #prop_list) then
+			if (prop_list[i] == prop) and (i+1 <= #prop_list) then
 				next_prop = prop_list[i+1]
 			end
 		end
@@ -430,7 +430,7 @@ function _split_screen(lines)
 	local win0 = windows[0]
 	local win1 = windows[1]
 	local cur_y_offset = max(0, win0.h - win0.z_cursor.y)
-	if (lines == 0) then --unsplit
+	if lines == 0 then --unsplit
 		win1.y = 1
 		win1.h = 0
 		win0.y = 1
@@ -442,7 +442,7 @@ function _split_screen(lines)
 		win0.h = max(0, _zm_screen_height - win1.h)
 	end
 	win0.z_cursor.y = win0.h - cur_y_offset
-	if (win0.z_cursor.y < 1) then
+	if win0.z_cursor.y < 1 then
 		win0.z_cursor = {x=1,y=1}
 	end
 	update_screen_rect(1)
@@ -620,7 +620,7 @@ function _erase_window(win)
 		_split_screen(0)
 	end
 
-	if (win <= 0) then
+	if win <= 0 then
 		windows[0].buffer = {}
 		lines_shown = 0
 	end
