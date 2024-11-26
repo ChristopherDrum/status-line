@@ -18,8 +18,6 @@ story_loaded = false
 punc = '.,!?_#'.."'"..'"/\\-:()'
 blank_line = '                                '
 
-
-
 function rehydrate_menu_vars()
 	raw_menu_strings = [[
 screen_types`1`b&w,6,0`green,138,131`amber,9,128`blue,12,129`oldlcd,131,129`plasma,8,130`invert,0,6/scroll_speeds`3`slow,7`medium,5`fast,4`faster,2`fastest,0/clock_types`1`24-hour,24`12-hour,12/cursor_types`1`block,▮`square,■`bar,|`under,_`dotted,\^:150a150a15000000
@@ -37,7 +35,6 @@ screen_types`1`b&w,6,0`green,138,131`amber,9,128`blue,12,129`oldlcd,131,129`plas
 		_𝘦𝘯𝘷[def[1]] = menu
 	end
 end
-
 
 --useful functions
 function in_set(val, set)
@@ -138,27 +135,27 @@ function _init()
 end
 
 function draw_splashscreen(did_load)
-	-- cls(0)
+	cls(0)
 
-	-- sspr(0,0,128,124,0,0)--monitor
-	-- rectfill(6,125,122,127,1)
-	-- sspr(90,125,7,3,83,124)--knobs
-	-- sspr(90,125,7,3,93,124)
+	sspr(0,0,128,124,0,0)--monitor
+	rectfill(6,125,122,127,1)
+	sspr(90,125,7,3,83,124)--knobs
+	sspr(90,125,7,3,93,124)
 
-	-- color(7)
-	-- line(33,83,93,83)
-	-- print('V'.._engine_version, 82, 69)
+	color(7)
+	line(33,83,93,83)
+	print('V'.._engine_version, 82, 69)
 
-	-- if (did_load == true) then
-	-- 	sspr(100,124,14,4,103,116)
-	-- 	print('sTORY IS LOADING', 31, 100)
-	-- else
-	-- 	sspr(114,124,14,4,103,116)
-	-- 	print('DRAG IN A Z3/4 STORY\n  TO START PLAYING', 24, 92)
-	-- end
+	if (did_load == true) then
+		sspr(100,124,14,4,103,116)
+		print('sTORY IS LOADING', 31, 100)
+	else
+		sspr(114,124,14,4,103,116)
+		print('DRAG IN A Z3/4 STORY\n  TO START PLAYING', 24, 92)
+	end
 
-	-- color()
-	-- flip()
+	color()
+	flip()
 end
 
 function game_id()
@@ -274,7 +271,7 @@ function process_header()
 
 	local i_flag = get_zbyte(_interpreter_flags_header_addr)
 
-	if _zm_version == 3 then
+	if _zm_version < 4 then
 		_zm_screen_height = 20
 		_zm_packed_shift = 1
 		_zm_object_property_count = 31
@@ -292,7 +289,8 @@ function process_header()
 		_zm_dictionary_word_size = 9
 
 		set_zbyte(_interpreter_number_header_addr, 4) --amiga
-		set_zbyte(_interpreter_version_header_addr, ord('P'))		set_zbyte(_screen_height_header_addr, _zm_screen_height)
+		set_zbyte(_interpreter_version_header_addr, ord('P'))		
+		set_zbyte(_screen_height_header_addr, _zm_screen_height)
 		set_zbyte(_screen_width_header_addr, 32)
 
 		i_flag = 0x9c
@@ -304,12 +302,12 @@ end
 
 
 function cache_memory_addresses()
-	_program_counter = zword_to_zaddress(get_zword(_program_counter_header_addr))
-	_paged_memory_mem_addr = zword_to_zaddress(get_zword(_paged_memory_header_addr))
-	_dictionary_mem_addr = zword_to_zaddress(get_zword(_dictionary_header_addr))
-	_object_table_mem_addr = zword_to_zaddress(get_zword(_object_table_header_addr))
+	_program_counter 		= zword_to_zaddress(get_zword(_program_counter_header_addr))
+	_paged_memory_mem_addr 	= zword_to_zaddress(get_zword(_paged_memory_header_addr))
+	_dictionary_mem_addr 	= zword_to_zaddress(get_zword(_dictionary_header_addr))
+	_object_table_mem_addr 	= zword_to_zaddress(get_zword(_object_table_header_addr))
 	_global_var_table_mem_addr = zword_to_zaddress(get_zword(_global_var_table_header_addr))
-	_abbr_table_mem_addr = zword_to_zaddress(get_zword(_abbr_table_mem_addr))
+	_abbr_table_mem_addr 	= zword_to_zaddress(get_zword(_abbr_table_mem_addr))
 	_static_memory_mem_addr = zword_to_zaddress(get_zword(_static_memory_header_addr))
 end
 

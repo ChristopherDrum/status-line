@@ -65,6 +65,9 @@ function clear_all_memory()
 end
 
 function flush_volatile_state()
+	--call stack holds a flat list of frame data
+	--a frame consists of 10 numbers:
+	--   stack pointer, program counter, 8 zwords for in-scope local vars
 	_call_stack = {}
 	_stack = {}
 	_program_counter = 0x0
@@ -482,7 +485,7 @@ function extract_prop_len(len_byte)
 		if (len_byte & 0x80) == 0 then
 			return ((len_byte >>> 6) & 0x1) + 1
 		else
-			return (len_byte & 0x3f)
+			return (len_byte & 0x7f)
 		end
 	end
 end
