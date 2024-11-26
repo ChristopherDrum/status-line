@@ -91,7 +91,7 @@ end
 function stack_pop()
 	-- log('- - stack_pop: '..tohex(_stack[#_stack]))
 	--assert(#_stack > 0, 'ERR: asked to pop from an empty stack!')
-	if (#_stack == _call_stack[#_call_stack - 8]) then
+	if #_stack == _call_stack[#_call_stack - 8] then
 		--log('ERR: asked to pop beyond the limit of this frames base sp')
 		return nil
 	end
@@ -207,17 +207,17 @@ function get_dword(zaddress, indirect)
 	local zaddress = zaddress or _program_counter
 	local base = (zaddress & 0xffff)
 
-	if (base < 0xa) then
+	if base < 0xa then
 		local bank, index, cell = get_memory_location(zaddress)
 		return _memory[bank][index], bank, index, cell
 	end
 
-	if (base == _local_var_table_mem_addr) then
+	if base == _local_var_table_mem_addr then
 		index = stack_index(zaddress)
 		return _call_stack[index], nil, index
 	end
 
-	if (zaddress == _stack_var_mem_addr) then
+	if zaddress == _stack_var_mem_addr then
 		if (indirect) return _stack[#_stack]
 		return stack_pop()
 	end
@@ -227,7 +227,7 @@ end
 --a zbyte or zword. Some routines need to add an offset
 --and the result may transition from 2- to 3-byte address
 function get_zbyte(zaddress)
-	if (zaddress == nil) then
+	if zaddress == nil then
 	-- log('______________________PC at: '..tohex(_program_counter))
 		zaddress = _program_counter
 		_program_counter += 0x.0001
@@ -236,13 +236,13 @@ function get_zbyte(zaddress)
 	local base = (zaddress & 0xffff)
 	local dword, _, _, cell  = get_dword(zaddress)
 
-	if (base < 0xa) then
+	if base < 0xa then
 		if cell < 2 then
 			dword >>>= (8 - (8*cell))
 		else
 			dword <<= (2 << cell)
 		end
-	elseif (base == _local_var_table_mem_addr) then
+	elseif base == _local_var_table_mem_addr then
 		if (zaddress & 0x.0001 == 0x.0001) dword <<= 16
 	end
 	-- if (zaddress == _screen_width_header_addr) then
@@ -269,12 +269,12 @@ function set_zbyte(zaddress, byte)
 	local byte &= 0xff --filter off zword garbage
 	local base = (zaddress & 0xffff)
 
-	if (zaddress == _stack_var_mem_addr) then
+	if zaddress == _stack_var_mem_addr then
 		-- log(' setting stack var byte: '..byte)
 		stack_push(byte)
 	else
 		local dword, bank, index, cell  = get_dword(zaddress)
-		if (base < 0xa) then
+		if base < 0xa then
 			local filter = ~(0xff00.0000 >>> (cell << 3))
 			dword &= filter
 			byte <<= 8
@@ -301,7 +301,7 @@ function set_zbytes(zaddress, bytes)
 end
 
 function get_zword(zaddress, indirect)
-	if (zaddress == nil) then
+	if zaddress == nil then
 		zaddress = _program_counter
 		_program_counter += 0x.0002
 	end	
@@ -309,7 +309,7 @@ function get_zword(zaddress, indirect)
 	-- log('  get_zword at address: '..tohex(zaddress,true)..', fetched: '..tohex(dword))
 	local base = (zaddress & 0xffff)
 
-	if (base < 0xa) then
+	if base < 0xa then
 		dword <<= (8 * cell)
 		if cell == 3 then
 			index += 1
@@ -318,7 +318,7 @@ function get_zword(zaddress, indirect)
 			-- log('  consecutive dword '..tohex(dwordb))
 			dword |= (dwordb >>> 8)
 		end
-	elseif (base == _local_var_table_mem_addr) then
+	elseif base == _local_var_table_mem_addr then
 		if (zaddress & 0x.0001 == 0x.0001) dword <<= 16
 	end
 	return dword & 0xffff
@@ -330,7 +330,7 @@ function set_zword(zaddress, zword, indirect)
 	-- local base = (zaddress & 0xffff)
 	--log('set_zword at '..tohex(zaddress)..' to value: '..tohex(zword))
 	
-	if (zaddress == _stack_var_mem_addr) then
+	if zaddress == _stack_var_mem_addr then
 		-- log(' setting stack var zword: '..tohex(zword))
 		if indirect then
 			_stack[#_stack] = zword
@@ -339,7 +339,7 @@ function set_zword(zaddress, zword, indirect)
 		end
 	else
 		local dword, bank, index, cell  = get_dword(zaddress, indirect)
-		if (zaddress < 0xa) then
+		if zaddress < 0xa then
 			local filter = ~(0xffff.0000 >>> (cell << 3))
 			dword &= filter
 			if cell == 3 then
@@ -446,7 +446,7 @@ end
 
 function zobject_name(index)
 	local text_length, prop_address = zobject_text_length(index)
-	if (text_length > 0) then
+	if text_length > 0 then
 		local str, zchars = get_zstring(prop_address + 0x.0001)
 		return str, zchars
 	end
@@ -503,10 +503,10 @@ function zobject_prop_data_addr_or_prop_list(index, property)
 	while prop_num > 0 do
 		-- log('prop num: '..prop_num..', has num bytes: '..prop_len)
 
-		if (collect_list == true) then
+		if collect_list == true then
 			add(prop_list, prop_num)
 		else
-			if (prop_num == property) then
+			if prop_num == property then
 				-- log('found property '..property..' at address: '..tohex(prop_address, true))
 				-- log('  returning address: '..tohex(prop_address + (offset >>> 16)))
 				return (prop_address + (offset >>> 16)), prop_len
@@ -517,7 +517,7 @@ function zobject_prop_data_addr_or_prop_list(index, property)
 		prop_num, prop_len, offset = zobject_prop_num_len(prop_address)
 	end
 	
-	if (collect_list == true) then
+	if collect_list == true then
 		-- log('returning prop list: '..#prop_list)
 		return prop_list
 	end
@@ -640,7 +640,7 @@ function load_instruction()
 	local op_form = (op_definition >>> 6) & 0xffff
 
 	local op_table, op_code, operands = nil, 0, {}
-	if (op_form <= 0x01) then
+	if op_form <= 0x01 then
 		-- log(' long instruction found')
 		-- The first byte of a long instruction is %0abxxxxx where
 		-- 0 == "long instruction" indicator
@@ -658,7 +658,7 @@ function load_instruction()
 			operands[2] = get_var(operands[2])
 		end
 
-	elseif (op_form == 0x02) then
+	elseif op_form == 0x02 then
 		log(' short instruction found')
 		-- The first byte of a short instruction is %10ttxxxx.
 		-- %tt is the type of the operand (or %11 if absent),
@@ -679,7 +679,7 @@ function load_instruction()
 		end
 		operands = {operands}
 
-	elseif (op_form == 0x03) then
+	elseif op_form == 0x03 then
 		-- log(' var instruction found')
 		-- The first byte of a v3 variable instruction is %11axxxxx
 		-- (two exceptions for v4+) where %xxxxx is the VAR opcode.
