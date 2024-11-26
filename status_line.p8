@@ -5,7 +5,7 @@ __lua__
 --by christopher drum
 
 -- _zm_version = 0
-_engine_version = '2.1A'
+_engine_version = '2.1'
 
 --these literally make the engine run
 _program_counter = 0x0

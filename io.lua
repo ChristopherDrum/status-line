@@ -117,7 +117,7 @@ end
 
 function output(str, flush_now)
 	-- log('('..active_window..') output str: '..str)
-	if (#memory_output > 0) then
+	if #memory_output > 0 then
 		-- log('   redirected to memory')
 		memory(str) 
 	else
@@ -145,7 +145,7 @@ function output(str, flush_now)
 
 			local o = ord(char)
 			visual_len += 4
-			if (make_bold == true) then
+			if make_bold == true then
 				if (o >= 32) o+=96
 				if (o != 10) visual_len += 1
 			end 
@@ -153,7 +153,7 @@ function output(str, flush_now)
 
 			if (in_set(char, break_chars)) break_index = #current_line
 			log('current line: '..current_line)
-			if visual_len > 128 or char == '\n' then
+			if (visual_len > 128) or (char == '\n') then
 
 				local next_line, next = current_format, nil
 				current_line, next = unpack(split(current_line, break_index, false))
@@ -452,7 +452,7 @@ function restore_game()
 	local save_checksum = dword_to_str(temp[#temp])
 	local this_checksum = dword_to_str(get_zword(_file_checksum_header_addr))
 
-	if (save_checksum != this_checksum) then
+	if save_checksum != this_checksum then
 		output('This save file appears to be for a different game.\n')
 		output(save_checksum..' vs. '..this_checksum..'\n', true)
 		return (_zm_version == 3) and false or 0
@@ -460,7 +460,7 @@ function restore_game()
 
 	local offset = 1
 	local save_version = temp[offset]
-	if (save_version > tonum(_engine_version)) then
+	if save_version > tonum(_engine_version) then
 		output('This save file requires v'..tostr(save_version)..' of Status Line or higher.\n', true)
 		return (_zm_version == 3) and false or 0
 	end
@@ -532,7 +532,7 @@ function show_status()
 		local ampm = ''
 		if clock_type == 12 then
 			ampm = 'a'
-			if (scorea >= 12) then 
+			if scorea >= 12 then 
 				ampm = 'p'
 				scorea -= 12
 			end

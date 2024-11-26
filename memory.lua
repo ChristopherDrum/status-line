@@ -408,8 +408,8 @@ end
 zparent, zsibling, zchild = 0, 1, 2
 function zfamily_address(index, family_member)
 	local address = zobject_address(index)
-	local attr_size, member_size = 0x.0004, 0x.0001
-	if (_zm_version > 3) attr_size, member_size = 0x.0006, 0x.0002 
+	local attr_size, member_size = 0x.0006, 0x.0002
+	if (_zm_version == 3) attr_size, member_size = 0x.0004, 0x.0001
 	address += attr_size + (family_member * member_size)
 	return address
 end
