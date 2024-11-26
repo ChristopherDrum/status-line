@@ -10,7 +10,8 @@ checksum = 0x0
 story_loaded = false
 -- full_color = false
 
-local punc = '.,!?_#'.."'"..'"/\\-:()'
+punc = '.,!?_#'.."'"..'"/\\-:()'
+blank_line = '                                '
 
 local screen_types = {
 	default = 1, 
@@ -42,24 +43,9 @@ local cursor_types = {
 	}
 }
 
--- --frequently used values we can cache before starting
--- max_input_length = 0
--- z_parse_buffer_length = 0
--- separators = {}
--- _dictionary_lookup = {}
-blank_line = '                                '
-
--- --default these to z4+ specs
--- screen_height = 21
--- packed_shift = 2
--- default_property_count = 63
--- object_entry_size = 0x.000e
--- dictionary_word_size = 9
-
 --these literally make the engine run
 _program_counter = 0x0
 _interrupt = nil
-
 
 --useful functions
 function in_set(val, set)
@@ -293,7 +279,6 @@ end
 function process_header()
 	_z_machine_version = get_zbyte(version)
 
-	
 	if _z_machine_version < 4 then
 		screen_height = 20
 		packed_shift = 1
