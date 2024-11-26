@@ -10,7 +10,8 @@ checksum = 0x0
 story_loaded = false
 -- full_color = false
 
-local punc = '.,!?_#'.."'"..'"/\\-:()'
+punc = '.,!?_#'.."'"..'"/\\-:()'
+blank_line = '                                '
 
 local screen_types = {
 	default = 1, 
@@ -42,24 +43,9 @@ local cursor_types = {
 	}
 }
 
---frequently used values we can cache before starting
-max_input_length = 0
-z_parse_buffer_length = 0
-separators = {}
-_dictionary_lookup = {}
-blank_line = '                                '
-
---default these to z4+ specs
-screen_height = 21
-packed_shift = 2
-default_property_count = 63
-object_entry_size = 0x.000e
-dictionary_word_size = 9
-
 --these literally make the engine run
 _program_counter = 0x0
 _interrupt = nil
-
 
 --useful functions
 function in_set(val, set)
@@ -189,6 +175,7 @@ function game_id()
 end
 
 function setup_palette()
+	pal()
 	local st = dget(0) or 1
 	local type = screen_types.values[st]
 	full_color = type[1] == 'ega'
@@ -245,7 +232,7 @@ function _update60()
 				flush_line_buffer()
 				screen("\^i\#0\f1       ~ END OF SESSION ~       ")
 				wait_for_any_key()
-				reset_all_memory()
+				clear_all_memory()
 			end
 			pal()
 			draw_splashscreen(false)
@@ -292,12 +279,18 @@ end
 function process_header()
 	_z_machine_version = get_zbyte(version)
 
-	if _z_machine_version == 3 then
+	if _z_machine_version < 4 then
 		screen_height = 20
 		packed_shift = 1
 		default_property_count = 31
 		object_entry_size = 0x.0009
 		dictionary_word_size = 6
+	else 
+		screen_height = 21
+		packed_shift = 2
+		default_property_count = 63
+		object_entry_size = 0x.000e
+		dictionary_word_size = 9
 	end
 
 	set_zbyte(_screen_height, screen_height)
@@ -323,16 +316,16 @@ function process_header()
 end
 
 function cache_memory_addresses()
-	_program_counter = zword_to_zaddress(get_zword(program_counter_addr))
-	_paged_memory_addr = zword_to_zaddress(get_zword(paged_memory_addr))
-	_dictionary_addr = zword_to_zaddress(get_zword(dictionary_addr))
-	_object_table_addr = zword_to_zaddress(get_zword(object_table_addr))
+	_program_counter 	= zword_to_zaddress(get_zword(program_counter_addr))
+	_paged_memory_addr 	= zword_to_zaddress(get_zword(paged_memory_addr))
+	_dictionary_addr 	= zword_to_zaddress(get_zword(dictionary_addr))
+	_object_table_addr 	= zword_to_zaddress(get_zword(object_table_addr))
 	_global_var_table_addr = zword_to_zaddress(get_zword(global_var_table_addr))
-	_abbr_table_addr = zword_to_zaddress(get_zword(abbr_table_addr))
-	_static_mem_addr = zword_to_zaddress(get_zword(static_mem_addr))
+	_abbr_table_addr 	= zword_to_zaddress(get_zword(abbr_table_addr))
+	_static_mem_addr 	= zword_to_zaddress(get_zword(static_mem_addr))
 end
 
-function patch()
+function patch() --override screen-width checks on some games
 	checksum = get_zword(file_checksum)
 	-- log('checksum: '..tohex(checksum))
 	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
@@ -340,6 +333,8 @@ function patch()
 end
 
 function initialize_game()
+
+	reset_screen_state()
 
 	setup_user_prefs()
 	setup_palette()
@@ -354,9 +349,8 @@ function initialize_game()
 	--special case at startup for the program counter
 	_call_stack[#_call_stack - 9] = _program_counter
 
-	active_window = 0
-	split_window(0)
 	if (_memory_start_state == nil) capture_state(_memory_start_state)
+	split_window(0)
 	update_current_format(0)
 	update_p_cursor()
 	story_loaded = true

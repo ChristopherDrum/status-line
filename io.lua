@@ -1,43 +1,42 @@
-current_bg = 0
-current_fg = 1
-current_font = 1
+function reset_screen_state()
+	current_bg = 0
+	current_fg = 1
+	current_font = 1
 
-previous_format = ''
-current_format = ''
-current_format_updated = false
-window_attributes = 0b00000000.00001010
+	current_format = ''
+	current_format_updated = false
+	window_attributes = 0b00000000.00001010
 
---io control
-emit_rate = 0 --the lower the faster
-clock_type = nil
-cursor_type = nil
-make_bold = false
-make_inverse = true
+	emit_rate = 0 --the lower the faster
+	clock_type = nil
+	cursor_type = nil
+	make_bold = false
+	make_inverse = true
 
-screen_output = true
-memory_output = {}
+	screen_output = true
+	memory_output = {}
 
---0-indexed windows to match z-machine index usage
-active_window = nil
-windows = {
-	[0] = {
-		y = 1, -- x is ALWAYS 1
-		h = 21, -- w is ALWAYS 32
-		z_cursor = {x=1,y=21}, --formerly cur_x, cur_y
-		p_cursor = {0,0}, -- unnamed vars for unpack()ing
-		screen_rect = {},
-		buffer = {},
-		last_line = ''
-	},
-	{
-		y = 1,
-		h = 0,
-		z_cursor = {x=1,y=1},
-		p_cursor = {0,0},
-		screen_rect = {},
-		buffer = {}
+	active_window = 0
+	windows = {
+		[0] = {
+			y = 1, -- x is ALWAYS 1
+			h = 21, -- w is ALWAYS 32
+			z_cursor = {x=1,y=21}, --formerly cur_x, cur_y
+			p_cursor = {0,0}, -- unnamed vars for unpack()ing
+			screen_rect = {},
+			buffer = {},
+			last_line = ''
+		},
+		{
+			y = 1,
+			h = 0,
+			z_cursor = {x=1,y=1},
+			p_cursor = {0,0},
+			screen_rect = {},
+			buffer = {}
+		}
 	}
-}
+end
 
 function update_current_format(n)
 	local inverse, emphasis = '\^-i\^-b', '\015'
@@ -140,7 +139,6 @@ function output(str, flush_now)
 
 			-- log('considering char: '..char)
 			if current_format_updated == true then
-				previous_format = current_format
 				current_line ..= current_format
 				current_format_updated = false
 			end
