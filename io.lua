@@ -543,5 +543,4 @@ function show_status()
 		flipped ..= case_setter(ord(loc,i), flipcase)
 	end
 	print('\^i\#'..current_bg..'\f'..current_fg..flipped, 1, 1)
-	print(stat(0),0,0,8)
 end
