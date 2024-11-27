@@ -152,7 +152,7 @@ function output(str, flush_now)
 			current_line ..= chr(o)
 
 			if (in_set(char, break_chars)) break_index = #current_line
-			log('current line: '..current_line)
+			-- log('current line: '..current_line)
 			if (visual_len > 128) or (char == '\n') then
 
 				local next_line, next = current_format, nil
