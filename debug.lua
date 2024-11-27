@@ -147,20 +147,20 @@ function test_system_memory_correctness()
 
 	--fill up the _stack for push/pop correctness check
 	for i = 1, 9 do
-		set_zword(_stack_var_mem_addr, i)
+		set_zword(_stack_mem_addr, i)
 	end
 
-	--repeatedly calling get_zbyte or get_zword at _stack_var_mem_addr
+	--repeatedly calling get_zbyte or get_zword at _stack_mem_addr
 	-- should pop off values from the stack; we get a new value each call
 	dump_stack()
-	log(get_zbyte(_stack_var_mem_addr))
-	log(get_zbyte(_stack_var_mem_addr))
-	log(get_zbyte(_stack_var_mem_addr))
-	log(get_zbyte(_stack_var_mem_addr))
-	set_zbyte(_stack_var_mem_addr, 99)
-	log(get_zbyte(_stack_var_mem_addr))
-	log(get_zbyte(_stack_var_mem_addr))
-	log(get_zbyte(_stack_var_mem_addr))
+	log(get_zbyte(_stack_mem_addr))
+	log(get_zbyte(_stack_mem_addr))
+	log(get_zbyte(_stack_mem_addr))
+	log(get_zbyte(_stack_mem_addr))
+	set_zbyte(_stack_mem_addr, 99)
+	log(get_zbyte(_stack_mem_addr))
+	log(get_zbyte(_stack_mem_addr))
+	log(get_zbyte(_stack_mem_addr))
 
 	dump_call_stack()
 	dump_stack()
@@ -168,8 +168,8 @@ function test_system_memory_correctness()
 	call_stack_push()
 	set_zword(local_var_address(5), 0x5555)
 	set_zword(local_var_address(13), 0xcccc)
-	set_zword(_stack_var_mem_addr, 0xaaaa)
-	set_zword(_stack_var_mem_addr, 0xbbbb)
+	set_zword(_stack_mem_addr, 0xaaaa)
+	set_zword(_stack_mem_addr, 0xbbbb)
 	_program_counter += 0x.0005
 	call_stack_push()
 	dump_call_stack()
@@ -178,7 +178,7 @@ function test_system_memory_correctness()
 	dump_call_stack()
 	dump_stack()
 	log('pc: '..tohex(_program_counter)..', sp: '.._stack_pointer)
-	get_zword(_stack_var_mem_addr) --should error
+	get_zword(_stack_mem_addr) --should error
 end
 
 -- function test_split_screen()

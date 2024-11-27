@@ -228,6 +228,7 @@ function _update60()
 			draw_splashscreen(false)
 		end
 	end
+	print(stat(0),0,0,8)
 end
 
 function build_dictionary_lookup()
@@ -330,7 +331,7 @@ function initialize_game()
 
 	call_stack_push()
 	--special case at startup for the program counter
-	_call_stack[#_call_stack - 9] = _program_counter
+	top_frame().pc = _program_counter
 
 	if (_memory_start_state == nil) capture_state(_memory_start_state)
 	_split_screen(0)

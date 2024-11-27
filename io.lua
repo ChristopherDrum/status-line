@@ -481,41 +481,28 @@ function restore_game()
 		end
 	end
 
-	-- log('memory dump ('..temp_index..')...')
-	-- for i = 1, memory_length do
-	-- 	log(tohex(_memory[1][i]))
-	-- end
-	-- log('last memory slot (bank '..mem_max_bank..', idx '..mem_max_index..'): '..tohex(_memory[mem_max_bank][mem_max_index]))
-
+	--not sure yet how to resurrect this data
 	offset += memory_length + 1
 	_call_stack = {}
 	local call_stack_length = temp[offset]
 	-- log('call_stack_length: '..call_stack_length)
 	for i = 1, call_stack_length do
-		_call_stack[i] = temp[offset + i]
+		local frame = frame:new()
+		-- frame.pc = temp[offset + i]
+		-- frame.call =
+		-- frame.args =
+		-- local stack_length = temp[offset + ?]
+		-- for j = 1, stack_length do
+		-- 	add(frame.stack, temp[offset + ?])
+		-- end
+		-- for k = 1, 16 do
+		-- 	add(frame.vars, temp[offset + ?])
+		-- end
+		add(_call_stack, frame)
 	end
-	-- log('loaded call stack: ')
-	-- for i = 1, #_call_stack do
-	-- 	log('  '.._call_stack[i])
-	-- end
-	-- log('last call stack: '..tohex(_call_stack[call_stack_length]))
-
-	offset += call_stack_length + 1
-	_stack = {}
-	local stack_length = temp[offset]
-	-- log('stack_length: '..stack_length)
-	for i = 1, stack_length do
-		_stack[i] = temp[offset + i]
-	end
-
-	-- log('loaded stack: ')
-	-- for i = 1, #_stack do
-	-- 	log('  '.._stack[i])
-	-- end
-	-- log('last stack: '..tohex(_stack[stack_length]))
 
 	-- log('setting pc to: '..tohex(temp[#temp-1]))
-	_program_counter = temp[#temp-1]
+	_program_counter = top_frame().pc --I think?
 	current_input = ''
 	process_header()
 	return (_zm_version == 3) and true or 2
@@ -556,4 +543,5 @@ function show_status()
 		flipped ..= case_setter(ord(loc,i), flipcase)
 	end
 	print('\^i\#'..current_bg..'\f'..current_fg..flipped, 1, 1)
+	print(stat(0),0,0,8)
 end
