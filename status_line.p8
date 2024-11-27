@@ -58,7 +58,7 @@ function tohex(value, full)
 end
 
 function log(str)
-	printh(str, 'status_line_log_21a')
+	printh(str, 'status_line_log_21')
 end
 
 function wait_for_any_key()
@@ -260,10 +260,7 @@ function fetch_parser_separators()
 	local seps = get_zbytes(_dictionary_mem_addr + 0x.0001, num_separators)
 	seps = zscii_to_p8scii(seps)
 	-- log('fetch_parser_separators: '..seps)
-	for i = 1, num_separators do
-		local k = sub(seps, i, i)
-		add(separators, k)
-	end
+	separators = split(seps,1)
 end
 
 function process_header()
@@ -337,7 +334,7 @@ function initialize_game()
 
 	if (_memory_start_state == nil) capture_state(_memory_start_state)
 	_split_screen(0)
-	update_current_format(0)
+	update_text_style(0)
 	update_p_cursor()
 	story_loaded = true
 
