@@ -26,7 +26,7 @@ _global_var_table_header_addr = 0x.000c
 _static_memory_header_addr = 0x.000e
 _peripherals_header_addr = 0x.0010
 _serial_code_header_addr = 0x.0012
-_abbr_table_mem_addr = 0x.0018
+_abbr_table_header_addr = 0x.0018
 _file_length_header_addr = 0x.001a
 _file_checksum_header_addr = 0x.001c
 -- header locations z4+

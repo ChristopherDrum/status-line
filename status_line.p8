@@ -304,7 +304,7 @@ function cache_memory_addresses()
 	_dictionary_mem_addr 	= zword_to_zaddress(get_zword(_dictionary_header_addr))
 	_object_table_mem_addr 	= zword_to_zaddress(get_zword(_object_table_header_addr))
 	_global_var_table_mem_addr = zword_to_zaddress(get_zword(_global_var_table_header_addr))
-	_abbr_table_mem_addr 	= zword_to_zaddress(get_zword(_abbr_table_mem_addr))
+	_abbr_table_mem_addr 	= zword_to_zaddress(get_zword(_abbr_table_header_addr))
 	_static_memory_mem_addr = zword_to_zaddress(get_zword(_static_memory_header_addr))
 end
 
