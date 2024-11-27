@@ -628,11 +628,12 @@ end
 
 --8.12 Sound, mouse, and menus
 
--- we'll only be able to support non-beeps
--- if we create custom sfx for specific games and make a lookup table
 function _sound_effect(number)
-	if (number == 1) print("\ac3")
-	if (number == 2) print("\ac1")
+	--log('sound_effect: '..number)
+	if mid(1,number,2) == number then
+		local tone = (number == 1) and "3" or "1"
+		print("\ac"..tone)
+	end
 end
 
 --8.13 Save, restore, and undo
