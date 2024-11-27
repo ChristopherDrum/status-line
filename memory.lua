@@ -101,7 +101,7 @@ function stack_pop()
 		--log('ERR: asked to pop beyond the limit of this frames base sp')
 		return nil
 	end
-	return deli(_stack, #_stack)
+	return deli(_stack)
 end
 
 function stack_pop_to(index)
@@ -110,7 +110,7 @@ function stack_pop_to(index)
 	if index == 0 then
 		_stack = {}
 	else
-		while (#_stack > index) deli(_stack, #_stack)
+		while (#_stack > index) deli(_stack)
 	end
 	-- assert(#_stack == index, "didn't pop stack to the right index:"..#_stack.." vs. "..index)
 end
@@ -126,7 +126,7 @@ end
 function call_stack_pop(ret_value)
 	stack_pop_to(_call_stack[#_call_stack - 8])
 	for i = 1, 10 do
-		deli(_call_stack, #_call_stack)
+		deli(_call_stack)
 	end
 	_program_counter = _call_stack[#_call_stack - 9]
 	if ret_value != nil then
@@ -164,10 +164,8 @@ function local_var_addr(index)
 end
 
 function global_var_addr(index)
-	-- index*0x.0002 == (index>>>15)
-	local addr = _global_var_table_mem_addr + (index >>> 15)
 	--log(' address for G'..sub(tostr(index,true),5,6)..' is: '..tohex(addr))
-	return addr
+	return _global_var_table_mem_addr + (index >>> 15) 	-- index*0x.0002 == (index>>>15)
 end
 
 function set_var(value, var_byte, indirect)
@@ -177,8 +175,7 @@ end
 
 function get_var(var_byte, indirect)
 	local var_address = decode_var_address(var_byte)
-	local r = get_zword(var_address, indirect)
-	return r
+	return get_zword(var_address, indirect)
 end
 
 function decode_var_address(var_byte)
@@ -233,7 +230,7 @@ end
 --a zbyte or zword. Some routines need to add an offset
 --and the result may transition from 2- to 3-byte address
 function get_zbyte(zaddress)
-	if zaddress == nil then
+	if not zaddress then
 	-- log('______________________PC at: '..tohex(_program_counter))
 		zaddress = _program_counter
 		_program_counter += 0x.0001
@@ -270,9 +267,9 @@ function get_zbytes(zaddress, num_bytes)
 	return bytes
 end
 
-function set_zbyte(zaddress, byte)
+function set_zbyte(zaddress, _byte)
 	--log('set_zbyte at '..tohex(zaddress)..' to value: '..byte)
-	local byte &= 0xff --filter off zword garbage
+	local byte = _byte & 0xff --filter off zword garbage
 	local base = (zaddress & 0xffff)
 
 	if zaddress == _stack_var_mem_addr then
@@ -307,7 +304,7 @@ function set_zbytes(zaddress, bytes)
 end
 
 function get_zword(zaddress, indirect)
-	if zaddress == nil then
+	if not zaddress then
 		zaddress = _program_counter
 		_program_counter += 0x.0002
 	end	
@@ -330,9 +327,9 @@ function get_zword(zaddress, indirect)
 	return dword & 0xffff
 end
 
-function set_zword(zaddress, zword, indirect)
+function set_zword(zaddress, _zword, indirect)
 	-- log(' setting zword: '..tohex(zword))
-	local zword &= 0xffff --filter off dword garbage
+	local zword = _zword & 0xffff --filter off dword garbage
 	-- local base = (zaddress & 0xffff)
 	--log('set_zword at '..tohex(zaddress)..' to value: '..tohex(zword))
 	
@@ -628,7 +625,7 @@ function zscii_to_p8scii(zchars)
 
 		else
 			local lookup_string = zchar_tables[active_table]
-			zstring ..= sub(lookup_string, zchar, _)
+			zstring ..= lookup_string[zchar]
 			active_table = 1
 		end
 	end
@@ -679,7 +676,7 @@ function load_instruction()
 		elseif op_type == 2 then
 			operands = get_var()
 		elseif op_type == 3 then
-			log(' - a zero op')
+			-- log(' - a zero op')
 			op_table = _zero_ops
 			operands = nil
 		end
@@ -737,7 +734,7 @@ function load_instruction()
 		end
 		if ((op_table == _long_ops) and (#operands == 1) and (op_code > 1)) get_zbyte()
 	end
-	log('  opcode: '..op_code)
+	-- log('  opcode: '..op_code)
 	local func = op_table[op_code+1]
 	return func, operands
 end
@@ -801,9 +798,9 @@ function load_story_file()
 		local chunk = serial(0x800, 0x4300, 1024)
 		for j = 0, chunk-1, 4 do
 			local a, b, c, d = peek(0x4300+j, 4)
-			local a <<= 8
-			local c >>>= 8
-			local d >>>= 16
+			a <<= 8
+			c >>>= 8
+			d >>>= 16
 			local dword = (a|b|c|d)
 			add(_memory[bank_num], dword)
 		end
