@@ -228,7 +228,6 @@ function _update60()
 			draw_splashscreen(false)
 		end
 	end
-	print(stat(0),0,0,8)
 end
 
 function build_dictionary_lookup()
