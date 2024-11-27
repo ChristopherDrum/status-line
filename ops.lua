@@ -486,7 +486,7 @@ end
 
 function _set_text_style(n)
 	log('set_text_style: '..n)
-	update_current_format(n)
+	update_text_style(n)
 end
 
 function _set_font(n)
