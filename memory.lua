@@ -51,10 +51,6 @@ _memory_bank_size = 16384 -- (1024*64)/4; four 64K banks
 --a frame consists of 10 numbers:
 --   stack pointer, program counter, 8 zwords for in-scope local vars
 
---these  are used to grab a save state snapshot
--- _memory_start_state = nil
--- _current_state = ''
-
 --we can't reset all memory otherwise the player
 --would have to drag the z3 game file in again
 function reset_session()
