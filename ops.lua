@@ -631,8 +631,8 @@ end
 function _sound_effect(number)
 	--log('sound_effect: '..number)
 	if mid(1,number,2) == number then
-		local tone = (number == 1) and "4" or "1"
-		print "\ac"..tone
+		local tone = (number == 1) and "3" or "1"
+		print("\ac"..tone)
 	end
 end
 
