@@ -295,10 +295,7 @@ function process_header()
 	end
 	set_zbyte(_interpreter_flags_header_addr, i_flag)
 	set_zbyte(_peripherals_header_addr, 0x03)
-end
 
-
-function cache_memory_addresses()
 	_program_counter 		= zword_to_zaddress(get_zword(_program_counter_header_addr))
 	_paged_memory_mem_addr 	= zword_to_zaddress(get_zword(_paged_memory_header_addr))
 	_dictionary_mem_addr 	= zword_to_zaddress(get_zword(_dictionary_header_addr))
@@ -317,7 +314,7 @@ end
 
 function initialize_game()
 
-	reset_screen_state()
+	reset_io_state()
 
 	setup_user_prefs()
 	setup_palette()
