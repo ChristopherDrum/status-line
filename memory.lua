@@ -759,18 +759,13 @@ end
 
 function capture_state(state)
 
-	local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
+	local mem_max_bank, _, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
 
 	if state == _memory_start_state then
 		-- log('capture _memory_start_state')
 		_memory_start_state = {}
 		for i = 1, mem_max_bank do
-			add(_memory_start_state, {})
-			local max_j = _memory_bank_size
-			if (i == mem_max_bank) max_j = mem_max_index
-			for j = 1, max_j do
-				_memory_start_state[i][j] = _memory[i][j]
-			end
+			_memory_start_state[i] = {unpack(_memory[i])}
 		end
 	else
 
