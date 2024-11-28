@@ -319,7 +319,6 @@ function initialize_game()
 	setup_user_prefs()
 	setup_palette()
 	process_header()
-	cache_memory_addresses()
 	fetch_parser_separators()
 	build_dictionary_lookup()
 
