@@ -7,6 +7,14 @@ __lua__
 -- _zm_version = 0
 _engine_version = '2.1'
 
+--these literally make the engine run
+_program_counter = 0x0
+_interrupt = nil
+
+checksum = 0x0
+story_loaded = false
+-- full_color = false
+
 punc = '.,!?_#'.."'"..'"/\\-:()'
 blank_line = '                                '
 
@@ -306,13 +314,6 @@ function patch()
 end
 
 function initialize_game()
-	--these literally make the engine run
-	_program_counter = 0x0
-	_interrupt = nil
-
-	checksum = 0x0
-	story_loaded = false
-	-- full_color = false
 
 	reset_io_state()
 
