@@ -454,7 +454,7 @@ function restore_game()
 	end
 
 	local save_checksum = dword_to_str(temp[#temp])
-	local this_checksum = dword_to_str(get_zword(_file_checksum_header_addr))
+	local this_checksum = dword_to_str(checksum)
 
 	if save_checksum != this_checksum then
 		output('This save file appears to be for a different game.\n')

@@ -7,14 +7,6 @@ __lua__
 -- _zm_version = 0
 _engine_version = '2.1'
 
---these literally make the engine run
-_program_counter = 0x0
-_interrupt = nil
-
-checksum = 0x0
-story_loaded = false
--- full_color = false
-
 punc = '.,!?_#'.."'"..'"/\\-:()'
 blank_line = '                                '
 
@@ -303,16 +295,24 @@ function process_header()
 	_global_var_table_mem_addr = zword_to_zaddress(get_zword(_global_var_table_header_addr))
 	_abbr_table_mem_addr 	= zword_to_zaddress(get_zword(_abbr_table_header_addr))
 	_static_memory_mem_addr = zword_to_zaddress(get_zword(_static_memory_header_addr))
+
+	checksum = get_zword(_file_checksum_header_addr)
+
 end
 
 function patch()
-	checksum = get_zword(_file_checksum_header_addr)
-	-- log('checksum: '..tohex(checksum))
 	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
 	if (in_set(checksum, {0x4860, 0xfc65})) set_zbyte(_screen_width_header_addr, 40) --amfv, bur
 end
 
 function initialize_game()
+	--these literally make the engine run
+	_program_counter = 0x0
+	_interrupt = nil
+
+	checksum = 0x0
+	story_loaded = false
+	-- full_color = false
 
 	reset_io_state()
 

@@ -811,8 +811,6 @@ function capture_state(state)
 
 		-- log('saving pc: '..(tohex(_program_counter,true)))
 		memory_dump ..= dword_to_str(_program_counter)
-		-- log('saving checksum: '..(tohex(checksum,true)))
-		local checksum = get_zword(_file_checksum_header_addr)
 		memory_dump ..= dword_to_str(checksum)
 
 		_current_state = memory_dump
