@@ -1,4 +1,4 @@
-function reset_screen_state()
+function reset_io_state()
 	current_bg = 0
 	current_fg = 1
 	current_font = 1
@@ -36,6 +36,20 @@ function reset_screen_state()
 			buffer = {}
 		}
 	}
+
+	origin_y = nil
+	break_chars = {'\n', ' ', ':', '-', '_', ';'}
+	break_index = 0
+
+	did_trim_nl = false
+	clear_last_line = false
+	lines_shown = 0
+
+	z_text_buffer, z_parse_buffer = 0x0, 0x0
+	current_input, visible_input = '', ''
+
+	show_warning = true
+
 end
 
 function update_text_style(n)
@@ -56,7 +70,6 @@ function update_text_style(n)
 	current_format_updated = true
 end
 
-origin_y = nil
 function update_screen_rect(zwin_num)
 	if (not origin_y) origin_y = (_zm_version == 3) and 8 or 1
 	local win = windows[zwin_num]
@@ -90,8 +103,6 @@ function strip(str)
 	return stripped
 end
 
-local break_chars = {'\n', ' ', ':', '-', '_', ';'}
-local break_index = 0
 
 function memory(str)
 	-- log('==> memory at level: '..#memory_output)
@@ -178,9 +189,6 @@ function output(str, flush_now)
 	if (flush_now) flush_line_buffer()
 end
 
-did_trim_nl = false
-clear_last_line = false
-lines_shown = 0
 function flush_line_buffer()
 	local win = windows[active_window]
 	local buffer = win.buffer
@@ -320,10 +328,6 @@ function case_setter(char, case)
 	return chr(o)
 end
 
-
-z_text_buffer, z_parse_buffer = 0x0, 0x0
-current_input, visible_input = '', ''
-
 function process_input_char(real, visible, max_length)
 	if real == '\b' then
 		if #current_input > 0 then
@@ -392,7 +396,6 @@ function dword_to_str(dword)
 	return sub(hex,3,6)..sub(hex,8)
 end
 
-show_warning = true
 function save_game(char)
 	-- log('save_game: '..tostr(char)..','..tostr(ord(char)))
 	--can the keyboard handler be shared with capture_input()?

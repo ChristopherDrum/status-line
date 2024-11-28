@@ -45,6 +45,8 @@ _terminating_chars_table_addr = 0x.002e
 _alphabet_table_addr = 0x.0034
 _header_extension_table_addr = 0x.0036
 
+_memory = {{}}
+_memory_start_state = nil
 _memory_bank_size = 16384 -- (1024*64)/4; four 64K banks
 
 -- FRAME DEFINITION --
@@ -759,14 +761,22 @@ end
 
 function capture_state(state)
 
-	local mem_max_bank, _, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
+	local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
 
 	if state == _memory_start_state then
 		-- log('capture _memory_start_state')
 		_memory_start_state = {}
 		for i = 1, mem_max_bank do
-			_memory_start_state[i] = {unpack(_memory[i])}
+			if i < mem_max_bank then
+				_memory_start_state[i] = {unpack(_memory[i])}
+			else
+				add(_memory_start_state, {})
+				for j = 1, mem_max_index do
+					_memory_start_state[i][j] = _memory[i][j]
+				end			
+			end
 		end
+		log("after memory_start_state with bank "..mem_max_bank..": "..stat(0))
 	else
 
 		local memory_dump = dword_to_str(tonum(_engine_version))
