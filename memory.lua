@@ -776,7 +776,7 @@ function capture_state(state)
 				end			
 			end
 		end
-		log("after memory_start_state with bank "..mem_max_bank..": "..stat(0))
+		-- log("after memory_start_state with bank "..mem_max_bank..": "..stat(0))
 	else
 
 		local memory_dump = dword_to_str(tonum(_engine_version))
@@ -798,19 +798,23 @@ function capture_state(state)
 			memory_dump ..= dword_to_str(frame.pc)
 			memory_dump ..= dword_to_str(frame.call)
 			memory_dump ..= dword_to_str(frame.args)
+			-- log("saving frame"..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args))
 			--save local stack size and values
 			memory_dump ..= dword_to_str(#frame.stack)
-			for i = 1, #frame.stack do
-				memory_dump ..= dword_to_str(frame.stack[i])
+			-- log("---frame stack---")
+			for j = 1, #frame.stack do
+				memory_dump ..= dword_to_str(frame.stack[j])
+				-- log("  "..j..': '..tohex(frame.stack[j])..' -> '..dword_to_str(frame.stack[j]))
 			end
 			--save local vars (always 16)
-			for i = 1, 16 do
-				memory_dump ..= dword_to_str(frame.vars[i])
+			-- log("---frame vars---")
+			for k = 1, 16 do
+				memory_dump ..= dword_to_str(frame.vars[k])
+				-- log("  "..k..": "..tohex(frame.vars[k])..' -> '..dword_to_str(frame.vars[k]))
 			end
-			log("saving frame"..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args)..', '..tohex(#frame.stack)..','..tohex(frame.vars[1]))
 		end
 
-		log('saving pc: '..(tohex(_program_counter,true)))
+		-- log('saving pc: '..(tohex(_program_counter,true)))
 		memory_dump ..= dword_to_str(_program_counter)
 		memory_dump ..= dword_to_str(checksum)
 

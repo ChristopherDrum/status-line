@@ -473,10 +473,7 @@ function restore_game()
 	offset += 1
 	local memory_length = temp[offset]
 	local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
-	-- assert(memory_length == mem_max_bank*mem_max_index, "Misaligned memory in save file?")
-	-- local mem_max_bank = (memory_length\_memory_bank_size)+1
-	-- local mem_max_index = memory_length - ((mem_max_bank-1)*_memory_bank_size)
-	log('memory_length ('..mem_max_bank..','..mem_max_index..'): '..memory_length)
+	-- log('memory_length ('..mem_max_bank..','..mem_max_index..'): '..memory_length)
 	local temp_index = 1
 	for i = 1, mem_max_bank do
 		local max_j = _memory_bank_size
@@ -498,23 +495,28 @@ function restore_game()
 		frame.pc = temp[offset + 1]
 		frame.call = temp[offset + 2]
 		frame.args = temp[offset + 3]
+		-- log("restoring frame "..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args))
 		local stack_length = temp[offset + 4]
+		-- log("---frame stack---")
 		for j = 1, stack_length do
-			add(frame.stack, temp[offset + 4 + j])
+			local val = temp[offset + 4 + j]
+			add(frame.stack, val)
+			-- log("  "..j..': '..tohex(temp[offset + 4 + j])..' -> '..tohex(frame.stack[j]))
 		end
 		offset += 4 + stack_length
+		-- log("---frame vars---")
 		for k = 1, 16 do
-			add(frame.vars, temp[offset + k])
+			local val = temp[offset + k]
+			frame.vars[k] =  val
+			-- log("  "..k..": "..tohex(temp[offset + k])..' -> '..tohex(frame.vars[k]))
 		end
 		add(_call_stack, frame)
 		offset += 16
-		log("restoring frame "..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args)..', '..tohex(#frame.stack)..','..tohex(frame.vars[1]))
 	end
 
 	_program_counter = temp[#temp-1]
-	log('restoring pc: '..tohex(_program_counter, true))
+	-- log('restoring pc: '..tohex(_program_counter, true))
 	current_input = ''
-	-- process_header()
 	return (_zm_version == 3) and true or 2
 end
 
