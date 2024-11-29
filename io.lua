@@ -502,18 +502,19 @@ function restore_game()
 		for j = 1, stack_length do
 			add(frame.stack, temp[offset + 4 + j])
 		end
+		offset += 4 + stack_length
 		for k = 1, 16 do
-			add(frame.vars, temp[offset + stack_length + k])
+			add(frame.vars, temp[offset + k])
 		end
 		add(_call_stack, frame)
-		offset += stack_length + 21 --20 steps are fixed, # of stack items is variable, +1 to get to NEXT item
+		offset += 16
+		log("restoring frame "..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args)..', '..tohex(#frame.stack)..','..tohex(frame.vars[1]))
 	end
 
-	-- log('setting pc to: '..tohex(temp[#temp-1], true))
-	-- _program_counter = temp[#temp-1]
-	call_stack_pop()
+	_program_counter = temp[#temp-1]
+	log('restoring pc: '..tohex(_program_counter, true))
 	current_input = ''
-	process_header()
+	-- process_header()
 	return (_zm_version == 3) and true or 2
 end
 

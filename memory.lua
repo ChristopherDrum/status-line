@@ -807,6 +807,7 @@ function capture_state(state)
 			for i = 1, 16 do
 				memory_dump ..= dword_to_str(frame.vars[i])
 			end
+			log("saving frame"..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args)..', '..tohex(#frame.stack)..','..tohex(frame.vars[1]))
 		end
 
 		log('saving pc: '..(tohex(_program_counter,true)))
