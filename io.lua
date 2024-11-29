@@ -392,8 +392,8 @@ function capture_input(char)
 end
 
 function dword_to_str(dword)
-	local hex = tostr(dword,true)
-	return sub(hex,3,6)..sub(hex,8)
+	local hex = tostr(dword,3)
+	return sub(hex,3)
 end
 
 function save_game(char)
@@ -453,6 +453,7 @@ function restore_game()
 		end
 	end
 
+	log(temp[#temp]..','..checksum)
 	local save_checksum = dword_to_str(temp[#temp])
 	local this_checksum = dword_to_str(checksum)
 
@@ -465,15 +466,17 @@ function restore_game()
 	local offset = 1
 	local save_version = temp[offset]
 	if save_version > tonum(_engine_version) then
-		output('This save file requires v'..tostr(save_version)..' of Status Line or higher.\n', true)
+		output('This save file requires v'..tostr(save_version)..' of Status Line.\n', true)
 		return (_zm_version == 3) and false or 0
 	end
 
 	offset += 1
 	local memory_length = temp[offset]
-	local mem_max_bank = (memory_length\_memory_bank_size)+1
-	local mem_max_index = memory_length - ((mem_max_bank-1)*_memory_bank_size)
-	-- log('memory_length ('..mem_max_bank..','..mem_max_index..'): '..memory_length)
+	local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
+	-- assert(memory_length == mem_max_bank*mem_max_index, "Misaligned memory in save file?")
+	-- local mem_max_bank = (memory_length\_memory_bank_size)+1
+	-- local mem_max_index = memory_length - ((mem_max_bank-1)*_memory_bank_size)
+	log('memory_length ('..mem_max_bank..','..mem_max_index..'): '..memory_length)
 	local temp_index = 1
 	for i = 1, mem_max_bank do
 		local max_j = _memory_bank_size
@@ -489,23 +492,26 @@ function restore_game()
 	_call_stack = {}
 	local call_stack_length = temp[offset]
 	-- log('call_stack_length: '..call_stack_length)
+	temp_index = 1
 	for i = 1, call_stack_length do
 		local frame = frame:new()
-		-- frame.pc = temp[offset + i]
-		-- frame.call =
-		-- frame.args =
-		-- local stack_length = temp[offset + ?]
-		-- for j = 1, stack_length do
-		-- 	add(frame.stack, temp[offset + ?])
-		-- end
-		-- for k = 1, 16 do
-		-- 	add(frame.vars, temp[offset + ?])
-		-- end
+		frame.pc = temp[offset + 1]
+		frame.call = temp[offset + 2]
+		frame.args = temp[offset + 3]
+		local stack_length = temp[offset + 4]
+		for j = 1, stack_length do
+			add(frame.stack, temp[offset + 4 + j])
+		end
+		for k = 1, 16 do
+			add(frame.vars, temp[offset + stack_length + k])
+		end
 		add(_call_stack, frame)
+		offset += stack_length + 21 --20 steps are fixed, # of stack items is variable, +1 to get to NEXT item
 	end
 
-	-- log('setting pc to: '..tohex(temp[#temp-1]))
-	_program_counter = top_frame().pc --I think?
+	-- log('setting pc to: '..tohex(temp[#temp-1], true))
+	-- _program_counter = temp[#temp-1]
+	call_stack_pop()
 	current_input = ''
 	process_header()
 	return (_zm_version == 3) and true or 2

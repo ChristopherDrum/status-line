@@ -60,7 +60,7 @@ _memory_bank_size = 16384 -- (1024*64)/4; four 64K banks
 call_type = { none = 0, func = 1, proc = 2, intr = 3 }
 
 -- frame prototype: program_counter, call_type, num_args
-frame = { pc = 0, call = nil, args = 0 }
+frame = { pc = 0, call = 0, args = 0 }
 
 function frame:new()
  local obj = {
@@ -804,12 +804,12 @@ function capture_state(state)
 				memory_dump ..= dword_to_str(frame.stack[i])
 			end
 			--save local vars (always 16)
-			for i = 1, #frame.vars do
+			for i = 1, 16 do
 				memory_dump ..= dword_to_str(frame.vars[i])
 			end
 		end
 
-		-- log('saving pc: '..(tohex(_program_counter,true)))
+		log('saving pc: '..(tohex(_program_counter,true)))
 		memory_dump ..= dword_to_str(_program_counter)
 		memory_dump ..= dword_to_str(checksum)
 
