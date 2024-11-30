@@ -1,8 +1,8 @@
---order/numbering follows zmach06e.pdf
---<result> means _result(some value)
---<branch> means send true/false to branch()
---alias for _result to set_var, for clarity in function definitions
+--follows zmach06e.pdf
+--<result> call _result(some value)
+--<branch> call _branch(true/false)
 
+--alias for for clarity in result handling
 _result = set_var
 
 function _branch(should_branch)
@@ -44,21 +44,16 @@ function _load(var)
 end
 
 function _store(var, a)
-	--log('store: '..tohex(var)..','..tohex(a))
 	_result(a, var, true)
 end
 
 function _loadw(baddr, n)
-	--log('loadw: '..tohex(baddr)..', '..n)
 	baddr = zword_to_zaddress(baddr) + (n >>> 15)
-	--log('  baddr now: '..tohex(baddr))
 	local zword = get_zword(baddr)
-	--log('  got zword: '..tohex(zword))
 	_result(zword)
 end
 
 function _storew(baddr, n, zword)
-	--log('storew: '..tohex(baddr)..','..n..','..tohex(zword))
 	--Store zword in the word at baddr + 2∗n
 	-->>>16 for addressing, then << 1 for "*2"
 	baddr = zword_to_zaddress(baddr) + (n >>> 15)
@@ -68,23 +63,19 @@ end
 function _loadb(baddr, n)
 	baddr = zword_to_zaddress(baddr) + (n >>> 16)
 	local zbyte = get_zbyte(baddr)
-	--log('loadb fetched '..tohex(zbyte)..' from address '..tohex(baddr))
 	_result(zbyte)
 end
 
 function _storeb(baddr, n, zbyte)
-	--log('storeb: '..tohex(baddr)..','..n..','..zbyte)
 	baddr = zword_to_zaddress(baddr) + (n >>> 16)
 	set_zbyte(baddr, zbyte)
 end
 
 function _push(a)
-	--log('push: '..a)
 	stack_push(a)
 end
 
 function _pull(var)
-	--log('pull: '..var)
 	local a = stack_pop()
 	_result(a, var, true)
 end
@@ -118,7 +109,6 @@ function _scan_table(a, baddr, n, byte) --<result> <branch>
 end
 
 function _copy_table(baddr1, baddr2, s)
-	--log("_copy_table not yet implemented")
 end
 
 
@@ -126,17 +116,14 @@ end
 --8.3 Arithmetic
 
 function _add(a, b)
-	--log('add: ('..a..' + '..b..')')
 	_result(a + b)
 end
 
 function _sub(a, b)
-	--log('sub: ('..a..' - '..b..')')
 	_result(a - b)
 end
 
 function _mul(a, b)
-	--log('mul: ('..a..' * '..b..')')
 	_result(a * b)
 end
 
@@ -148,12 +135,10 @@ function _div(a, b)
 	else
 		d = ceil(d)
 	end
-	--log('div: ('..a..' / '..b..') = '..d)
 	_result(d)
 end
 
 function _mod(a, b)
-	--log('mod: ('..a..' % '..b..')')
 	--p8 mod gives non-compliant results
 	--ex: -13 % -5, p8: "2", zmachine: "-3"
 	local m
@@ -175,41 +160,34 @@ end
 
 function _inc_dec(var, amt)
 	local zword = get_var(var)
-	--log('inc_dec: '..tohex(var)..'; current value: '..zword..' by '..amt)
 	zword += amt --amt may be 1 or -1
 	_result(zword, var)
 	return zword
 end
 
 function _inc_jg(var, s)
-	--log('inc_jg: '..tohex(var)..', '..tohex(s))
 	local val = _inc(var)
 	_jg(val, s)
 end
 
 function _dec_jl(var, s)
-	--log('inc_jg: '..tohex(var)..', '..tohex(s))
 	local val = _dec(var)
 	_jl(val, s)
 end
 
 function _or(a, b)
-	--log('_or: '..a..' | '..b)
 	_result(a | b)
 end
 
 function _and(a, b)
-	--log('_and: '..a..' & '..b)
 	_result(a & b)
 end
 
 function _not(a)
-	--log('_not: '..a)
 	_result(~a)
 end
 
 function _log_shift(a, t)
-	--The result is floor(a ∗ 2^t) modulo $10000
 	if t > 0 then
 		a <<= t
 	else
@@ -604,6 +582,7 @@ function _read(baddr1, baddr2, time, raddr)
 	else
 		z_text_buffer, z_parse_buffer = 0x0, 0x0
 		_interrupt = nil
+		if (_zm_version > 4) _ret(13) --'\r' in zscii
 	end
 end
 
@@ -668,6 +647,7 @@ end
 
 function _print_table(baddr, x, y, n)
 	log('_print_table: Not Implemented')
+	output("print a table here??")
 end
 
 
@@ -796,7 +776,7 @@ end
 -- Overloads; functions to route calls based on zm version
 
 function _pop_catch()
-	if (_zm_version < 5) then
+	if _zm_version < 5 then
 		--log('v3/4 pop: ')
 		_pop()
 	else
