@@ -1,11 +1,16 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
---status line 2.0
+--status line 2.1
 --by christopher drum
 
-_z_machine_version = 0
-_engine_version = '2.0'
+-- _zm_version = 0
+_engine_version = '2.1'
+
+--these literally make the engine run
+_program_counter = 0x0
+_interrupt = nil
+
 checksum = 0x0
 story_loaded = false
 -- full_color = false
@@ -13,39 +18,23 @@ story_loaded = false
 punc = '.,!?_#'.."'"..'"/\\-:()'
 blank_line = '                                '
 
-local screen_types = {
-	default = 1, 
-	values = {
-		{'b&w', {6,0}}, {'green', {138, 131}}, 
-		{'amber', {9,128}}, {'blue', {12,129}}, 
-		{'oldlcd', {131,129}}, {'plasma', {8,130}}, 
-		{'invert', {0,6}}--, {'ega', {7,0}}
-	}
-}
-local scroll_speeds = {
-	default = 3,
-	values = {
-		{'slow', 7}, {'medium', 5}, {'fast', 4}, 
-		{'faster', 2}, {'fastest', 0}
-	}
-}
-local clock_types = {
-	default = 1,
-	values = {
-		{'24-hour', 24}, {'12-hour', 12}
-	}
-}
-local cursor_types = {
-	default = 1,
-	values = {
-		{'block', '▮'}, {'square', '■'}, 
-		{'bar', '|'}, {'under', '_'}, {'dotted', '\^:150a150a15000000'}
-	}
-}
-
---these literally make the engine run
-_program_counter = 0x0
-_interrupt = nil
+function rehydrate_menu_vars()
+	raw_menu_strings = [[
+screen_types`1`b&w,6,0`green,138,131`amber,9,128`blue,12,129`oldlcd,131,129`plasma,8,130`invert,0,6/scroll_speeds`3`slow,7`medium,5`fast,4`faster,2`fastest,0/clock_types`1`24-hour,24`12-hour,12/cursor_types`1`block,▮`square,■`bar,|`under,_`dotted,\^:150a150a15000000
+	]]
+	local menu_strings = split(raw_menu_strings, '/')
+	for str in all(menu_strings) do
+		local def = split(str, '`')
+		local menu = {}
+		menu['default'] = def[2]
+		local values = {}
+		for i = 3, #def do
+			add(values, split(def[i], ','))
+		end
+		menu['values'] = values
+		_𝘦𝘯𝘷[def[1]] = menu
+	end
+end
 
 --useful functions
 function in_set(val, set)
@@ -69,7 +58,7 @@ function tohex(value, full)
 end
 
 function log(str)
-	printh(str, 'status_line_log_20')
+	printh(str, 'status_line_log_21')
 end
 
 function wait_for_any_key()
@@ -138,6 +127,7 @@ function _init()
 
 	cartdata('drum_statusline_1')
 
+	rehydrate_menu_vars()
 	build_menu('screen', 0, screen_types)
 	build_menu('scroll', 1, scroll_speeds)
 	build_menu('clock', 2, clock_types)
@@ -170,7 +160,7 @@ end
 
 function game_id()
 	local id = checksum
-	if (_z_machine_version == 3) id = (zword_to_zaddress(get_zword(_static_mem_addr))<<16)
+	if (_zm_version == 3) id = (zword_to_zaddress(get_zword(_static_memory_mem_addr))<<16)
 	return tohex(id, false)
 end
 
@@ -179,7 +169,7 @@ function setup_palette()
 	local st = dget(0) or 1
 	local type = screen_types.values[st]
 	full_color = type[1] == 'ega'
-	fg, bg = unpack(type[2])
+	fg, bg = type[2], type[3]
 	pal({fg,0,8,139,10,140,136,12,7,10,11,12,13,14,15,bg},1)
 	palt(0,false)
 end
@@ -241,7 +231,7 @@ function _update60()
 end
 
 function build_dictionary_lookup()
-	local addr = _dictionary_addr
+	local addr = _dictionary_mem_addr
 	local num_separators = get_zbyte(addr)
 	addr += 0x.0001 + (0x.0001 * num_separators)
 	local entry_length = (get_zbyte(addr) >>> 16)
@@ -266,80 +256,70 @@ function build_dictionary_lookup()
 end
 
 function fetch_parser_separators()
-	local num_separators = get_zbyte(_dictionary_addr)
-	local seps = get_zbytes(_dictionary_addr + 0x.0001, num_separators)
+	local num_separators = get_zbyte(_dictionary_mem_addr)
+	local seps = get_zbytes(_dictionary_mem_addr + 0x.0001, num_separators)
 	seps = zscii_to_p8scii(seps)
 	-- log('fetch_parser_separators: '..seps)
-	for i = 1, num_separators do
-		local k = sub(seps, i, i)
-		add(separators, k)
-	end
+	separators = split(seps,1)
 end
 
 function process_header()
-	_z_machine_version = get_zbyte(version)
+	_zm_version = get_zbyte(_version_header_addr)
 
-	if _z_machine_version < 4 then
-		screen_height = 20
-		packed_shift = 1
-		default_property_count = 31
-		object_entry_size = 0x.0009
-		dictionary_word_size = 6
-	else 
-		screen_height = 21
-		packed_shift = 2
-		default_property_count = 63
-		object_entry_size = 0x.000e
-		dictionary_word_size = 9
-	end
+	local i_flag = get_zbyte(_interpreter_flags_header_addr)
 
-	set_zbyte(_screen_height, screen_height)
-	set_zbyte(_screen_width, 32)
+	if _zm_version < 4 then
+		_zm_screen_height = 20
+		_zm_packed_shift = 1
+		_zm_object_property_count = 31
+		_zm_object_entry_size = 0x.0009
+		_zm_dictionary_word_size = 6
 
-	local i_flag = get_zbyte(interpreter_flags)
-	if _z_machine_version == 3 then
 		i_flag &= 0x3b --turn off some bits
 		i_flag |= 0x20 --enable upper window
+
 	else
+		_zm_screen_height = 21
+		_zm_packed_shift = 2
+		_zm_object_property_count = 63
+		_zm_object_entry_size = 0x.000e
+		_zm_dictionary_word_size = 9
+
+		set_zbyte(_interpreter_number_header_addr, 4) --amiga
+		set_zbyte(_interpreter_version_header_addr, ord('P'))		
+		set_zbyte(_screen_height_header_addr, _zm_screen_height)
+		set_zbyte(_screen_width_header_addr, 32)
+
 		i_flag = 0x9c
 		-- if (full_color == true) i_flag |= 0x01
 	end
-	-- log('interpreter flags set to: '..tohex(i_flag))
-	set_zbyte(interpreter_flags, i_flag)
+	set_zbyte(_interpreter_flags_header_addr, i_flag)
+	set_zbyte(_peripherals_header_addr, 0x03)
 
-	-- local p_flag = get_zbyte(peripherals)
-	-- p_flag &= 0xff --no transcription
-	set_zbyte(peripherals, 0x03)
+	_program_counter 		= zword_to_zaddress(get_zword(_program_counter_header_addr))
+	_paged_memory_mem_addr 	= zword_to_zaddress(get_zword(_paged_memory_header_addr))
+	_dictionary_mem_addr 	= zword_to_zaddress(get_zword(_dictionary_header_addr))
+	_object_table_mem_addr 	= zword_to_zaddress(get_zword(_object_table_header_addr))
+	_global_var_table_mem_addr = zword_to_zaddress(get_zword(_global_var_table_header_addr))
+	_abbr_table_mem_addr 	= zword_to_zaddress(get_zword(_abbr_table_header_addr))
+	_static_memory_mem_addr = zword_to_zaddress(get_zword(_static_memory_header_addr))
 
-	set_zbyte(interpreter_number, 4) --amiga
-	set_zbyte(interpreter_version, ord('P'))
+	checksum = get_zword(_file_checksum_header_addr)
+
 end
 
-function cache_memory_addresses()
-	_program_counter 	= zword_to_zaddress(get_zword(program_counter_addr))
-	_paged_memory_addr 	= zword_to_zaddress(get_zword(paged_memory_addr))
-	_dictionary_addr 	= zword_to_zaddress(get_zword(dictionary_addr))
-	_object_table_addr 	= zword_to_zaddress(get_zword(object_table_addr))
-	_global_var_table_addr = zword_to_zaddress(get_zword(global_var_table_addr))
-	_abbr_table_addr 	= zword_to_zaddress(get_zword(abbr_table_addr))
-	_static_mem_addr 	= zword_to_zaddress(get_zword(static_mem_addr))
-end
-
-function patch() --override screen-width checks on some games
-	checksum = get_zword(file_checksum)
-	-- log('checksum: '..tohex(checksum))
+function patch()
 	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
-	if (in_set(checksum, {0x4860, 0xfc65})) set_zbyte(_screen_width, 40) --amfv, bur
+	if (in_set(checksum, {0x4860, 0xfc65})) set_zbyte(_screen_width_header_addr, 40) --amfv, bur
 end
 
 function initialize_game()
 
-	reset_screen_state()
+	reset_io_state()
 
 	setup_user_prefs()
 	setup_palette()
 	process_header()
-	cache_memory_addresses()
 	fetch_parser_separators()
 	build_dictionary_lookup()
 
@@ -347,11 +327,11 @@ function initialize_game()
 
 	call_stack_push()
 	--special case at startup for the program counter
-	_call_stack[#_call_stack - 9] = _program_counter
+	top_frame().pc = _program_counter
 
 	if (_memory_start_state == nil) capture_state(_memory_start_state)
-	split_window(0)
-	update_current_format(0)
+	_split_screen(0)
+	update_text_style(0)
 	update_p_cursor()
 	story_loaded = true
 

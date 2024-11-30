@@ -1,5 +1,9 @@
---functions with <result> means to set_var(some value)
---functions with <branch> means send true/false to branch()
+--order/numbering follows zmach06e.pdf
+--<result> means set_var(some value)
+--<branch> means send true/false to branch()
+--alias for set_var to _result, just for clarity in function definitions
+
+_result = set_var
 
 function _branch(should_branch)
 	--log('branch called with should_branch: '..tostr(should_branch,true))
@@ -7,24 +11,23 @@ function _branch(should_branch)
 	--log('branch arg: '..tohex(branch_arg))
 	local reverse_arg = (branch_arg & 0x80) == 0
 	local big_branch = (branch_arg & 0x40) == 0
-	--log('  against 0x40: '..tohex(branch_arg & 0x40))
 	local offset = (branch_arg & 0x3f)
 
 	if (reverse_arg == true) should_branch = not should_branch
 
-	if (big_branch == true) then
+	if big_branch == true then
 		--log('big_branch evaluated')
 		if (offset > 31) offset -= 64
 		offset <<= 8
 		offset += get_zbyte()
 	end
 
-		--log('_program_counter at: '..tohex(_program_counter))
+	--log('_program_counter at: '..tohex(_program_counter))
 	--log('branch offset at: '..offset)
-	if (should_branch == true) then
+	if should_branch == true then
 		--log('should_branch is true')
 		if offset == 0 or offset == 1 then --same as rfalse/rtrue
-			ret(offset)
+			_ret(offset)
 		else 
 			offset >>= 16 --keep the sign!
 			_program_counter += (offset - 0x.0002)
@@ -231,7 +234,12 @@ end
 
 
 
---8.4
+--8.4 Comparisons and jumps
+
+function _jz(a)
+	--log('jz: '..a)
+	_branch(a == 0)
+end
 
 function _je(a, b1, b2, b3)
 	--log('je: '..tohex(a)..','..tohex(b1)..','..tohex(b2)..','..tohex(b3))
@@ -253,14 +261,6 @@ function _jg(s, t)
 	_branch(s > t)
 end
 
-function _dec_chk(var, s)
-	--log('dec_chk: ')
-	local val = dec(var)
-	_jl(val, s)
-end
-
-
-
 function _jin(obj, n)
 	local parent = zobject_family(obj, zparent)
 	--log('jin: '..obj..' with parent '..parent..', '..n)
@@ -272,6 +272,65 @@ function _test(a, b)
 	--log('test:('..a..'&'..b..') == '..b..'?')
 	_branch((a & b) == b)
 end
+
+function _jump(s)
+	--log('jump: '..tohex(s))
+	_program_counter += ((s - 2) >> 16) --keep the sign
+end
+
+
+
+--8.5 Call and return, throw and catch
+
+function _call_f(raddr, a1, a2, a3, a4, a5, a6, a7)
+	_call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
+end
+
+function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
+	if (raddr == 0x0) then
+		set_var(0)
+	else 
+		--z3/4 formula is "r = r + 2 ∗ L + 1"
+		--z5 formula is "r = r + 1"
+		local r = zword_to_zaddress(raddr, true)
+		--log('  unpacked raddr: '..tohex(r))
+		local l = get_zbyte(r) --num local vars
+		--log('  revealed l value: '..l)
+		r += 0x.0001 -- "1"
+		call_stack_push()
+
+		local a_vars = {a1, a2, a3, a4, a5, a6, a7}
+		-- if #a_vars > 0 then
+		for i = 1, l do -- "L"
+			local zword = 0
+			if _zm_version < 5 then
+				if (i <= #a_vars) then 
+					zword = a_vars[i]
+				else
+					zword = get_zword(r)
+				end
+				r += 0x.0002 --"2"
+			end
+			set_zword(local_var_addr(i), zword)
+		end
+			--r should be pointing to the start of the routine
+		-- end
+		_program_counter = r
+	end
+end
+
+
+function _dec_chk(var, s)
+	--log('dec_chk: ')
+	local val = dec(var)
+	_jl(val, s)
+end
+
+
+
+
+
+
 
 
 
@@ -339,17 +398,14 @@ end
 
 
 
-function _jz(a)
-	--log('jz: '..a)
-	branch(a == 0)
-end
+
 
 function _get_family_member(obj, fam)
 	--log('get_family_member: '..obj..','..fam)
 	local member = zobject_family(obj, fam)
 	if (not member) member = 0
-	set_var(member)
-	if (fam != zparent) branch(member != 0)
+	_result(member)
+	if (fam != zparent) _branch(member != 0)
 end
 
 function _get_sibling(obj) 
@@ -382,15 +438,15 @@ function _remove_obj(obj)
 	--children always move with their parent
 
 	local original_parent = zobject_family(obj, zparent)
-	if (original_parent != 0) then
+	if original_parent != 0 then
 
 		local next_child = zobject_family(original_parent, zchild)
 		local next_sibling = zobject_family(obj, zsibling)
-		if (next_child == obj) then
+		if next_child == obj then
 			zobject_set_family(original_parent, zchild, next_sibling)
 		else
-			while (next_child != 0) do
-				if (zobject_family(next_child, zsibling) == obj) then
+			while next_child != 0 do
+				if zobject_family(next_child, zsibling) == obj then
 					zobject_set_family(next_child, zsibling, next_sibling)
 					next_child = 0
 				else
@@ -408,10 +464,7 @@ function _ret(a)
 	call_stack_pop(a)
 end
 
-function _jump(s)
-	--log('jump: '..tohex(s))
-	_program_counter += ((s - 2) >> 16) --keep the sign
-end
+
 
 
 
@@ -453,19 +506,19 @@ function _split_window(lines)
 	local win0 = windows[0]
 	local win1 = windows[1]
 	local cur_y_offset = max(0, win0.h - win0.z_cursor.y)
-	if (lines == 0) then --unsplit
+	if lines == 0 then --unsplit
 		win1.y = 1
 		win1.h = 0
 		win0.y = 1
-		win0.h = screen_height
+		win0.h = _zm_screen_height
 	else
 		win1.y = 1
 		win1.h = lines
 		win0.y = lines + 1
-		win0.h = max(0, screen_height - win1.h)
+		win0.h = max(0, _zm_screen_height - win1.h)
 	end
 	win0.z_cursor.y = win0.h - cur_y_offset
-	if (win0.z_cursor.y < 1) then
+	if win0.z_cursor.y < 1 then
 		win0.z_cursor = {x=1,y=1}
 	end
 	update_screen_rect(1)
@@ -531,38 +584,6 @@ end
 
 
 
-function _call_fp(raddr, a1, a2, a3, a4, a5, a6, a7)
-	if (raddr == 0x0) then
-		set_var(0)
-	else 
-		--z3/4 formula is "r = r + 2 ∗ L + 1"
-		--z5 formula is "r = r + 1"
-		local r = zword_to_zaddress(raddr, true)
-		--log('  unpacked raddr: '..tohex(r))
-		local l = get_zbyte(r) --num local vars
-		--log('  revealed l value: '..l)
-		r += 0x.0001 -- "1"
-		call_stack_push()
-
-		local a_vars = {a1, a2, a3, a4, a5, a6, a7}
-		-- if #a_vars > 0 then
-		for i = 1, l do -- "L"
-			local zword = 0
-			if _zm_version < 5 then
-				if (i <= #a_vars) then 
-					zword = a_vars[i]
-				else
-					zword = get_zword(r)
-				end
-				r += 0x.0002 --"2"
-			end
-			set_zword(local_var_addr(i), zword)
-		end
-			--r should be pointing to the start of the routine
-		-- end
-		_program_counter = r
-	end
-end
 
 function _input_stream(operands)
 	--log('input_stream: NI')
