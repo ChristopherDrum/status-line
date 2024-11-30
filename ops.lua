@@ -151,11 +151,11 @@ function _mod(a, b)
 end
 
 function _inc(var)
-	return inc_dec(var,1)
+	return _inc_dec(var,1)
 end
 
 function _dec(var)
-	return inc_dec(var,-1)
+	return _inc_dec(var,-1)
 end
 
 function _inc_dec(var, amt)
