@@ -124,9 +124,9 @@ function call_stack_pop(ret_value)
 end
 
 
-function stack_index(zaddress)
+function local_var_at_zindex(zaddress)
 	local si = #_call_stack - (flr((0xf - (zaddress << 16)) >>> 1))
-	--log('call_stack_index for zaddress: '..tohex(zaddress)..' is: '..si)
+	--log('local_var_at_zindex for zaddress: '..tohex(zaddress)..' is: '..si)
 	return si
 end
 
@@ -205,7 +205,7 @@ function get_dword(zaddress, indirect)
 	end
 
 	if (base == _local_var_table_addr) then
-		index = stack_index(zaddress)
+		index = local_var_at_zindex(zaddress)
 		return _call_stack[index], nil, index
 	end
 
