@@ -1,7 +1,7 @@
 --order/numbering follows zmach06e.pdf
---<result> means set_var(some value)
+--<result> means _result(some value)
 --<branch> means send true/false to branch()
---alias for set_var to _result, just for clarity in function definitions
+--alias for _result to set_var, for clarity in function definitions
 
 _result = set_var
 
@@ -40,12 +40,12 @@ end
 function _load(var)
 	--log('load: '..var)
 	local a = get_var(var,true)
-	set_var(a)
+	_result(a)
 end
 
 function _store(var, a)
 	--log('store: '..tohex(var)..','..tohex(a))
-	set_var(a, var, true)
+	_result(a, var, true)
 end
 
 function _loadw(baddr, n)
@@ -54,7 +54,7 @@ function _loadw(baddr, n)
 	--log('  baddr now: '..tohex(baddr))
 	local zword = get_zword(baddr)
 	--log('  got zword: '..tohex(zword))
-	set_var(zword)
+	_result(zword)
 end
 
 function _storew(baddr, n, zword)
@@ -69,7 +69,7 @@ function _loadb(baddr, n)
 	baddr = zword_to_zaddress(baddr) + (n >>> 16)
 	local zbyte = get_zbyte(baddr)
 	--log('loadb fetched '..tohex(zbyte)..' from address '..tohex(baddr))
-	set_var(zbyte)
+	_result(zbyte)
 end
 
 function _storeb(baddr, n, zbyte)
@@ -86,16 +86,11 @@ end
 function _pull(var)
 	--log('pull: '..var)
 	local a = stack_pop()
-	set_var(a, var, true)
+	_result(a, var, true)
 end
 
-function _pop_catch()
-	if (_zm_version < 5) then
-		--log('v3/4 pop: ')
-		stack_pop()
-	else
-		--log("v5 catch")
-	end
+function _pop()
+	stack_pop()
 end
 
 function _scan_table(a, baddr, n, byte) --<result> <branch>
@@ -118,7 +113,7 @@ function _scan_table(a, baddr, n, byte) --<result> <branch>
 		end
 	end
 
-	set_var(found_addr)
+	_result(found_addr)
 	_branch(should_branch)
 end
 
@@ -132,17 +127,17 @@ end
 
 function _add(a, b)
 	--log('add: ('..a..' + '..b..')')
-	set_var(a + b)
+	_result(a + b)
 end
 
 function _sub(a, b)
 	--log('sub: ('..a..' - '..b..')')
-	set_var(a - b)
+	_result(a - b)
 end
 
 function _mul(a, b)
 	--log('mul: ('..a..' * '..b..')')
-	set_var(a * b)
+	_result(a * b)
 end
 
 function _div(a, b)
@@ -154,7 +149,7 @@ function _div(a, b)
 		d = ceil(d)
 	end
 	--log('div: ('..a..' / '..b..') = '..d)
-	set_var(d)
+	_result(d)
 end
 
 function _mod(a, b)
@@ -167,7 +162,7 @@ function _mod(a, b)
 	else
 		m = a - (ceil(a/b) * b)
 	end
-	set_var(m)
+	_result(m)
 end
 
 function _inc(var)
@@ -182,7 +177,7 @@ function _inc_dec(var, amt)
 	local zword = get_var(var)
 	--log('inc_dec: '..tohex(var)..'; current value: '..zword..' by '..amt)
 	zword += amt --amt may be 1 or -1
-	set_var(zword, var)
+	_result(zword, var)
 	return zword
 end
 
@@ -200,17 +195,17 @@ end
 
 function _or(a, b)
 	--log('_or: '..a..' | '..b)
-	set_var(a | b)
+	_result(a | b)
 end
 
 function _and(a, b)
 	--log('_and: '..a..' & '..b)
-	set_var(a & b)
+	_result(a & b)
 end
 
 function _not(a)
 	--log('_not: '..a)
-	set_var(~a)
+	_result(~a)
 end
 
 function _log_shift(a, t)
@@ -220,7 +215,7 @@ function _log_shift(a, t)
 	else
 		a >>>= t
 	end
-	set_var(a)
+	_result(a)
 end
 
 function _art_shift(s, t)
@@ -229,7 +224,7 @@ function _art_shift(s, t)
 	else
 		s >>= t
 	end
-	set_var(s)
+	_result(s)
 end
 
 
@@ -283,122 +278,97 @@ end
 --8.5 Call and return, throw and catch
 
 function _call_f(raddr, a1, a2, a3, a4, a5, a6, a7)
-	_call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
+	_call_fp(raddr, call_type.func, a1, a2, a3, a4, a5, a6, a7)
+end
+
+function _call_p(raddr, a1, a2, a3, a4, a5, a6, a7)
+	_call_fp(raddr, call_type.proc, a1, a2, a3, a4, a5, a6, a7)
 end
 
 function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
+	
 	if (raddr == 0x0) then
-		set_var(0)
+		if (type == call_type.func) _result(0)
+
 	else 
 		--z3/4 formula is "r = r + 2 ∗ L + 1"
 		--z5 formula is "r = r + 1"
 		local r = zword_to_zaddress(raddr, true)
-		--log('  unpacked raddr: '..tohex(r))
 		local l = get_zbyte(r) --num local vars
-		--log('  revealed l value: '..l)
 		r += 0x.0001 -- "1"
 		call_stack_push()
+		if (_zm_version >= 5) top_frame().pc = r
 
+		--set local vars on the new frame
 		local a_vars = {a1, a2, a3, a4, a5, a6, a7}
-		-- if #a_vars > 0 then
+		local n = #a_vars
 		for i = 1, l do -- "L"
 			local zword = 0
-			if _zm_version < 5 then
-				if (i <= #a_vars) then 
-					zword = a_vars[i]
-				else
-					zword = get_zword(r)
-				end
-				r += 0x.0002 --"2"
+			if (i <= n) then 
+				zword = a_vars[i]
+			else
+				if (_zm_version < 5) zword = get_zword(r)
 			end
 			set_zword(local_var_addr(i), zword)
+			r += 0x.0002 --"2 * l"
 		end
-			--r should be pointing to the start of the routine
-		-- end
+
+		--finish building out the top frame
+		if (_zm_version < 5) top_frame().pc = r
+		top_frame().call = type
+		top_frame().args = n
+
 		_program_counter = r
 	end
 end
 
+function _ret(a)
+	local call = top_frame().call
+	log("_ret() with frame type: "..call)
 
-function _dec_chk(var, s)
-	--log('dec_chk: ')
-	local val = dec(var)
-	_jl(val, s)
-end
-
-
-
-
-
-
-
-
-
-function _test_attr(obj, attr)
-	--log('test_attr: '..tohex(obj)..','..tohex(attr))
-	_branch(zobject_has_attribute(obj, attr))
-end
-
-function _set_attr(obj, attr)
-	--log('set_attr: '..tohex(obj)..','..tohex(attr))
-	zobject_set_attribute(obj, attr, 1)
-end
-
-function _clear_attr(obj, attr)
-	--log('clear_attr: '..tohex(obj)..','..tohex(attr))
-	zobject_set_attribute(obj, attr, 0)
-end
-
-
-
-function _insert_obj(obj1, obj2)
-	--log('insert_obj: '..zobject_name(obj1)..'('..obj1..')'..' into '..zobject_name(obj2)..'('..obj2..')')
-	_remove_obj(obj1)
-	local first_child = zobject_family(obj2, zchild)
-	zobject_set_family(obj2, zchild, obj1)
-	zobject_set_family(obj1, zparent, obj2)
-	zobject_set_family(obj1, zsibling, first_child)
-end	
-
-
-
-function _get_prop(obj, prop)
-	--log('get_prop: '..obj..','..prop)
-	local p = zobject_get_prop(obj, prop)
-	set_var(p)
-end
-
-function _get_prop_addr(obj, prop)
-	--log('get_prop_addr: '..obj..','..prop)
-	set_var(zobject_prop_data_addr_or_prop_list(obj, prop) << 16)
-end
-
-function _get_next_prop(obj, prop)
-	--log('get_next_prop: '..obj)
-	--If prop is 0, result is highest numbered prop
-	--Else,  next lower numbered prop; else, 0
-	local next_prop = 0
-	local prop_list = zobject_prop_data_addr_or_prop_list(obj)
-	if prop == 0 then 
-		if (#prop_list > 0) next_prop = prop_list[1]
+	call_stack_pop() --in all cases
+	
+	if call == call_type.proc then
+		--do nothing
 	else
-		for i = 1, #prop_list do
-			if (prop_list[i] == prop and i+1 <= #prop_list) then
-				next_prop = prop_list[i+1]
-			end
-		end
+		if (a != nil) _result(a)
 	end
-	--log('next prop: '..next_prop)
-	set_var(next_prop)
+end
+
+function _rtrue()
+	log('rtrue: ')
+	_ret(1)
+end
+
+function _rfalse()
+	log('rfalse: ')
+	_ret(0)
+end
+
+function _ret_pulled()
+	--log('_ret_pulled: ')
+	_ret(stack_pop())
+end
+
+function _check_arg_count(n)
+	_branch(top_frame().args >= n)
+end
+
+function _catch()
+	_ret(#_call_stack)
+end
+
+function _throw(a, fp)
+	assert(fp <= #_call_stack, "Tried to throw to a non-existant frame! We wanted frame #"..fp.." but only have "..#_call_stack)
+	while #_call_stack > fp do
+		call_stack_pop()
+	end
+	_ret(a)
 end
 
 
 
-
-
-
-
-
+--8.6 Objects, attributes, and properties
 
 function _get_family_member(obj, fam)
 	--log('get_family_member: '..obj..','..fam)
@@ -419,18 +389,6 @@ end
 function _get_parent(obj) 
 	_get_family_member(obj, zparent) 
 end
-
-function _get_prop_len(baddr)
-	--log('get_prop_len: '..tohex(baddr))
-	local baddr = zword_to_zaddress(baddr)
-	local len_byte = get_zbyte(baddr - 0x.0001)
-	local len = extract_prop_len(len_byte)
-	set_var(len)
-end
-
-
-
-
 
 function _remove_obj(obj)
 	--log('remove_obj: '..zobject_name(obj)..'('..obj..')')
@@ -459,48 +417,78 @@ function _remove_obj(obj)
 	zobject_set_family(obj, zsibling, 0)
 end
 
-function _ret(a)
-	--log('===> ret: '..tohex(a)..' <===')
-	call_stack_pop(a)
+function _insert_obj(obj1, obj2)
+	--log('insert_obj: '..zobject_name(obj1)..'('..obj1..')'..' into '..zobject_name(obj2)..'('..obj2..')')
+	_remove_obj(obj1)
+	local first_child = zobject_family(obj2, zchild)
+	zobject_set_family(obj2, zchild, obj1)
+	zobject_set_family(obj1, zparent, obj2)
+	zobject_set_family(obj1, zsibling, first_child)
+end	
+
+function _test_attr(obj, attr)
+	--log('test_attr: '..tohex(obj)..','..tohex(attr))
+	_branch(zobject_has_attribute(obj, attr))
 end
 
-
-
-
-
-
-
-function _rtrue()
-	--log('rtrue: ')
-	ret(1)
+function _set_attr(obj, attr)
+	--log('set_attr: '..tohex(obj)..','..tohex(attr))
+	zobject_set_attribute(obj, attr, 1)
 end
 
-function _rfalse()
-	--log('rfalse: ')
-	ret(0)
+function _clear_attr(obj, attr)
+	--log('clear_attr: '..tohex(obj)..','..tohex(attr))
+	zobject_set_attribute(obj, attr, 0)
 end
-
-function _show_status()
-	if (_zm_version == 3) show_status()
-end
-
-function _ret_pulled()
-	--log('_ret_pulled: ')
-	_ret(stack_pop())
-end
-
-
 
 function _put_prop(obj, prop, a)
 	--log('put_prop: '..obj..','..prop..','..tohex(a))
 	zobject_set_prop(obj, prop, a)
 end
 
+function _get_prop(obj, prop)
+	--log('get_prop: '..obj..','..prop)
+	local p = zobject_get_prop(obj, prop)
+	_result(p)
+end
+
+function _get_prop_addr(obj, prop)
+	--log('get_prop_addr: '..obj..','..prop)
+	_result(zobject_prop_data_addr_or_prop_list(obj, prop) << 16)
+end
+
+function _get_next_prop(obj, prop)
+	--log('get_next_prop: '..obj)
+	--If prop is 0, result is highest numbered prop
+	--Else,  next lower numbered prop; else, 0
+	local next_prop = 0
+	local prop_list = zobject_prop_data_addr_or_prop_list(obj)
+	if prop == 0 then 
+		if (#prop_list > 0) next_prop = prop_list[1]
+	else
+		for i = 1, #prop_list do
+			if (prop_list[i] == prop and i+1 <= #prop_list) then
+				next_prop = prop_list[i+1]
+			end
+		end
+	end
+	--log('next prop: '..next_prop)
+	_result(next_prop)
+end
+
+function _get_prop_len(baddr)
+	--log('get_prop_len: '..tohex(baddr))
+	local baddr = zword_to_zaddress(baddr)
+	local len_byte = get_zbyte(baddr - 0x.0001)
+	local len = extract_prop_len(len_byte)
+	_result(len)
+end
 
 
 
+--8.7 Windows
 
-function _split_window(lines)
+function _split_screen(lines)
 	--log('split_window called: '..lines)
 	flush_line_buffer(0)
 	local win0 = windows[0]
@@ -530,15 +518,15 @@ function _set_window(win)
 	--log('set_window: '..win)
 	flush_line_buffer()
 	active_window = win
-	if (win == 1) _set_zcursor(1,1)
+	if (win == 1) _set_cursor(1,1)
 end
 
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
 --autosplitting on z4 Nord & Bert reveals a status line bug in the game (!)
-function _set_zcursor(lin, col)
+function _set_cursor(lin, col)
 	--log('_set_zcursor to line '..lin..', col '..col)
 	flush_line_buffer()
-	if ((_zm_version == 5) and (lin > windows[1].h)) _split_window(lin)
+	if ((_zm_version > 3) and (lin > windows[1].h)) _split_screen(lin)
 	windows[1].z_cursor = {x=col, y=lin}
 	update_p_cursor()
 end
@@ -551,43 +539,54 @@ function _get_cursor(baddr)
 	set_zword(baddr + 0x.0002, zc.x)
 end
 
-function _set_text_style(n)
-	--log('set_text_style: '..n)
-	update_current_format(n)
+function _buffer_mode(bit)
+	--ignored; we have to buffer regardless
 end
 
-function _buffer_mode(bit)
-	--ignore; we have to buffer regardless
+function _set_color(byte0, byte1)
+	log('_set_color: Not Implemented')
 end
+
+function _set_text_style(n)
+	log('set_text_style: '..n)
+	update_text_style(n)
+end
+
+function _set_font(n)
+	log('_set_font: Not Implemented')
+	_result(0)
+end
+
+
+
+--8.8 Input and output streams
 
 function _output_stream(n, baddr)
 	--log('output_stream: '..n..', '..tohex(baddr))
-	if (n == 1) screen_output = true
-	if (n == -1) screen_output = false
-	if (n == 3) set_zword(zword_to_zaddress(baddr),0x00) add(memory_output,baddr)
-	if (n == -3) deli(memory_output)
-	if n == 2 then
-		local p_flag = get_zbyte(peripherals)
-		p_flag |= 0x01 --turn on transcription
-		set_zbyte(peripherals, p_flag)
-	end
-	if n == -2 then
-		local p_flag = get_zbyte(peripherals)
-		p_flag &= 0xfe --turn off transcription
-		set_zbyte(peripherals, p_flag)
+	if abs(n) == 1 then
+		screen_output = (n > 0)
+
+	elseif abs(n) == 2 then
+		local p_flag = get_zbyte(_peripherals_header_addr)
+		if (n > 0) p_flag |= 0x01 --turn on transcription
+		if (n < 0) p_flag &= 0xfe --turn off transcription
+		set_zbyte(_peripherals_header_addr, p_flag)
+
+	else
+		if n > 0 then
+			set_zword(zword_to_zaddress(baddr), 0x00)
+			add(memory_output, baddr)
+		else
+			deli(memory_output)
+		end
 	end
 end
-
-
-
-
-
-
-
 
 function _input_stream(operands)
 	--log('input_stream: NI')
 end
+
+
 
 --8.9 Input
 
@@ -613,8 +612,9 @@ function _read_char(one, time, raddr)
 	--log('read_char: '..one..','..tohex(time)..','..tohex(raddr))
 	flush_line_buffer()
 	local char = wait_for_any_key()
-	set_var(ord(char))
+	_result(ord(char))
 end
+
 
 
 --8.10 Character based output
@@ -670,6 +670,8 @@ function _print_table(baddr, x, y, n)
 	log('_print_table: Not Implemented')
 end
 
+
+
 --8.11 Miscellaneous screen output
 
 function _erase_line(val)
@@ -694,6 +696,8 @@ function _erase_window(win)
 	end
 end
 
+
+
 --8.12 Sound, mouse, and menus
 
 function _sound_effect(number)
@@ -713,7 +717,7 @@ function _save(did_save)
 		if _zm_version == 3 then
 			_branch(did_save)
 		else 
-			set_var(did_save)
+			_result(did_save)
 		end
 	end
 end
@@ -724,7 +728,7 @@ function _restore()
 	if _zm_version == 3 then
 		_branch(rg)
 	else
-		set_var(rg)
+		_result(rg)
 	end
 end
 
@@ -736,22 +740,24 @@ function _restore_undo()
 	--log('_restore_undo: Not Implemented')
 end
 
+
+
 --8.14 Miscellaneous
 
 function _nop()
 	--log('_nop: ')
 end
 
-function _random(s, skip_set_var)
+function _random(s, skip__result)
 	if (s < 0) then
 		srand(s) 
-		if (not skip_set_var) set_var(0)
+		if (not skip__result) _result(0)
 	elseif (s > 0) then
 		local rnd = flr(rnd(s)) + 1
-		if (not skip_set_var) set_var(rnd)
+		if (not skip__result) _result(rnd)
 	else
 		srand(tonum(tostr(stat(93))..tostr(stat(94))..tostr(stat(95))))
-		if (not skip_set_var) set_var(0)
+		if (not skip__result) _result(0)
 	end
 end
 
@@ -785,7 +791,20 @@ function _encode_text(baddr1, n, p, baddr2)
 	--log('_encode_text: Not Implemented')
 end
 
+
+
 -- Overloads; functions to route calls based on zm version
+
+function _pop_catch()
+	if (_zm_version < 5) then
+		--log('v3/4 pop: ')
+		_pop()
+	else
+		--log("v5 catch")
+		_catch()
+	end
+end
+
 function _not_call_p(raddr, a1, a2, a3, a4, a5, a6, a7)
 	if _zm_version < 5 then
 		_not(raddr)
@@ -793,6 +812,8 @@ function _not_call_p(raddr, a1, a2, a3, a4, a5, a6, a7)
 		_call_p(raddr, a1, a2, a3, a4, a5, a6, a7)
 	end
 end
+
+
 
 _zero_ops = {
 	_rtrue, _rfalse, _print, _print_rtrue, _nop, _save, _restore, _restart, _ret_pulled, _pop_catch, _quit, _new_line, _show_status, _verify, _piracy
@@ -809,8 +830,7 @@ _long_ops = {
 _var_ops = {
 	_call_f, _storew, _storeb, _put_prop, _read, 
 	_print_char, _print_num, _random, _push, _pull, 
-	_split_screen, _set_window, _call_f, _erase_window, _erase_line, 
-	_set_cursor, _get_cursor, _set_text_style, _buffer_mode, _output_stream, _input_stream, _sound_effect, _read_char, _scan_table, _not, _call_p, _call_p, _tokenise, _encode_text, _copy_table, _print_table, _check_arg_count
+	_split_screen, _set_window, _call_f, _erase_window, _erase_line, _set_cursor, _get_cursor, _set_text_style, _buffer_mode, _output_stream, _input_stream, _sound_effect, _read_char, _scan_table, _not, _call_p, _call_p, _tokenise, _encode_text, _copy_table, _print_table, _check_arg_count
 }
 
 _ext_ops = {

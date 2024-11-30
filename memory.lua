@@ -147,16 +147,9 @@ function call_stack_push()
 	add(_call_stack, frame:new())
 end
 
-function call_stack_pop(ret_value)
+function call_stack_pop()
 	deli(_call_stack)
 	_program_counter = top_frame().pc
-
-	if ret_value != nil then
-		local var_byte = get_zbyte()
-		local ret_address = decode_var_address(var_byte)
-		--log('(var byte: '..tohex(var_byte)..' converted to address: '..tohex(ret_address)..', set to: '..tohex(ret_value)..')')
-		set_zword(ret_address, ret_value)
-	end
 end
 
 function local_var_at_zindex(zaddress)
