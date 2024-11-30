@@ -1,4 +1,4 @@
-function reset_screen_state()
+function reset_io_state()
 	current_bg = 0
 	current_fg = 1
 	current_font = 1
@@ -36,9 +36,23 @@ function reset_screen_state()
 			buffer = {}
 		}
 	}
+
+	origin_y = nil
+	break_chars = {'\n', ' ', ':', '-', '_', ';'}
+	break_index = 0
+
+	did_trim_nl = false
+	clear_last_line = false
+	lines_shown = 0
+
+	z_text_buffer, z_parse_buffer = 0x0, 0x0
+	current_input, visible_input = '', ''
+
+	show_warning = true
+
 end
 
-function update_current_format(n)
+function update_text_style(n)
 	local inverse, emphasis = '\^-i\^-b', '\015'
 	make_bold = (n&2 == 2)
 	make_inverse = (n&1 == 1)
@@ -46,7 +60,7 @@ function update_current_format(n)
 	if (make_inverse == true) inverse = '\^i'
 	if (n > 1) emphasis = '\014'
 	if checksum == 0xfc65 then -- Bureaucracy masterpiece
-		if (active_window == 1) and (n&2 == 2) then
+		if (active_window == 1) and (make_bold == true) then
 			--suppress bold in window 1 because of form fields
 			inverse, emphasis, make_bold = '\^i', '\015', false
 		end
@@ -56,12 +70,11 @@ function update_current_format(n)
 	current_format_updated = true
 end
 
-origin_y = nil
 function update_screen_rect(zwin_num)
-	if (not origin_y) origin_y = (_z_machine_version == 3) and 8 or 1
+	if (not origin_y) origin_y = (_zm_version == 3) and 8 or 1
 	local win = windows[zwin_num]
 	local py = (win.y-1)*6 + origin_y
-	if (_z_machine_version > 3 and zwin_num == 1) py = 0
+	if (_zm_version > 3 and zwin_num == 1) py = 0
 	local ph = (win.h)*6
 	-- log('setting screen rect '..zwin_num..': 0, '..py..', 128,'..(origin_y+ph))
 	win.screen_rect = {0, py, 128, origin_y+ph}
@@ -73,7 +86,7 @@ function update_p_cursor()
 	local cx, cy = win.z_cursor.x, win.z_cursor.y
 	px = ((cx - 1)<<2) + 1
 	py += (cy - 1)*6 + 1
-	if (_z_machine_version == 3) py -= 1
+	if (_zm_version == 3) py -= 1
 	win.p_cursor = {px, py}
 	return px, py
 end
@@ -86,12 +99,10 @@ function strip(str)
 		local w = words[i]
 		if (w != '') stripped ..= w..' '
 	end
-	if (sub(stripped, -1) == ' ') stripped = sub(stripped, 1, #stripped-1)
+	if (stripped[-1] == ' ') stripped = sub(stripped, 1, -2)
 	return stripped
 end
 
-local break_chars = {'\n', ' ', ':', '-', '_', ';'}
-local break_index = 0
 
 function memory(str)
 	-- log('==> memory at level: '..#memory_output)
@@ -117,7 +128,7 @@ end
 
 function output(str, flush_now)
 	-- log('('..active_window..') output str: '..str)
-	if (#memory_output > 0) then
+	if #memory_output > 0 then
 		-- log('   redirected to memory')
 		memory(str) 
 	else
@@ -145,7 +156,7 @@ function output(str, flush_now)
 
 			local o = ord(char)
 			visual_len += 4
-			if (make_bold == true) then
+			if make_bold == true then
 				if (o >= 32) o+=96
 				if (o != 10) visual_len += 1
 			end 
@@ -153,7 +164,7 @@ function output(str, flush_now)
 
 			if (in_set(char, break_chars)) break_index = #current_line
 			-- log('current line: '..current_line)
-			if visual_len > 128 or char == '\n' then
+			if (visual_len > 128) or (char == '\n') then
 
 				local next_line, next = current_format, nil
 				current_line, next = unpack(split(current_line, break_index, false))
@@ -178,9 +189,6 @@ function output(str, flush_now)
 	if (flush_now) flush_line_buffer()
 end
 
-did_trim_nl = false
-clear_last_line = false
-lines_shown = 0
 function flush_line_buffer()
 	local win = windows[active_window]
 	local buffer = win.buffer
@@ -203,9 +211,10 @@ function flush_line_buffer()
 			end
 		end
 		-- log('last char: '..ord(sub(str,-1)))
-		local dtn = sub(str,-1) == '\n'
-		if (dtn == true) str = sub(str,1,#str-1)
-		if (active_window == 0 or (active_window == 1 and _z_machine_version == 3)) did_trim_nl = dtn
+		if str[-1] == '\n' then
+			str = sub(str,1,-2)
+			if (active_window == 0 or (active_window == 1 and _zm_version == 3)) did_trim_nl = true
+		end
 		-- if (active_window == 0) did_trim_nl = dtn
 		win.last_line = str
 		screen(str)
@@ -238,7 +247,7 @@ function screen(str)
 		if win.z_cursor.y <= win.h then
 			print(str)
 			cx += win.z_cursor.x
-			if _z_machine_version == 3 then
+			if _zm_version == 3 then
 				if did_trim_nl == true then
 					cx = 1
 					win.z_cursor.y += 1
@@ -270,7 +279,7 @@ function tokenise(str)
 	end
 
 	for i = 1, #str do
-		local char = sub(str,i,_)
+		local char = str[i]
 		-- log('  char '..i..': '..ord(char))
 		add(bytes, ord(char))
 
@@ -319,10 +328,6 @@ function case_setter(char, case)
 	return chr(o)
 end
 
-
-z_text_buffer, z_parse_buffer = 0x0, 0x0
-current_input, visible_input = '', ''
-
 function process_input_char(real, visible, max_length)
 	if real == '\b' then
 		if #current_input > 0 then
@@ -369,8 +374,8 @@ function capture_input(char)
 		for i = 1, max_tokens do
 			local word, index, z_adjust = unpack(tokens[i])
 			-- log('looking up word: '..word)
-			-- log('  substring: '..sub(word,1,dictionary_word_size-z_adjust))
-			local dict_addr = _dictionary_lookup[sub(word,1,dictionary_word_size-z_adjust)] or 0x0
+			-- log('  substring: '..sub(word,1,_zm_dictionary_word_size-z_adjust))
+			local dict_addr = _dictionary_lookup[sub(word,1,_zm_dictionary_word_size-z_adjust)] or 0x0
 			-- log('  received: '..tohex(dict_addr))
 			set_zword(z_parse_buffer, dict_addr)
 			set_zbyte(z_parse_buffer+0x.0002, #word)
@@ -379,7 +384,7 @@ function capture_input(char)
 		end
 		
 		current_input, visible_input = '', ''
-		read()
+		_read()
 
 	else
 		process_input_char(case_setter(char, lowercase), char, max_input_length)
@@ -387,11 +392,10 @@ function capture_input(char)
 end
 
 function dword_to_str(dword)
-	local hex = tostr(dword,true)
-	return sub(hex,3,6)..sub(hex,8)
+	local hex = tostr(dword,3)
+	return sub(hex,3)
 end
 
-show_warning = true
 function save_game(char)
 	-- log('save_game: '..tostr(char)..','..tostr(ord(char)))
 	--can the keyboard handler be shared with capture_input()?
@@ -410,7 +414,7 @@ function save_game(char)
 		printh(_current_state, filename, true)
 		current_input, visible_input = '', ''
 		show_warning = true
-		local s = (_z_machine_version == 3) and true or 1
+		local s = (_zm_version == 3) and true or 1
 		_save(s)
 
 	else
@@ -449,30 +453,30 @@ function restore_game()
 		end
 	end
 
+	log(temp[#temp]..','..checksum)
 	local save_checksum = dword_to_str(temp[#temp])
-	local this_checksum = dword_to_str(get_zword(file_checksum))
+	local this_checksum = dword_to_str(checksum)
 
-	if (save_checksum != this_checksum) then
+	if save_checksum != this_checksum then
 		output('This save file appears to be for a different game.\n')
 		output(save_checksum..' vs. '..this_checksum..'\n', true)
-		return (_z_machine_version == 3) and false or 0
+		return (_zm_version == 3) and false or 0
 	end
 
 	local offset = 1
 	local save_version = temp[offset]
-	if (save_version > tonum(_engine_version)) then
-		output('This save file requires v'..tostr(save_version)..' of Status Line or higher.\n', true)
-		return (_z_machine_version == 3) and false or 0
+	if save_version > tonum(_engine_version) then
+		output('This save file requires v'..tostr(save_version)..' of Status Line.\n', true)
+		return (_zm_version == 3) and false or 0
 	end
 
 	offset += 1
 	local memory_length = temp[offset]
-	local mem_max_bank = (memory_length\bank_size)+1
-	local mem_max_index = memory_length - ((mem_max_bank-1)*bank_size)
+	local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
 	-- log('memory_length ('..mem_max_bank..','..mem_max_index..'): '..memory_length)
 	local temp_index = 1
 	for i = 1, mem_max_bank do
-		local max_j = bank_size
+		local max_j = _memory_bank_size
 		if (i == mem_max_bank) max_j = mem_max_index
 		for j = 1, max_j do
 			_memory[i][j] = temp[offset+temp_index]
@@ -480,44 +484,40 @@ function restore_game()
 		end
 	end
 
-	-- log('memory dump ('..temp_index..')...')
-	-- for i = 1, memory_length do
-	-- 	log(tohex(_memory[1][i]))
-	-- end
-	-- log('last memory slot (bank '..mem_max_bank..', idx '..mem_max_index..'): '..tohex(_memory[mem_max_bank][mem_max_index]))
-
+	--not sure yet how to resurrect this data
 	offset += memory_length + 1
 	_call_stack = {}
 	local call_stack_length = temp[offset]
 	-- log('call_stack_length: '..call_stack_length)
+	temp_index = 1
 	for i = 1, call_stack_length do
-		_call_stack[i] = temp[offset + i]
+		local frame = frame:new()
+		frame.pc = temp[offset + 1]
+		frame.call = temp[offset + 2]
+		frame.args = temp[offset + 3]
+		-- log("restoring frame "..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args))
+		local stack_length = temp[offset + 4]
+		-- log("---frame stack---")
+		for j = 1, stack_length do
+			local val = temp[offset + 4 + j]
+			add(frame.stack, val)
+			-- log("  "..j..': '..tohex(temp[offset + 4 + j])..' -> '..tohex(frame.stack[j]))
+		end
+		offset += 4 + stack_length
+		-- log("---frame vars---")
+		for k = 1, 16 do
+			local val = temp[offset + k]
+			frame.vars[k] =  val
+			-- log("  "..k..": "..tohex(temp[offset + k])..' -> '..tohex(frame.vars[k]))
+		end
+		add(_call_stack, frame)
+		offset += 16
 	end
-	-- log('loaded call stack: ')
-	-- for i = 1, #_call_stack do
-	-- 	log('  '.._call_stack[i])
-	-- end
-	-- log('last call stack: '..tohex(_call_stack[call_stack_length]))
 
-	offset += call_stack_length + 1
-	_stack = {}
-	local stack_length = temp[offset]
-	-- log('stack_length: '..stack_length)
-	for i = 1, stack_length do
-		_stack[i] = temp[offset + i]
-	end
-
-	-- log('loaded stack: ')
-	-- for i = 1, #_stack do
-	-- 	log('  '.._stack[i])
-	-- end
-	-- log('last stack: '..tohex(_stack[stack_length]))
-
-	-- log('setting pc to: '..tohex(temp[#temp-1]))
 	_program_counter = temp[#temp-1]
+	-- log('restoring pc: '..tohex(_program_counter, true))
 	current_input = ''
-	process_header()
-	return (_z_machine_version == 3) and true or 2
+	return (_zm_version == 3) and true or 2
 end
 
 function show_status()
@@ -526,13 +526,13 @@ function show_status()
 	local location = zobject_name(obj)
 	local scorea = get_zword(global_var_addr(1))
 	local scoreb = get_zword(global_var_addr(2))
-	local flag = get_zbyte(interpreter_flags)
+	local flag = get_zbyte(_interpreter_flags_header_addr)
 	local separator = '/'
 	if (flag & 2) == 2 then
 		local ampm = ''
 		if clock_type == 12 then
 			ampm = 'a'
-			if (scorea >= 12) then 
+			if scorea >= 12 then 
 				ampm = 'p'
 				scorea -= 12
 			end
@@ -546,7 +546,7 @@ function show_status()
 	-- useful to use status bar for debug info
 	-- score = tostr(stat(0))
 	local loc = ' '..sub(location, 1, 30-#score-2)
-	if (#loc < #location) loc = sub(loc, 1, #loc-1)..chr(144)
+	if (#loc < #location) loc = sub(loc, 1, -2)..chr(144)
 	local spacer_len = 32 - #loc - #score
 	local spacer = sub(blank_line,-spacer_len)
 	loc ..= spacer..score
