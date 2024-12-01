@@ -6,7 +6,7 @@ function reset_io_state()
 	window_attributes = 0b00000000.00001010
 
 	emit_rate = 0 --the lower the faster
-	clock_type, cursor_type
+	clock_type, cursor_type = nil, nil
 	make_bold, make_inverse = false, true
 
 	screen_output = true
@@ -38,6 +38,7 @@ function reset_io_state()
 	break_index = 0
 
 	did_trim_nl, clear_last_line = false, false
+	lines_shown = 0
 
 	z_text_buffer, z_parse_buffer = 0x0, 0x0
 	current_input, visible_input = '', ''
