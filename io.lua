@@ -478,7 +478,6 @@ function restore_game()
 		end
 	end
 
-	--not sure yet how to resurrect this data
 	offset += memory_length + 1
 	_call_stack = {}
 	local call_stack_length = temp[offset]

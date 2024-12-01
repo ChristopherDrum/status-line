@@ -84,7 +84,6 @@ function flush_volatile_state()
 end
 
 --may just be a zbyte, but storage is the same
---there is no such thing as popping individual bytes from words
 function stack_push(zword)
 	-- log('+ + stack_push: '..tohex(zword))
 	top_frame():stack_push(zword)
