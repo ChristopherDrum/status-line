@@ -1,17 +1,13 @@
 function reset_io_state()
-	current_bg = 0
-	current_fg = 1
-	current_font = 1
-
+	current_bg, current_fg, current_font = 0, 1, 1
+	
 	current_format = ''
 	current_format_updated = false
 	window_attributes = 0b00000000.00001010
 
 	emit_rate = 0 --the lower the faster
-	clock_type = nil
-	cursor_type = nil
-	make_bold = false
-	make_inverse = true
+	clock_type, cursor_type
+	make_bold, make_inverse = false, true
 
 	screen_output = true
 	memory_output = {}
@@ -41,15 +37,12 @@ function reset_io_state()
 	break_chars = {'\n', ' ', ':', '-', '_', ';'}
 	break_index = 0
 
-	did_trim_nl = false
-	clear_last_line = false
-	lines_shown = 0
+	did_trim_nl, clear_last_line = false, false
 
 	z_text_buffer, z_parse_buffer = 0x0, 0x0
 	current_input, visible_input = '', ''
 
 	show_warning = true
-
 end
 
 function update_text_style(n)
