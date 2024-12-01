@@ -5,7 +5,8 @@
 --alias for for clarity in result handling
 _result = set_var
 
-function _branch(should_branch)
+function _branch(_should_branch)
+	local should_branch = _should_branch or true --zero_op overload for "verify" and "piracy" 
 	--log('branch called with should_branch: '..tostr(should_branch,true))
 	local branch_arg = get_zbyte()
 	--log('branch arg: '..tohex(branch_arg))
@@ -129,7 +130,7 @@ end
 
 function _div(a, b)
 	local d = a/b
-	if ((a&0x8000) == (b&0x8000)) then
+	if (a&0x8000) == (b&0x8000) then
 	-- if ((a > 0 and b > 0) or (a < 0 and b < 0)) then
 		d = flr(d)
 	else
@@ -142,7 +143,7 @@ function _mod(a, b)
 	--p8 mod gives non-compliant results
 	--ex: -13 % -5, p8: "2", zmachine: "-3"
 	local m
-	if ((a > 0 and b > 0) or (a < 0 and b < 0)) then
+	if (a > 0 and b > 0) or (a < 0 and b < 0) then
 		m = a - (flr(a/b) * b)
 	else
 		m = a - (ceil(a/b) * b)
@@ -306,9 +307,7 @@ function _ret(a)
 
 	call_stack_pop() --in all cases
 	
-	if call == call_type.proc then
-		--do nothing
-	else
+	if call != call_type.proc then
 		if (a != nil) _result(a)
 	end
 end
@@ -517,18 +516,13 @@ function _get_cursor(baddr)
 	set_zword(baddr + 0x.0002, zc.x)
 end
 
-function _buffer_mode(bit)
-	--ignored; we have to buffer regardless
-end
+--_buffer_mode; not sure this applies to us so _nop() for now
 
 function _set_color(byte0, byte1)
 	log('_set_color: Not Implemented')
 end
 
-function _set_text_style(n)
-	log('set_text_style: '..n)
-	update_text_style(n)
-end
+--_set_text_style defined in io.lua
 
 function _set_font(n)
 	log('_set_font: Not Implemented')
@@ -741,10 +735,7 @@ function _random(s, skip__result)
 	end
 end
 
-function _restart()
-	-- log('restart: ')
-	reset_session()
-end
+--_restart() defined in memory.lua
 
 function _quit()
 	story_loaded = false
@@ -754,14 +745,8 @@ function _show_status()
 	if (_zm_version == 3) show_status()
 end
 
-function _verify()
-	-- log('_verify: cheating on this')
-	_branch(true)
-end
-
-function _piracy()
-	_branch(true)
-end
+--_verify() and _piracy() are just _branch(true)
+--we're using a zero op _branch() overload for these
 
 function _tokenise(baddr1, baddr2, baddr3, bit)
 	--log('_tokenise: Not Implemented')
@@ -777,10 +762,8 @@ end
 
 function _pop_catch()
 	if _zm_version < 5 then
-		--log('v3/4 pop: ')
 		_pop()
 	else
-		--log("v5 catch")
 		_catch()
 	end
 end

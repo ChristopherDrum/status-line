@@ -53,7 +53,7 @@ function set_stack_top(val)
 end
 
 --reset play session data (leave loaded game alone)
-function reset_session()
+function _restart()
 	for i = 1, #_memory_start_state do
 		local bank = _memory_start_state[i]
 		for j = 1, #bank do

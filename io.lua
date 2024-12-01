@@ -46,7 +46,7 @@ function reset_io_state()
 	show_warning = true
 end
 
-function update_text_style(n)
+function _set_text_style(n)
 	local inverse, emphasis = '\^-i\^-b', '\015'
 	make_bold = (n&2 == 2)
 	make_inverse = (n&1 == 1)
