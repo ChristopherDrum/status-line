@@ -5,8 +5,7 @@
 --alias for for clarity in result handling
 _result = set_var
 
-function _branch(_should_branch)
-	local should_branch = _should_branch or true --zero_op overload for "verify" and "piracy" 
+function _branch(should_branch)
 	--log('branch called with should_branch: '..tostr(should_branch,true))
 	local branch_arg = get_zbyte()
 	--log('branch arg: '..tohex(branch_arg))
@@ -746,7 +745,9 @@ function _show_status()
 end
 
 --_verify() and _piracy() are just _branch(true)
---we're using a zero op _branch() overload for these
+function _btrue()
+	_branch(true)
+end
 
 function _tokenise(baddr1, baddr2, baddr3, bit)
 	--log('_tokenise: Not Implemented')
