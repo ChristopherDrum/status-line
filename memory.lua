@@ -668,7 +668,7 @@ function load_instruction()
 		op_code = (op_definition & 0x1f)
 
 		local type_information, num_bytes, filter
-		if (_zm_version > 3 and (in_set(op_definition, {0xec, 0xfa}))) then
+		if ((_zm_version > 3) and (op_definition == 0xec or op_definition == 0xfa)) then
 			-- log('double var op_code')
 			type_information = get_zword()
 			num_bytes = 7 -- for the loop; 8 bytes really

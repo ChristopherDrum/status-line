@@ -56,13 +56,10 @@ function rehydrate_mem_addresses()
 end
 
 --useful functions
-function in_set(val, set)
+function in_set(val, set) --set must be single chars in a string
 	if (not val or not set) return
-	if (type(set) == 'string') set = split(set,1)
-	for i = 1, #set do
-		if (val == set[i]) return true
-	end
-	return false
+	set = split(set,1)
+	return del(set,val) == val
 end
 
 function in_range(val,min,max)
@@ -86,7 +83,7 @@ function wait_for_any_key()
 	lines_shown = 0
 	local c = (make_inverse == false) and current_fg or current_bg
 	local keypress = ''
-	while (keypress == '') do
+	while keypress == '' do
 		if (active_window == 1) draw_cursor()
 		if stat(30) then
 			poke(0x5f30,1)
@@ -96,7 +93,7 @@ function wait_for_any_key()
 	end
 
 	local o = ord(keypress)
-	if (active_window == 1) then 
+	if active_window == 1 then 
 		local clear = (c+1)%2
 		draw_cursor(clear)
 	else
@@ -279,9 +276,8 @@ end
 function fetch_parser_separators()
 	local num_separators = get_zbyte(_dictionary_mem_addr)
 	local seps = get_zbytes(_dictionary_mem_addr + 0x.0001, num_separators)
-	seps = zscii_to_p8scii(seps)
-	-- log('fetch_parser_separators: '..seps)
-	separators = split(seps,1)
+	separators = zscii_to_p8scii(seps)
+	log('fetch_parser_separators: '..separators)
 end
 
 function process_header()
@@ -331,7 +327,7 @@ end
 
 function patch()
 	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
-	if (in_set(checksum, {0x4860, 0xfc65})) set_zbyte(_screen_width_header_addr, 40) --amfv, bur
+	if (checksum == 0x4860 or checksum == 0xfc65) set_zbyte(_screen_width_header_addr, 40) --amfv, bur
 end
 
 function initialize_game()

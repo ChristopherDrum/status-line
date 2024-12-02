@@ -34,7 +34,7 @@ function reset_io_state()
 	}
 
 	origin_y = nil
-	break_chars = {'\n', ' ', ':', '-', '_', ';'}
+	break_chars = "\n :-_;"
 	break_index = 0
 
 	did_trim_nl, clear_last_line = false, false
