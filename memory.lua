@@ -598,6 +598,27 @@ function zscii_to_p8scii(zchars)
 end
 
 function load_instruction()
+
+	local op_table, op_code, operands = nil, 0, {}
+	local function extract_operands(info, count)
+		-- log(' type_information: '..tohex(info))
+		for i = count-1, 0, -1 do
+			local op_type = (info >>> (i*2)) & 0x03
+			-- log('  byte '..i..', op type: '..op_type)
+			local operand
+			if op_type == 0 then
+				operand = get_zword()
+			elseif op_type == 1 then
+				operand = get_zbyte()
+			elseif op_type == 2 then
+				operand = get_var()
+			elseif op_type == 3 then
+				break
+			end
+			-- log('  operand '..tohex(operand))
+			add(operands, operand)
+		end
+	end
 	
 	-- An instruction consists of opcode and operands
 	-- First 1 to 3 bytes contain opcode and operand types
@@ -607,7 +628,6 @@ function load_instruction()
 	-- log(' op_definition: '..tohex(op_definition))
 	local op_form = (op_definition >>> 6) & 0xffff
 
-	local op_table, op_code, operands = nil, 0, {}
 	if op_form <= 0x01 then
 		-- log(' long instruction found')
 		-- The first byte of a long instruction is %0abxxxxx where
@@ -625,6 +645,17 @@ function load_instruction()
 		if (op_definition & 0x20 == 0x20) then
 			operands[2] = get_var(operands[2])
 		end
+
+	elseif op_form == 0xbe and _zm_version >= 5 then
+		-- log(' v5+ extended instruction found')
+		-- the first byte of an extended instruction is $BE, it is an extended instruction. 
+		-- The second byte contains the EXT opcode.
+		-- Then follow the operand types (one byte) and the operands themselves,
+		-- in the same format as for variable instructions (as op_form 0x03 below).
+		op_table = _ext_ops
+		op_code = get_zbyte()
+		type_information = get_zbyte()
+		extract_operands(type_information,4)
 
 	elseif op_form == 0x02 then
 		-- log(' short instruction found')
@@ -659,44 +690,20 @@ function load_instruction()
 		-- A %11 pair means ‘no operand’
 
 		op_table = _var_ops
-		-- if _zm_version > 3 then
-			if (op_definition & 0x20 == 0) then
-				-- log('  (2OP actually)')
-				op_table = _long_ops
-			end
-		-- end
+		if (op_definition & 0x20 == 0) then
+			-- log('  (2OP actually)')
+			op_table = _long_ops
+		end
 		op_code = (op_definition & 0x1f)
 
-		local type_information, num_bytes, filter
+		local type_information, num_bytes
 		if ((_zm_version > 3) and (op_definition == 0xec or op_definition == 0xfa)) then
 			-- log('double var op_code')
-			type_information = get_zword()
-			num_bytes = 7 -- for the loop; 8 bytes really
-			filter = 0xc000
+			type_information, num_bytes = get_zword(), 8
 		else
-			type_information = get_zbyte()
-			num_bytes = 3 --4 bytes really
-			filter = 0xc0
+			type_information, num_bytes = get_zbyte(), 4
 		end
-		-- log(' type_information: '..tohex(type_information))
-		for i = 0, num_bytes do
-			local filtered_byte = type_information & (filter >>> (i << 1))
-			local op_type = filtered_byte >>> ((num_bytes-i)<<1)
-			-- log('  byte '..i..', op type: '..op_type)
-
-			local operand
-			if op_type == 0 then
-				operand = get_zword()
-			elseif op_type == 1 then
-				operand = get_zbyte()
-			elseif op_type == 2 then
-				operand = get_var()
-			elseif op_type == 3 then
-				break
-			end
-			-- log('  operand '..tohex(operand))
-			add(operands, operand)
-		end
+		extract_operands(type_information, num_bytes)
 		if ((op_table == _long_ops) and (#operands == 1) and (op_code > 1)) get_zbyte()
 	end
 	-- log('  opcode: '..op_code)
