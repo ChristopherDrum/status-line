@@ -39,8 +39,7 @@ end
 
 function _load(var)
 	--log('load: '..var)
-	local a = get_var(var,true)
-	_result(a)
+	_result(get_var(var,true))
 end
 
 function _store(var, a)
@@ -128,25 +127,19 @@ function _mul(a, b)
 end
 
 function _div(a, b)
-	local d = a/b
-	if (a&0x8000) == (b&0x8000) then
+	local op = ceil
+	if ((a&0x8000) == (b&0x8000)) op = flr
 	-- if ((a > 0 and b > 0) or (a < 0 and b < 0)) then
-		d = flr(d)
-	else
-		d = ceil(d)
-	end
+	local d = op(a/b)
 	_result(d)
 end
 
 function _mod(a, b)
 	--p8 mod gives non-compliant results
 	--ex: -13 % -5, p8: "2", zmachine: "-3"
-	local m
-	if (a > 0 and b > 0) or (a < 0 and b < 0) then
-		m = a - (flr(a/b) * b)
-	else
-		m = a - (ceil(a/b) * b)
-	end
+	local op = ceil
+	if ((a&0x8000) == (b&0x8000)) op = flr
+	local m = a - (op(a/b) * b)
 	_result(m)
 end
 
@@ -216,12 +209,7 @@ end
 
 function _je(a, b1, b2, b3)
 	--log('je: '..tohex(a)..','..tohex(b1)..','..tohex(b2)..','..tohex(b3))
-	local b_vars = {b1, b2, b3}
-	local should_branch = false
-	for i = 1, #b_vars do
-		if (a == b_vars[i]) should_branch = true
-	end
-	_branch(should_branch)
+	_branch(del({b1,b2,b3},a) == a)
 end
 
 function _jl(s, t)
@@ -443,7 +431,7 @@ function _get_next_prop(obj, prop)
 		if (#prop_list > 0) next_prop = prop_list[1]
 	else
 		for i = 1, #prop_list do
-			if (prop_list[i] == prop and i+1 <= #prop_list) then
+			if (prop_list[i] == prop) and (i+1 <= #prop_list) then
 				next_prop = prop_list[i+1]
 			end
 		end
