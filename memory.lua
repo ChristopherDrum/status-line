@@ -163,11 +163,12 @@ end
 -- index: index into the bank
 -- cell: 0-indexed byte at _memory[bank][index]
 function get_memory_location(zaddress)
-	-- log('get_memory_location for address: '..tohex(zaddress,true))
+	log('get_memory_location for address: '..tohex(zaddress,true))
 	local bank = (zaddress & 0x000f) + 1
 	local za = ((zaddress<<16)>>>2) + 1 --contains index and cell
 	local index = za & 0xffff
 	local cell = (za & 0x.ffff) << 2
+	log("...accessing _memory("..#_memory.."), bank #"..bank.."("..#_memory[bank]..") at index: "..index)
 	return bank, index, cell
 end
 
@@ -506,11 +507,11 @@ end
 
 function zobject_set_prop(index, property, value)
 	local prop_data_address = zobject_prop_data_addr_or_prop_list(index, property)
-	assert(prop_data_address != 0, 'ERR: property '..property..' does not exist for object '..index)
+	-- assert(prop_data_address != 0, 'ERR: property '..property..' does not exist for object '..index)
 
 	local len_byte = get_zbyte(prop_data_address - 0x.0001)
 	local len = extract_prop_len(len_byte)
-	-- log('zobject_set_prop '..property..' at addr: '..tohex(prop_data_address)..', value: '..value..', len: '..len)
+	log('zobject_set_prop '..property..' at addr: '..tohex(prop_data_address)..', value: '..value..', len: '..len)
 	if len == 1 then
 		 set_zbyte(prop_data_address, value & 0xff)
 	else
@@ -604,7 +605,7 @@ function load_instruction()
 		-- log(' type_information: '..tohex(info))
 		for i = count-1, 0, -1 do
 			local op_type = (info >>> (i*2)) & 0x03
-			-- log('  byte '..i..', op type: '..op_type)
+			log('  byte '..i..', op type: '..op_type)
 			local operand
 			if op_type == 0 then
 				operand = get_zword()
@@ -647,7 +648,7 @@ function load_instruction()
 		end
 
 	elseif op_form == 0xbe and _zm_version >= 5 then
-		-- log(' v5+ extended instruction found')
+		log(' v5+ extended instruction found')
 		-- the first byte of an extended instruction is $BE, it is an extended instruction. 
 		-- The second byte contains the EXT opcode.
 		-- Then follow the operand types (one byte) and the operands themselves,
