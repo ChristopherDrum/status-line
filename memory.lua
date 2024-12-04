@@ -175,7 +175,7 @@ end
 -- returns value stored at zaddress, memory bank (if any), index into storage, cell
 function get_dword(zaddress, indirect)
 	local zaddress = zaddress or _program_counter
-	log("get_dword at address "..tohex(zaddress))
+	-- log("get_dword at address "..tohex(zaddress))
 	local base = (zaddress & 0xffff)
 
 	if base < 0xa then
@@ -184,6 +184,7 @@ function get_dword(zaddress, indirect)
 	end
 
 	if base == _local_var_table_mem_addr then
+		log("get dword at local var addr: "..tohex(zaddress))
 		local var, index = local_var_at_zindex(zaddress)
 		return var, nil, index
 	end
@@ -215,8 +216,7 @@ function get_zbyte(zaddress)
 		end
 	elseif base == _local_var_table_mem_addr then
 		log("get_zbyte at local var table: "..tohex(zaddress))
-		-- if (zaddress & 0x.0001 == 0x.0001) dword <<= 16
-		dword <<= 16
+		if (zaddress & 0x.000f > 0) dword <<= 16
 	end
 	-- if (zaddress == _screen_width_header_addr) then
 	-- 	log('screen width called, returning: '..(dword & 0xff))
@@ -515,7 +515,7 @@ function zobject_set_prop(index, property, value)
 
 	local len_byte = get_zbyte(prop_data_address - 0x.0001)
 	local len = extract_prop_len(len_byte)
-	log('zobject_set_prop '..property..' at addr: '..tohex(prop_data_address)..', value: '..value..', len: '..len)
+	-- log('zobject_set_prop '..property..' at addr: '..tohex(prop_data_address)..', value: '..value..', len: '..len)
 	if len == 1 then
 		 set_zbyte(prop_data_address, value & 0xff)
 	else

@@ -330,7 +330,7 @@ function process_header()
 	_static_memory_mem_addr = zword_to_zaddress(get_zword(_static_memory_header_addr))
 
 	checksum = get_zword(_file_checksum_header_addr)
-
+	log("global var table memory starts at: "..tohex(_global_var_table_mem_addr,true))
 end
 
 function patch()
