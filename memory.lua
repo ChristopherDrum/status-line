@@ -473,14 +473,14 @@ function zobject_prop_data_addr_or_prop_list(index, property)
 
 	local prop_num, prop_len, offset = zobject_prop_num_len(prop_address)
 	while prop_num > 0 do
-		log('prop num: '..prop_num..', has num bytes: '..prop_len)
+		-- log('prop num: '..prop_num..', has num bytes: '..prop_len)
 
 		if collect_list == true then
 			add(prop_list, prop_num)
 		else
 			if prop_num == property then
-				log('found property '..property..' at address: '..tohex(prop_address, true))
-				log('  returning address: '..tohex(prop_address + (offset >>> 16)))
+				-- log('found property '..property..' at address: '..tohex(prop_address, true))
+				-- log('  returning address: '..tohex(prop_address + (offset >>> 16)))
 				return (prop_address + (offset >>> 16)), prop_len
 			end
 		end
@@ -490,10 +490,10 @@ function zobject_prop_data_addr_or_prop_list(index, property)
 	end
 	
 	if collect_list == true then
-		log('returning prop list: '..#prop_list)
+		-- log('returning prop list: '..#prop_list)
 		return prop_list
 	end
-	log('returning 0')
+	-- log('returning 0')
 	return 0
 end
 
