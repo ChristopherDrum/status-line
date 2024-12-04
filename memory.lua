@@ -628,7 +628,9 @@ function load_instruction()
 	-- log('::load_instruction at: '..tohex(_program_counter))	
 	local op_definition = get_zbyte()
 	log(' op_definition: '..tohex(op_definition))
-	local op_form = (op_definition >>> 6) & 0xffff
+	op_form = (op_definition >>> 6)
+	if (op_definition == 0xbe) op_form = 0xbe
+	op_form &= 0xff
 
 	local op_table_name
 	if op_form <= 0x01 then
