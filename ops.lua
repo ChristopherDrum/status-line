@@ -53,8 +53,6 @@ function _loadw(baddr, n)
 end
 
 function _storew(baddr, n, zword)
-	--Store zword in the word at baddr + 2∗n
-	-->>>16 for addressing, then << 1 for "*2"
 	baddr = zword_to_zaddress(baddr) + (n >>> 15)
 	set_zword(baddr, zword)
 end
@@ -181,12 +179,12 @@ function _not(a)
 end
 
 function _log_shift(a, t)
-	log("_log_shift: "..a..','..t)
+	-- log("_log_shift: "..a..','..t)
 	_result(flr(a<<t))
 end
 
 function _art_shift(s, t)
-	log("_art_shift: "..s..','..t)
+	-- log("_art_shift: "..s..','..t)
 	_result(s>>-t)
 end
 
@@ -535,7 +533,7 @@ function _output_stream(n, baddr)
 end
 
 function _input_stream(operands)
-	log('input_stream: NI')
+	log('_input_stream: Not Implemented')
 end
 
 
@@ -621,7 +619,6 @@ end
 
 function _print_table(baddr, x, y, n)
 	log('_print_table: Not Implemented')
-	output("print a table here??")
 end
 
 
@@ -699,7 +696,7 @@ end
 --8.14 Miscellaneous
 
 function _nop()
-	log('_nop: ')
+	-- log('_nop: ')
 end
 
 function _random(s, skip__result)

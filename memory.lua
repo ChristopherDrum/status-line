@@ -184,7 +184,7 @@ function get_dword(zaddress, indirect)
 	end
 
 	if base == _local_var_table_mem_addr then
-		log("get dword at local var addr: "..tohex(zaddress))
+		-- log("get dword at local var addr: "..tohex(zaddress))
 		local var, index = local_var_at_zindex(zaddress)
 		return var, nil, index
 	end
@@ -200,7 +200,7 @@ end
 --and the result may transition from 2- to 3-byte address
 function get_zbyte(zaddress)
 	if not zaddress then
-	log('_________________get_zbyte from PC: '..tohex(_program_counter))
+	-- log('_________________get_zbyte from PC: '..tohex(_program_counter))
 		zaddress = _program_counter
 		_program_counter += 0x.0001
 	-- log('                       now: '..tohex(_program_counter))
@@ -215,7 +215,7 @@ function get_zbyte(zaddress)
 			dword <<= (2 << cell)
 		end
 	elseif base == _local_var_table_mem_addr then
-		log("get_zbyte at local var table: "..tohex(zaddress))
+		-- log("get_zbyte at local var table: "..tohex(zaddress))
 		if (zaddress & 0x.000f > 0) dword <<= 16
 	end
 
@@ -590,7 +590,7 @@ function load_instruction()
 		-- log(' type_information: '..tohex(info))
 		for i = count-1, 0, -1 do
 			local op_type = (info >>> (i*2)) & 0x03
-			log('  byte '..i..', op type: '..op_type)
+			-- log('  byte '..i..', op type: '..op_type)
 			local operand
 			if op_type == 0 then
 				operand = get_zword()
@@ -601,7 +601,7 @@ function load_instruction()
 			elseif op_type == 3 then
 				break
 			end
-			log('  operand '..tohex(operand))
+			-- log('  operand '..tohex(operand))
 			add(operands, operand)
 		end
 	end
@@ -610,14 +610,14 @@ function load_instruction()
 	-- First 1 to 3 bytes contain opcode and operand types
 	-- Subsequent bytes are the operands
 	local op_definition = get_zbyte()
-	log(' op_definition: '..tohex(op_definition))
+	-- log(' op_definition: '..tohex(op_definition))
 	op_form = (op_definition >>> 6)
 	if (op_definition == 0xbe) op_form = 0xbe
 	op_form &= 0xff
 
 	local op_table_name
 	if op_form <= 0x01 then
-		op_table_name = 'long'
+		-- op_table_name = 'long'
 		-- The first byte of a long instruction is %0abxxxxx where
 		-- 0 == "long instruction" indicator
 		-- a == "operand type of first byte"
@@ -635,7 +635,7 @@ function load_instruction()
 		end
 
 	elseif op_form == 0xbe and _zm_version >= 5 then
-		op_table_name = 'ext'
+		-- op_table_name = 'ext'
 		-- the first byte of an extended instruction is $BE, it is an extended instruction. 
 		-- The second byte contains the EXT opcode.
 		-- Then follow the operand types (one byte) and the operands themselves,
@@ -646,7 +646,7 @@ function load_instruction()
 		extract_operands(type_information,4)
 
 	elseif op_form == 0x02 then
-		op_table_name = 'short'
+		-- op_table_name = 'short'
 		-- The first byte of a short instruction is %10ttxxxx.
 		-- %tt is the type of the operand (or %11 if absent),
 		-- %xxxx is the 1OP (0OP if operand absent) opcode
@@ -661,14 +661,14 @@ function load_instruction()
 			operands = get_var()
 		elseif op_type == 3 then
 			-- log(' - a zero op')
-			op_table_name = 'zero'
+			-- op_table_name = 'zero'
 			op_table = _zero_ops
 			operands = nil
 		end
 		operands = {operands}
 
 	elseif op_form == 0x03 then
-		op_table_name = 'var'
+		-- op_table_name = 'var'
 		-- The first byte of a v3 variable instruction is %11axxxxx
 		-- (two exceptions for v4+) where %xxxxx is the VAR opcode.
 		-- If %a is %1 its a VAR opcode (if %0, a 2OP opcode)
@@ -680,14 +680,14 @@ function load_instruction()
 
 		op_table = _var_ops
 		if (op_definition & 0x20 == 0) then
-			op_table_name = '2OP'
+			-- op_table_name = '2OP'
 			op_table = _long_ops
 		end
 		op_code = (op_definition & 0x1f)
 
 		local type_information, num_bytes
 		if ((_zm_version > 3) and (op_definition == 0xec or op_definition == 0xfa)) then
-			log('double var op_code')
+			-- log('double var op_code')
 			type_information, num_bytes = get_zword(), 8
 		else
 			type_information, num_bytes = get_zbyte(), 4
@@ -699,7 +699,7 @@ function load_instruction()
 	for i = 1, #operands do
 		op_string ..= tohex(operands[i])..', '
 	end
-	log(op_table_name..'['..(op_code+1)..'] ('..op_string..')')
+	-- log(op_table_name..'['..(op_code+1)..'] ('..op_string..')')
 	local func = op_table[op_code+1]
 	return func, operands
 end
