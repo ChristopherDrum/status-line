@@ -181,21 +181,13 @@ function _not(a)
 end
 
 function _log_shift(a, t)
-	if t > 0 then
-		a <<= t
-	else
-		a >>>= t
-	end
-	_result(a)
+	log("_log_shift: "..a..','..t)
+	_result(flr(a<<t))
 end
 
 function _art_shift(s, t)
-	if t > 0 then
-		s <<= t
-	else
-		s >>= t
-	end
-	_result(s)
+	log("_art_shift: "..s..','..t)
+	_result(s>>-t)
 end
 
 
@@ -252,7 +244,7 @@ function _call_p(raddr, a1, a2, a3, a4, a5, a6, a7)
 end
 
 function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
-	log("_call "..type.."(1f,2p): "..tohex(raddr).." {"..tohex(a1)..','..tohex(a2).."}")
+	-- log("_call "..type.."(1f,2p): "..tohex(raddr).." {"..tohex(a1)..','..tohex(a2).."}")
 	if (raddr == 0x0) then
 		if (type == call_type.func) _result(0)
 
@@ -285,13 +277,13 @@ function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
 		top_frame().args = n
 
 		_program_counter = top_frame().pc
-		log("_call set pc to: "..tohex(r))
+		-- log("_call set pc to: "..tohex(r))
 	end
 end
 
 function _ret(a)
 	local call = top_frame().call
-	log("_ret() with frame type: "..call)
+	-- log("_ret() with frame type: "..call)
 
 	call_stack_pop() --in all cases
 	
@@ -301,12 +293,12 @@ function _ret(a)
 end
 
 function _rtrue()
-	log('rtrue: ')
+	-- log('rtrue: ')
 	_ret(1)
 end
 
 function _rfalse()
-	log('rfalse: ')
+	-- log('rfalse: ')
 	_ret(0)
 end
 
