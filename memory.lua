@@ -175,6 +175,7 @@ end
 -- returns value stored at zaddress, memory bank (if any), index into storage, cell
 function get_dword(zaddress, indirect)
 	local zaddress = zaddress or _program_counter
+	log("get_dword at address "..tohex(zaddress))
 	local base = (zaddress & 0xffff)
 
 	if base < 0xa then
@@ -213,7 +214,9 @@ function get_zbyte(zaddress)
 			dword <<= (2 << cell)
 		end
 	elseif base == _local_var_table_mem_addr then
-		if (zaddress & 0x.0001 == 0x.0001) dword <<= 16
+		log("get_zbyte at local var table: "..tohex(zaddress))
+		-- if (zaddress & 0x.0001 == 0x.0001) dword <<= 16
+		dword <<= 16
 	end
 	-- if (zaddress == _screen_width_header_addr) then
 	-- 	log('screen width called, returning: '..(dword & 0xff))
