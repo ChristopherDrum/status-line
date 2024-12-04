@@ -47,7 +47,7 @@ function rehydrate_ops()
 end
 
 function rehydrate_mem_addresses()
-	local raw_strings = "_paged_memory_mem_addr=0x0,_dictionary_mem_addr=0x0,_object_table_mem_addr=0x0,_global_var_table_mem_addr=0x0,_static_memory_mem_addr=0x0,_abbr_table_mem_addr=0x0,_dynamic_memory_mem_addr=0x0,_high_memory_mem_addr=0x0,_program_counter_mem_addr=0xa,_local_var_table_mem_addr=0xb,_stack_mem_addr=0xc.0001,_version_header_addr=0x.0000,_interpreter_flags_header_addr=0x.0001,_release_number_header_addr=0x.0002,_paged_memory_header_addr=0x.0004,_program_counter_header_addr=0x.0006,_dictionary_header_addr=0x.0008,_object_table_header_addr=0x.000a,_global_var_table_header_addr=0x.000c,_static_memory_header_addr=0x.000e,_peripherals_header_addr=0x.0010,_serial_code_header_addr=0x.0012,_abbr_table_header_addr=0x.0018,_file_length_header_addr=0x.001a,_file_checksum_header_addr=0x.001c,_interpreter_number_header_addr=0x.001e,_interpreter_version_header_addr=0x.001f,_screen_height_header_addr=0x.0020,_screen_width_header_addr=0x.0021,_screen_width_units_addr=0x.0022,_screen_height_units_addr=0x.0024,_font_width_units_addr=0x.0026,_font_height_units_addr=0x.0027,_default_bg_color_addr=0x.002c,_default_fg_color_addr=0x.002d,_terminating_chars_table_addr=0x.002e,_alphabet_table_addr=0x.0034,_header_extension_table_addr=0x.0036"
+	local raw_strings = "_paged_memory_mem_addr=0x0,_dictionary_mem_addr=0x0,_object_table_mem_addr=0x0,_global_var_table_mem_addr=0x0,_static_memory_mem_addr=0x0,_abbr_table_mem_addr=0x0,_dynamic_memory_mem_addr=0x0,_high_memory_mem_addr=0x0,_program_counter_mem_addr=0xa,_local_var_table_mem_addr=0xb,_stack_mem_addr=0xc.0001,_version_header_addr=0x.0000,_interpreter_flags_header_addr=0x.0001,_release_number_header_addr=0x.0002,_paged_memory_header_addr=0x.0004,_program_counter_header_addr=0x.0006,_dictionary_header_addr=0x.0008,_object_table_header_addr=0x.000a,_global_var_table_header_addr=0x.000c,_static_memory_header_addr=0x.000e,_peripherals_header_addr=0x.0010,_serial_code_header_addr=0x.0012,_abbr_table_header_addr=0x.0018,_file_length_header_addr=0x.001a,_file_checksum_header_addr=0x.001c,_interpreter_number_header_addr=0x.001e,_interpreter_version_header_addr=0x.001f,_screen_height_header_addr=0x.0020,_screen_width_header_addr=0x.0021,_screen_width_units_addr=0x.0022,_screen_height_units_addr=0x.0024,_font_height_units_addr=0x.0026,_font_width_units_addr=0x.0027,_default_bg_color_addr=0x.002c,_default_fg_color_addr=0x.002d,_terminating_chars_table_addr=0x.002e,_alt_character_set_addr=0x.0034,_extension_table_addr=0x.0036"
 	local strings = split(raw_strings)
 	for str in all(strings) do
 		local def = split(str,"=")
@@ -248,8 +248,7 @@ function _update60()
 	end
 end
 
-function build_dictionary_lookup()
-	local addr = _dictionary_mem_addr
+function build_dictionary_lookup(addr)
 	local num_separators = get_zbyte(addr)
 	addr += 0x.0001 + (0x.0001 * num_separators)
 	local entry_length = (get_zbyte(addr) >>> 16)
@@ -268,7 +267,7 @@ function build_dictionary_lookup()
 			lower ..= chr(c)
 		end
 		_dictionary_lookup[lower] = (addr << 16)
-		-- log('  '..lower..', set to '..tohex(addr << 16)..'(was '..tohex(addr)..')')
+		-- log('  '..lower..' -> '..tohex(addr))
 		addr += entry_length
 	end
 end
@@ -277,7 +276,7 @@ function fetch_parser_separators()
 	local num_separators = get_zbyte(_dictionary_mem_addr)
 	local seps = get_zbytes(_dictionary_mem_addr + 0x.0001, num_separators)
 	separators = zscii_to_p8scii(seps)
-	log('fetch_parser_separators: '..separators)
+	-- log('fetch_parser_separators: '..separators)
 end
 
 function process_header()
@@ -302,16 +301,25 @@ function process_header()
 		_zm_object_entry_size = 0x.000e
 		_zm_dictionary_word_size = 9
 
-		set_zbyte(_interpreter_number_header_addr, 4) --amiga
+		set_zbyte(_interpreter_number_header_addr, 6) --ibm pc
 		set_zbyte(_interpreter_version_header_addr, ord('P'))		
 		set_zbyte(_screen_height_header_addr, _zm_screen_height)
 		set_zbyte(_screen_width_header_addr, 32)
+		
+		if _zm_version >= 5 then
+			set_zword(_screen_width_units_addr, 128)
+			set_zword(_screen_height_units_addr, 128)
+			set_zbyte(_font_height_units_addr, 5)
+			set_zbyte(_font_width_units_addr, 3)
+			set_zbyte(_default_bg_color_addr, 2) --black
+			set_zbyte(_default_fg_color_addr, 9) --white
+		end
 
-		i_flag = 0x9c
-		-- if (full_color == true) i_flag |= 0x01
+		i_flag = 0x9e
+		if (full_color == true) i_flag |= 0x01
 	end
 	set_zbyte(_interpreter_flags_header_addr, i_flag)
-	set_zbyte(_peripherals_header_addr, 0x03)
+	set_zword(_peripherals_header_addr, 0x00c2)
 
 	_program_counter 		= zword_to_zaddress(get_zword(_program_counter_header_addr))
 	_paged_memory_mem_addr 	= zword_to_zaddress(get_zword(_paged_memory_header_addr))
@@ -338,7 +346,7 @@ function initialize_game()
 	setup_palette()
 	process_header()
 	fetch_parser_separators()
-	build_dictionary_lookup()
+	build_dictionary_lookup(_dictionary_mem_addr)
 
 	patch()
 

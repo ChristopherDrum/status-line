@@ -542,7 +542,7 @@ function _output_stream(n, baddr)
 end
 
 function _input_stream(operands)
-	--log('input_stream: NI')
+	log('input_stream: NI')
 end
 
 
@@ -694,11 +694,11 @@ function _restore()
 end
 
 function _save_undo()
-	--log('_save_undo: Not Implemented')
+	log('_save_undo: Not Implemented')
 end
 
 function _restore_undo()
-	--log('_restore_undo: Not Implemented')
+	log('_restore_undo: Not Implemented')
 end
 
 
@@ -706,7 +706,7 @@ end
 --8.14 Miscellaneous
 
 function _nop()
-	--log('_nop: ')
+	log('_nop: ')
 end
 
 function _random(s, skip__result)
@@ -738,11 +738,11 @@ function _btrue()
 end
 
 function _tokenise(baddr1, baddr2, baddr3, bit)
-	--log('_tokenise: Not Implemented')
+	log('_tokenise: Not Implemented')
 end
 
 function _encode_text(baddr1, n, p, baddr2)
-	--log('_encode_text: Not Implemented')
+	log('_encode_text: Not Implemented')
 end
 
 

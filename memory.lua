@@ -163,12 +163,12 @@ end
 -- index: index into the bank
 -- cell: 0-indexed byte at _memory[bank][index]
 function get_memory_location(zaddress)
-	log('get_memory_location for address: '..tohex(zaddress,true))
+	-- log('get_memory_location for address: '..tohex(zaddress,true))
 	local bank = (zaddress & 0x000f) + 1
 	local za = ((zaddress<<16)>>>2) + 1 --contains index and cell
 	local index = za & 0xffff
 	local cell = (za & 0x.ffff) << 2
-	log("...accessing _memory("..#_memory.."), bank #"..bank.."("..#_memory[bank]..") at index: "..index)
+	-- log("...accessing _memory("..#_memory.."), bank #"..bank.."("..#_memory[bank]..") at index: "..index)
 	return bank, index, cell
 end
 
@@ -470,14 +470,14 @@ function zobject_prop_data_addr_or_prop_list(index, property)
 
 	local prop_num, prop_len, offset = zobject_prop_num_len(prop_address)
 	while prop_num > 0 do
-		-- log('prop num: '..prop_num..', has num bytes: '..prop_len)
+		log('prop num: '..prop_num..', has num bytes: '..prop_len)
 
 		if collect_list == true then
 			add(prop_list, prop_num)
 		else
 			if prop_num == property then
-				-- log('found property '..property..' at address: '..tohex(prop_address, true))
-				-- log('  returning address: '..tohex(prop_address + (offset >>> 16)))
+				log('found property '..property..' at address: '..tohex(prop_address, true))
+				log('  returning address: '..tohex(prop_address + (offset >>> 16)))
 				return (prop_address + (offset >>> 16)), prop_len
 			end
 		end
@@ -487,9 +487,10 @@ function zobject_prop_data_addr_or_prop_list(index, property)
 	end
 	
 	if collect_list == true then
-		-- log('returning prop list: '..#prop_list)
+		log('returning prop list: '..#prop_list)
 		return prop_list
 	end
+	log('returning 0')
 	return 0
 end
 
@@ -605,7 +606,7 @@ function load_instruction()
 		-- log(' type_information: '..tohex(info))
 		for i = count-1, 0, -1 do
 			local op_type = (info >>> (i*2)) & 0x03
-			log('  byte '..i..', op type: '..op_type)
+			-- log('  byte '..i..', op type: '..op_type)
 			local operand
 			if op_type == 0 then
 				operand = get_zword()
@@ -626,11 +627,12 @@ function load_instruction()
 	-- Subsequent bytes are the operands
 	-- log('::load_instruction at: '..tohex(_program_counter))	
 	local op_definition = get_zbyte()
-	-- log(' op_definition: '..tohex(op_definition))
+	log(' op_definition: '..tohex(op_definition))
 	local op_form = (op_definition >>> 6) & 0xffff
 
+	local op_table_name
 	if op_form <= 0x01 then
-		-- log(' long instruction found')
+		op_table_name = 'long'
 		-- The first byte of a long instruction is %0abxxxxx where
 		-- 0 == "long instruction" indicator
 		-- a == "operand type of first byte"
@@ -648,7 +650,7 @@ function load_instruction()
 		end
 
 	elseif op_form == 0xbe and _zm_version >= 5 then
-		log(' v5+ extended instruction found')
+		op_table_name = 'ext'
 		-- the first byte of an extended instruction is $BE, it is an extended instruction. 
 		-- The second byte contains the EXT opcode.
 		-- Then follow the operand types (one byte) and the operands themselves,
@@ -659,7 +661,7 @@ function load_instruction()
 		extract_operands(type_information,4)
 
 	elseif op_form == 0x02 then
-		-- log(' short instruction found')
+		op_table_name = 'short'
 		-- The first byte of a short instruction is %10ttxxxx.
 		-- %tt is the type of the operand (or %11 if absent),
 		-- %xxxx is the 1OP (0OP if operand absent) opcode
@@ -680,7 +682,7 @@ function load_instruction()
 		operands = {operands}
 
 	elseif op_form == 0x03 then
-		-- log(' var instruction found')
+		op_table_name = 'var'
 		-- The first byte of a v3 variable instruction is %11axxxxx
 		-- (two exceptions for v4+) where %xxxxx is the VAR opcode.
 		-- If %a is %1 its a VAR opcode (if %0, a 2OP opcode)
@@ -692,7 +694,7 @@ function load_instruction()
 
 		op_table = _var_ops
 		if (op_definition & 0x20 == 0) then
-			-- log('  (2OP actually)')
+			op_table_name = '2OP'
 			op_table = _long_ops
 		end
 		op_code = (op_definition & 0x1f)
@@ -707,7 +709,11 @@ function load_instruction()
 		extract_operands(type_information, num_bytes)
 		if ((op_table == _long_ops) and (#operands == 1) and (op_code > 1)) get_zbyte()
 	end
-	-- log('  opcode: '..op_code)
+	local op_string = ''
+	for i = 1, #operands do
+		op_string ..= tohex(operands[i]..', ')
+	end
+	log(op_table_name..'['..(op_code+1)..'] ('..op_string..')')
 	local func = op_table[op_code+1]
 	return func, operands
 end
