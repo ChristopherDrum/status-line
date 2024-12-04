@@ -252,7 +252,7 @@ function _call_p(raddr, a1, a2, a3, a4, a5, a6, a7)
 end
 
 function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
-	
+	log("_call "..type.."(1f,2p): "..tohex(raddr).." {"..tohex(a1)..','..tohex(a2).."}")
 	if (raddr == 0x0) then
 		if (type == call_type.func) _result(0)
 
@@ -284,7 +284,8 @@ function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
 		top_frame().call = type
 		top_frame().args = n
 
-		_program_counter = r
+		_program_counter = top_frame().pc
+		log("_call set pc to: "..tohex(r))
 	end
 end
 

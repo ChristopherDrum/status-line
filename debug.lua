@@ -1,17 +1,3 @@
-function fill_call_stack()
-	local keep_running = true
-	while (keep_running == true) do 
-		local frame = frame:new()
-		frame.pc = 0xffff
-		frame.call = 1
-		frame.args = 6
-		frame.stack = {0x1111, 0x2222, 0x3333, 0x4444, 0x5555, 0x6666, 0x7777, 0x8888, 0x9999, 0xaaaa, 0xbbbb, 0xcccc, 0xdddd, 0xeeee, 0xffff}
-		frame.vars = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16}
-		add(_call_stack, frame)
-		log("fill_call_stack at: "..#_call_stack)
-	end
-end
-
 
 -- function dump_call_stack()
 -- 	log('current call stack, frame depth: '..(#_call_stack/10))

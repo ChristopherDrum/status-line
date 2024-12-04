@@ -35,7 +35,7 @@ function rehydrate_menu_vars()
 end
 
 function rehydrate_ops()
-	local raw_strings = "_zero_ops,_rtrue,_rfalse,_print,_print_rtrue,_nop,_save,_restore,_restart,_ret_pulled,_pop_catch,_quit,_new_line,_show_status,_btrue,_btrue/_short_ops,_jz,_get_sibling,_get_child,_get_parent,_get_prop_len,_inc,_dec,_print_addr,_call_f,_remove_obj,_print_obj,_ret,_jump,_print_paddr,_load,_not_call_p/_long_ops,_nop,_je,_jl,_jg,_dec_jl,_inc_jg,_jin,_test,_or,_and,_test_attr,_set_attr,_clear_attr,_store,_insert_obj,_loadw,_loadb,_get_prop,_get_prop_addr,_get_next_prop,_add,_sub,_mul,_div,_mod,_call_f,_call_p,_set_color,_throw/_var_ops,_call_f,_storew,_storeb,_put_prop,_read,_print_char,_print_num,_random,_push,_pull,_split_screen,_set_window,_call_f,_erase_window,_erase_line,_set_cursor,_get_cursor,_set_text_style,_nop,_output_stream,_input_stream,_sound_effect,_read_char,_scan_table,_not,_call_p,_call_p,_tokenise,_encode_text,_copy_table,_print_table,_check_arg_count/_ext_ops,_save,_restore,_log_shift,_art_shift,_set_font,_nop,_nop,_nop,_nop,_save_undo,_restore_undo"
+	local raw_strings = "_zero_ops,_rtrue,_rfalse,_print,_print_rtrue,_nop,_save,_restore,_restart,_ret_pulled,_pop_catch,_quit,_new_line,_show_status,_btrue,_nop,_btrue/_short_ops,_jz,_get_sibling,_get_child,_get_parent,_get_prop_len,_inc,_dec,_print_addr,_call_f,_remove_obj,_print_obj,_ret,_jump,_print_paddr,_load,_not_call_p/_long_ops,_nop,_je,_jl,_jg,_dec_jl,_inc_jg,_jin,_test,_or,_and,_test_attr,_set_attr,_clear_attr,_store,_insert_obj,_loadw,_loadb,_get_prop,_get_prop_addr,_get_next_prop,_add,_sub,_mul,_div,_mod,_call_f,_call_p,_set_color,_throw/_var_ops,_call_f,_storew,_storeb,_put_prop,_read,_print_char,_print_num,_random,_push,_pull,_split_screen,_set_window,_call_f,_erase_window,_erase_line,_set_cursor,_get_cursor,_set_text_style,_nop,_output_stream,_input_stream,_sound_effect,_read_char,_scan_table,_not,_call_p,_call_p,_tokenise,_encode_text,_copy_table,_print_table,_check_arg_count/_ext_ops,_save,_restore,_log_shift,_art_shift,_set_font,_nop,_nop,_nop,_nop,_save_undo,_restore_undo"
 	local strings = split(raw_strings,'/')
 	for str in all(strings) do
 		local def = split(str)
@@ -251,13 +251,13 @@ end
 function build_dictionary_lookup(addr)
 	local num_separators = get_zbyte(addr)
 	addr += 0x.0001 + (0x.0001 * num_separators)
+
 	local entry_length = (get_zbyte(addr) >>> 16)
-	-- log('entry length: '..entry_length)
 	addr += 0x.0001
+
 	local word_count = get_zword(addr)
-	-- log('dictionary entries: '..word_count)
 	addr += 0x.0002
-	-- log('start decoding at byte: '..tostr(unpack(get_zbytes(addr, 1)),true))
+
 	for i = 1, word_count do
 		local zstring = get_zstring(addr,1)
 		local lower = ''
@@ -267,7 +267,6 @@ function build_dictionary_lookup(addr)
 			lower ..= chr(c)
 		end
 		_dictionary_lookup[lower] = (addr << 16)
-		-- log('  '..lower..' -> '..tohex(addr))
 		addr += entry_length
 	end
 end
@@ -276,7 +275,6 @@ function fetch_parser_separators()
 	local num_separators = get_zbyte(_dictionary_mem_addr)
 	local seps = get_zbytes(_dictionary_mem_addr + 0x.0001, num_separators)
 	separators = zscii_to_p8scii(seps)
-	-- log('fetch_parser_separators: '..separators)
 end
 
 function process_header()
@@ -330,7 +328,6 @@ function process_header()
 	_static_memory_mem_addr = zword_to_zaddress(get_zword(_static_memory_header_addr))
 
 	checksum = get_zword(_file_checksum_header_addr)
-	log("global var table memory starts at: "..tohex(_global_var_table_mem_addr,true))
 end
 
 function patch()
@@ -351,7 +348,6 @@ function initialize_game()
 	patch()
 
 	call_stack_push()
-	--special case at startup for the program counter
 	top_frame().pc = _program_counter
 
 	if (_memory_start_state == nil) capture_state(_memory_start_state)

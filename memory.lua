@@ -200,7 +200,7 @@ end
 --and the result may transition from 2- to 3-byte address
 function get_zbyte(zaddress)
 	if not zaddress then
-	-- log('______________________PC at: '..tohex(_program_counter))
+	log('_________________get_zbyte from PC: '..tohex(_program_counter))
 		zaddress = _program_counter
 		_program_counter += 0x.0001
 	-- log('                       now: '..tohex(_program_counter))
@@ -218,11 +218,7 @@ function get_zbyte(zaddress)
 		log("get_zbyte at local var table: "..tohex(zaddress))
 		if (zaddress & 0x.000f > 0) dword <<= 16
 	end
-	-- if (zaddress == _screen_width_header_addr) then
-	-- 	log('screen width called, returning: '..(dword & 0xff))
-	-- elseif zaddress == _interpreter_flags_header_addr then
-	-- 	log('interpreter flags, returning: '..tohex(dword))
-	-- end
+
 	return dword & 0xff
 end
 
@@ -350,10 +346,7 @@ end
 
 function zobject_has_attribute(index, attribute_id)
 	local attr_byte, attr_bit = zobject_attributes_byte_bit(index, attribute_id)
-	-- log('  NEW zobject_has_attribute: '..index..', id:'..attribute_id..', attributes: '..tohex(attr_byte,true))
 	local attr_check = (0x80>>attr_bit)
-	-- log('    attr_check: '..tohex(attr_check,true))
-	-- log('    '..tostr((attr_byte & attr_check) == attr_check))
 	return (attr_byte & attr_check) == attr_check
 end
 
@@ -361,16 +354,12 @@ function zobject_set_attribute(index, attribute_id, val)
 	-- log('zobject_set_attribute object: '..index..', set attr '..attribute_id..' to: '..val)
 	-- assert(val <= 1, 'can only set binary value on attributes,'..index..','..attribute_id..','..val)
 	local attr_byte, attr_bit, address = zobject_attributes_byte_bit(index, attribute_id)
-	-- log('    NEW current attributes: '..tohex(attr_byte))
 	attr_byte &= ~(0x80>>attr_bit)
 	attr_byte |= (val<<(7-attr_bit))
-	-- log('    set bit '..attr_bit..', became: '..tohex(attr_byte))
 	set_zbyte(address, attr_byte)
 end
 
---properties start at 1, not 0
---so the table address is pointing at property #1
---therefore, offsets are (property - 1) * offset
+--properties start at 1, not 0; offsets are (property - 1) * offset
 function zobject_default_property(property)
 	assert(property <= _zm_object_property_count, 'ERR: default object property '..property)
 	local address = _object_table_mem_addr + ((property - 1) * 0x.0002)
@@ -436,12 +425,10 @@ function zobject_prop_num_len(prop_num_len_address)
 		prop_num = raw_byte & 0x3f
 		if (raw_byte & 0x80) == 0x80 then
 			local next_byte = get_zbyte(prop_num_len_address + 0x.0001)
-			-- log('  checking prop len on next_byte: '..tohex(next_byte))
 			prop_len = extract_prop_len(next_byte)
 			if (prop_len == 0) prop_len = 64
 			offset = 2
 		else
-			-- log('  checking prop len on raw_byte: '..tohex(raw_byte))
 			prop_len = extract_prop_len(raw_byte)
 		end
 	end
@@ -451,7 +438,6 @@ end
 -- 12.4.2
 function extract_prop_len(len_byte)
 	if _zm_version == 3 then
-		-- log('extract_prop_len: '..len_byte)
 		return ((len_byte >>> 5) & 0x7) + 1
 	else
 		if (len_byte & 0x80) == 0 then
@@ -473,14 +459,11 @@ function zobject_prop_data_addr_or_prop_list(index, property)
 
 	local prop_num, prop_len, offset = zobject_prop_num_len(prop_address)
 	while prop_num > 0 do
-		-- log('prop num: '..prop_num..', has num bytes: '..prop_len)
 
 		if collect_list == true then
 			add(prop_list, prop_num)
 		else
 			if prop_num == property then
-				-- log('found property '..property..' at address: '..tohex(prop_address, true))
-				-- log('  returning address: '..tohex(prop_address + (offset >>> 16)))
 				return (prop_address + (offset >>> 16)), prop_len
 			end
 		end
@@ -490,10 +473,8 @@ function zobject_prop_data_addr_or_prop_list(index, property)
 	end
 	
 	if collect_list == true then
-		-- log('returning prop list: '..#prop_list)
 		return prop_list
 	end
-	-- log('returning 0')
 	return 0
 end
 
@@ -515,7 +496,7 @@ function zobject_set_prop(index, property, value)
 
 	local len_byte = get_zbyte(prop_data_address - 0x.0001)
 	local len = extract_prop_len(len_byte)
-	-- log('zobject_set_prop '..property..' at addr: '..tohex(prop_data_address)..', value: '..value..', len: '..len)
+
 	if len == 1 then
 		 set_zbyte(prop_data_address, value & 0xff)
 	else
@@ -609,7 +590,7 @@ function load_instruction()
 		-- log(' type_information: '..tohex(info))
 		for i = count-1, 0, -1 do
 			local op_type = (info >>> (i*2)) & 0x03
-			-- log('  byte '..i..', op type: '..op_type)
+			log('  byte '..i..', op type: '..op_type)
 			local operand
 			if op_type == 0 then
 				operand = get_zword()
@@ -620,7 +601,7 @@ function load_instruction()
 			elseif op_type == 3 then
 				break
 			end
-			-- log('  operand '..tohex(operand))
+			log('  operand '..tohex(operand))
 			add(operands, operand)
 		end
 	end
@@ -628,7 +609,6 @@ function load_instruction()
 	-- An instruction consists of opcode and operands
 	-- First 1 to 3 bytes contain opcode and operand types
 	-- Subsequent bytes are the operands
-	-- log('::load_instruction at: '..tohex(_program_counter))	
 	local op_definition = get_zbyte()
 	log(' op_definition: '..tohex(op_definition))
 	op_form = (op_definition >>> 6)
@@ -681,6 +661,7 @@ function load_instruction()
 			operands = get_var()
 		elseif op_type == 3 then
 			-- log(' - a zero op')
+			op_table_name = 'zero'
 			op_table = _zero_ops
 			operands = nil
 		end
@@ -706,7 +687,7 @@ function load_instruction()
 
 		local type_information, num_bytes
 		if ((_zm_version > 3) and (op_definition == 0xec or op_definition == 0xfa)) then
-			-- log('double var op_code')
+			log('double var op_code')
 			type_information, num_bytes = get_zword(), 8
 		else
 			type_information, num_bytes = get_zbyte(), 4
@@ -716,7 +697,7 @@ function load_instruction()
 	end
 	local op_string = ''
 	for i = 1, #operands do
-		op_string ..= tohex(operands[i]..', ')
+		op_string ..= tohex(operands[i])..', '
 	end
 	log(op_table_name..'['..(op_code+1)..'] ('..op_string..')')
 	local func = op_table[op_code+1]
