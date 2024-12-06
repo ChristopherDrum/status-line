@@ -520,7 +520,7 @@ end
 --8.8 Input and output streams
 
 function _output_stream(n, baddr)
-	--log('output_stream: '..n..', '..tohex(baddr))
+	log('output_stream: '..n..', '..tohex(baddr))
 	if abs(n) == 1 then
 		screen_output = (n > 0)
 
@@ -579,13 +579,13 @@ end
 --8.10 Character based output
 
 function _print_char(n)
-	--log('print_char '..n..': '..chr(n))
+	log('print_char '..n..': '..chr(n))
 	if (n == 10) n = 13	
-	output(chr(n))
+	if (n != 0) output(chr(n))
 end
 
 function _new_line()
-	--log('new_line')
+	log('new_line')
 	_print_char(10)
 end
 

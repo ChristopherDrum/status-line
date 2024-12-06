@@ -102,7 +102,7 @@ function memory(str)
 	-- log('==> memory at level: '..#memory_output)
 	if ((#memory_output == 0) or (#str == 0)) return
 	local table_addr = zword_to_zaddress(memory_output[#memory_output])
-	-- log('  memory asked to record '..#str..' zscii chars')
+	log('  memory asked to record '..#str..' zscii chars')
 	local table_len = get_zword(table_addr)
 	-- log('  current table len '..table_len)
 	local zscii = p8scii_to_zscii(str)
@@ -114,7 +114,7 @@ function p8scii_to_zscii(str)
 	local zscii = {}
 	for i = 1, #str do
 		local o = ord(str,i)
-		if (o == 13) o = 10
+		-- if (o == 13) o = 10
 		add(zscii, o)
 	end
 	return zscii
@@ -123,7 +123,7 @@ end
 function output(str, flush_now)
 	-- log('('..active_window..') output str: '..str)
 	if #memory_output > 0 then
-		-- log('   redirected to memory')
+		log('   redirected to memory')
 		memory(str) 
 	else
 		if (screen_output == false) return
