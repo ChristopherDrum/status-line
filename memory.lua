@@ -588,10 +588,10 @@ function load_instruction()
 
 	local op_table, op_code, operands = nil, 0, {}
 	local function extract_operands(info, count)
-		log(' type_information: '..tohex(info))
+		-- log(' type_information: '..tohex(info))
 		for i = count-1, 0, -1 do
 			local op_type = (info >>> (i*2)) & 0x03
-			log('  byte '..i..', op type: '..op_type)
+			-- log('  byte '..i..', op type: '..op_type)
 			local operand
 			if op_type == 0 then
 				operand = get_zword()

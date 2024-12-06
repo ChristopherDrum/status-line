@@ -250,7 +250,7 @@ function _call_p(raddr, a1, a2, a3, a4, a5, a6, a7)
 end
 
 function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
-	log("_call "..type.."(1f,2p): "..tohex(raddr).." {"..tohex(a1)..','..tohex(a2).."}")
+	local var_str = ""
 	if (raddr == 0x0) then
 		if (type == call_type.func) _result(0)
 
@@ -273,6 +273,7 @@ function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
 			else
 				if (_zm_version < 5) zword = get_zword(r)
 			end
+			var_str ..= tohex(zword)..'  '
 			set_zword(local_var_addr(i), zword)
 			r += 0x.0002 --"2 * l"
 		end
@@ -283,7 +284,8 @@ function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
 		top_frame().args = n
 
 		_program_counter = top_frame().pc
-		log("_call set pc to: "..tohex(r))
+		log("_call "..type.."(1=f,2=p) : "..tohex(raddr).." "..var_str)
+		log(" --> set pc to: "..tohex(_program_counter))
 	end
 end
 
@@ -318,14 +320,18 @@ function _check_arg_count(n)
 end
 
 function _catch()
-	_ret(#_call_stack)
+	log("_catch "..#_call_stack)
+	_result(#_call_stack)
 end
 
 function _throw(a, fp)
 	assert(fp <= #_call_stack, "Tried to throw to a non-existant frame! We wanted frame #"..fp.." but only have "..#_call_stack)
+	log("_throw "..a.." by popping call stack from #"..#_call_stack.." to "..fp)
 	while #_call_stack > fp do
 		call_stack_pop()
 	end
+	assert(#_call_stack == fp, "Didn't pop properly: "..#_call_stack.." vs. "..fp)
+	log("  _throwing "..a.." to frame #"..fp)
 	_ret(a)
 end
 
@@ -520,7 +526,7 @@ end
 --8.8 Input and output streams
 
 function _output_stream(n, baddr)
-	log('output_stream: '..n..', '..tohex(baddr))
+	-- log('output_stream: '..n..', '..tohex(baddr))
 	if abs(n) == 1 then
 		screen_output = (n > 0)
 
@@ -579,19 +585,19 @@ end
 --8.10 Character based output
 
 function _print_char(n)
-	log('print_char '..n..': '..chr(n))
+	-- log('print_char '..n..': '..chr(n))
 	if (n == 10) n = 13	
 	if (n != 0) output(chr(n))
 end
 
 function _new_line()
-	log('new_line')
+	-- log('new_line')
 	_print_char(10)
 end
 
 function _print(string)
 	local zstring = get_zstring(string)
-	log('_print: '..zstring)
+	-- log('_print: '..zstring)
 	output(zstring)
 end
 
