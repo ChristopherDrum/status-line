@@ -163,12 +163,24 @@ end
 -- index: index into the bank
 -- cell: 0-indexed byte at _memory[bank][index]
 function get_memory_location(zaddress)
-	-- log('get_memory_location for address: '..tohex(zaddress,true))
+	log('get_memory_location for address: '..tohex(zaddress,true))
 	local bank = (zaddress & 0x000f) + 1
 	local za = ((zaddress<<16)>>>2) + 1 --contains index and cell
 	local index = za & 0xffff
 	local cell = (za & 0x.ffff) << 2
-	-- log("...accessing _memory("..#_memory.."), bank #"..bank.."("..#_memory[bank]..") at index: "..index)
+	log("...we have "..#_memory.." banks, last bank holds"..#_memory[#_memory])
+	log("...we were asked for Bank #"..bank..", Index #"..index..", Cell #"..cell)
+
+	--try flexing the memory to provide the "unlimited bytes" the z-machine requires ~\_o_/~ ???
+	-- if (bank > #_memory) then 
+	-- 	log("...that doesn't exist, so we need to make new banks")
+	-- 	add(_memory, {})
+	-- end
+	-- if (index > #_memory[bank])	then
+	-- 	for i = #_memory[bank]+1, index do
+	-- 		add(_memory[bank], 0)
+	-- 	end
+	-- end
 	return bank, index, cell
 end
 

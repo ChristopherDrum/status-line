@@ -47,24 +47,32 @@ function _store(var, a)
 end
 
 function _loadw(baddr, n)
-	baddr = zword_to_zaddress(baddr) + (n >>> 15)
+	local offset = (abs(n)>>>15)
+	if (n < 0) offset = -offset
+	baddr = zword_to_zaddress(baddr) + offset
 	local zword = get_zword(baddr)
 	_result(zword)
 end
 
 function _storew(baddr, n, zword)
-	baddr = zword_to_zaddress(baddr) + (n >>> 15)
+	local offset = (abs(n)>>>15)
+	if (n < 0) offset = -offset
+	baddr = zword_to_zaddress(baddr) + offset
 	set_zword(baddr, zword)
 end
 
 function _loadb(baddr, n)
-	baddr = zword_to_zaddress(baddr) + (n >>> 16)
+	local offset = (abs(n)>>>16)
+	if (n < 0) offset = -offset
+	baddr = zword_to_zaddress(baddr) + offset
 	local zbyte = get_zbyte(baddr)
 	_result(zbyte)
 end
 
 function _storeb(baddr, n, zbyte)
-	baddr = zword_to_zaddress(baddr) + (n >>> 16)
+	local offset = (abs(n)>>>16)
+	if (n < 0) offset = -offset
+	baddr = zword_to_zaddress(baddr) + offset
 	set_zbyte(baddr, zbyte)
 end
 
@@ -583,7 +591,7 @@ end
 
 function _print(string)
 	local zstring = get_zstring(string)
-	--log('_print: '..zstring)
+	log('_print: '..zstring)
 	output(zstring)
 end
 
