@@ -81,17 +81,9 @@ function _pull(var)
 	_result(a, var, true)
 end
 
--- function _dump_table(_base_addr, entry_len, n, getter)
--- 	local base_addr = _base_addr
--- 	for i = 0, n-1 do
--- 		local value = getter(base_addr)
--- 		log("value "..i..": "..tohex(value))
--- 		base_addr += entry_len
--- 	end
--- end
 
 function _scan_table(a, baddr, n, byte) --<result> <branch>
-	log('scan_table: '..tohex(a)..','..tohex(baddr)..','..n..','..tohex(byte))
+	-- log('scan_table: '..tohex(a)..','..tohex(baddr)..','..n..','..tohex(byte))
 	local base_addr = zword_to_zaddress(baddr)
 	local byte = byte or 0x82
 	local getter = ((byte & 0x80) == 0x80) and get_zword or get_zbyte
@@ -112,39 +104,26 @@ function _scan_table(a, baddr, n, byte) --<result> <branch>
 end
 
 function _copy_table(baddr1, baddr2, s)
-	log('_copy_table from: '..tohex(baddr1)..' to: '..tohex(baddr2)..','..s..' bytes')
+	-- log('_copy_table from: '..tohex(baddr1)..' to: '..tohex(baddr2)..','..s..' bytes')
 
 	local from = zword_to_zaddress(baddr1)
 	if baddr2 == 0 then
 		for i = 0, s-1 do
 			set_zbyte(from+(i>>>16), 0)
-			-- local copy = get_zbyte(from+offset)
-			-- log("clear byte at: "..tohex(from+offset))
-			-- log("  "..tohex(copy))
 		end
 	else
 		local to = zword_to_zaddress(baddr2)
+		local st, en, step = s-1, 0, -1
 		if (s < 0) or (from > to) then
 			s = abs(s)
-			for i = 0, s-1 do
-				local offset = i>>>16
-				local byte = get_zbyte(from+offset)
-				set_zbyte(to+offset, byte)
-				local copy = get_zbyte(to+offset)
-				log("forward copy from: "..tohex(from+offset).." into: "..tohex(to+offset))
-				log("  "..tohex(byte).." --> "..tohex(copy))
-			end
-
-		else
-			for i = s-1, 0, -1 do
-				local offset = i>>>16
-				local byte = get_zbyte(from+offset)
-				set_zbyte(to+offset, byte)
-				local copy = get_zbyte(to+offset)
-				log("backward copy from: "..tohex(from+offset).." into: "..tohex(to+offset))
-				log("  "..tohex(byte).." --> "..tohex(copy))
-			end
+			st, en, step = 0, s-1, 1
 		end
+		for i = st, en, step do
+			local offset = i>>>16
+			local byte = get_zbyte(from+offset)
+			set_zbyte(to+offset, byte)
+		end
+	
 	end
 
 end

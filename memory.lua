@@ -264,8 +264,7 @@ end
 
 function set_zbytes(zaddress, bytes)
 	for i = 1, #bytes do
-		local byte = bytes[i]
-		set_zbyte(zaddress, byte)
+		set_zbyte(zaddress, bytes[i])
 		zaddress += 0x.0001
 	end
 end
