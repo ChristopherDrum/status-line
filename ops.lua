@@ -170,8 +170,7 @@ function _dec(var)
 end
 
 function _inc_dec(var, amt)
-	local zword = get_var(var)
-	zword += amt --amt may be 1 or -1
+	local zword = get_var(var) + amt
 	_result(zword, var)
 	return zword
 end
