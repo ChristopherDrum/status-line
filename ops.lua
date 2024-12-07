@@ -254,7 +254,7 @@ function _call_p(raddr, a1, a2, a3, a4, a5, a6, a7)
 end
 
 function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
-	local var_str = ""
+	-- local var_str = ""
 	if (raddr == 0x0) then
 		if (type == call_type.func) _result(0)
 
@@ -263,7 +263,7 @@ function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
 		--z5 formula is "r = r + 1"
 		local r = zword_to_zaddress(raddr, true)
 		local l = get_zbyte(r) --num local vars
-		r += (1>>>16) -- "1"
+		r += 0x.0001 -- "1"
 		call_stack_push()
 		if (_zm_version >= 5) top_frame().pc = r
 
@@ -277,9 +277,9 @@ function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
 			else
 				if (_zm_version < 5) zword = get_zword(r)
 			end
-			var_str ..= tohex(zword)..'  '
+			-- var_str ..= tohex(zword)..'  '
 			set_zword(local_var_addr(i), zword)
-			r += (2>>>16) --"2 * l"
+			r += 0x.0002 --"2 * l"
 		end
 
 		--finish building out the top frame
@@ -288,8 +288,8 @@ function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
 		top_frame().args = n
 
 		_program_counter = top_frame().pc
-		log("_call "..type.."(1=f,2=p) : "..tohex(raddr).." "..var_str)
-		log(" --> set pc to: "..tohex(_program_counter))
+		-- log("_call "..type.."(1=f,2=p) : "..tohex(raddr).." "..var_str)
+		-- log(" --> set pc to: "..tohex(_program_counter))
 	end
 end
 
@@ -328,7 +328,7 @@ function _catch()
 end
 
 function _throw(a, fp)
-	assert(fp <= #_call_stack, "Tried to throw to a non-existant frame! We wanted frame #"..fp.." but only have "..#_call_stack)
+	assert(fp <= #_call_stack, "Tried to throw to non-existant frame "..fp.." out of "..#_call_stack)
 	while #_call_stack > fp do
 		call_stack_pop()
 	end
@@ -458,8 +458,7 @@ end
 function _split_screen(lines)
 	--log('split_window called: '..lines)
 	flush_line_buffer(0)
-	local win0 = windows[0]
-	local win1 = windows[1]
+	local win0, win1 = windows[0], windows[1]
 	local cur_y_offset = max(0, win0.h - win0.z_cursor.y)
 	if lines == 0 then --unsplit
 		win1.y = 1
@@ -478,7 +477,7 @@ function _split_screen(lines)
 	end
 	update_screen_rect(1)
 	update_screen_rect(0)
-	if (lines > 0 and _zm_version == 3) erase_window(1)
+	if (_zm_version == 3 and lines > 0) erase_window(1)
 end
 
 function _set_window(win)
@@ -493,7 +492,7 @@ end
 function _set_cursor(lin, col)
 	--log('_set_zcursor to line '..lin..', col '..col)
 	flush_line_buffer()
-	if ((_zm_version > 3) and (lin > windows[1].h)) _split_screen(lin)
+	if ((_zm_version > 4) and (lin > windows[1].h)) _split_screen(lin)
 	windows[1].z_cursor = {x=col, y=lin}
 	update_p_cursor()
 end
@@ -503,7 +502,7 @@ function _get_cursor(baddr)
 	baddr = zword_to_zaddress(baddr)
 	local zc = windows[active_window].z_cursor
 	set_zword(baddr, zc.y)
-	set_zword(baddr + (2>>>16), zc.x)
+	set_zword(baddr + 0x.0002, zc.x)
 end
 
 --_buffer_mode; not sure this applies to us so _nop() for now
@@ -629,15 +628,11 @@ function _print_obj(obj)
 end
 
 function _print_table(baddr, x, y, n)
-	local zaddress = zword_to_zaddress(baddr)
-	local offset = 0
+	local za = zword_to_zaddress(baddr)
 	for i = 1, y do
 		for j = 0, x+n-1 do
-			if (j < x) then
-				local byte = get_zbyte(zaddress+offset)
-				_print_char(byte)
-			end
-			offset += 0x.0001
+			if (j < x) _print_char(get_zbyte(za))
+			za += 0x.0001
 		end
 		_new_line()
 	end
