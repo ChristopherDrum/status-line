@@ -47,73 +47,71 @@ function _store(var, a)
 end
 
 function _loadw(baddr, n)
-	local offset = (abs(n)>>>15)
-	if (n < 0) offset = -offset
-	baddr = zword_to_zaddress(baddr) + offset
-	local zword = get_zword(baddr)
-	_result(zword)
+	_load_store_bw(baddr, n, 15, get_zword)
 end
 
 function _storew(baddr, n, zword)
-	local offset = (abs(n)>>>15)
-	if (n < 0) offset = -offset
-	baddr = zword_to_zaddress(baddr) + offset
-	set_zword(baddr, zword)
+	_load_store_bw(baddr, n, 15, set_zword, zword)
 end
 
 function _loadb(baddr, n)
-	local offset = (abs(n)>>>16)
-	if (n < 0) offset = -offset
-	baddr = zword_to_zaddress(baddr) + offset
-	local zbyte = get_zbyte(baddr)
-	_result(zbyte)
+	_load_store_bw(baddr, n, 16, get_zbyte)
 end
 
 function _storeb(baddr, n, zbyte)
-	local offset = (abs(n)>>>16)
-	if (n < 0) offset = -offset
-	baddr = zword_to_zaddress(baddr) + offset
-	set_zbyte(baddr, zbyte)
+	_load_store_bw(baddr, n, 16, set_zbyte, zbyte)
 end
 
-function _push(a)
-	stack_push(a)
+function _load_store_bw(baddr, n, shift, func, val)
+	local offset = (abs(n)>>>shift)
+	if (n < 0) offset = -offset
+	baddr = zword_to_zaddress(baddr) + offset
+	if val then
+		func(baddr, val)
+	else
+		_result(func(baddr))
+	end
 end
+
+-- _push(a) and _pop() ops are substituted with 
+-- stack_push and stack_pop, defined in memory.lua
 
 function _pull(var)
 	local a = stack_pop()
 	_result(a, var, true)
 end
 
-function _pop()
-	stack_pop()
-end
+-- function _dump_table(_base_addr, entry_len, n, getter)
+-- 	local base_addr = _base_addr
+-- 	for i = 0, n-1 do
+-- 		local value = getter(base_addr)
+-- 		log("value "..i..": "..tohex(value))
+-- 		base_addr += entry_len
+-- 	end
+-- end
 
 function _scan_table(a, baddr, n, byte) --<result> <branch>
-	--log('scan_table: '..tohex(a)..','..tohex(baddr)..','..n..','..tohex(byte))
+	-- log('scan_table: '..tohex(a)..','..tohex(baddr)..','..n..','..tohex(byte))
+	local base_addr = zword_to_zaddress(baddr)
 	local byte = byte or 0x82
 	local getter = ((byte & 0x80) == 0x80) and get_zword or get_zbyte
-	local entry_len = byte & 0x7f --strip the top bit
-	local base_addr = zword_to_zaddress(baddr)
+	local entry_len = (byte & 0x7f)>>16 --strip the top bit
 
-	local found_addr, should_branch = 0, false
+	local should_branch = false
 	for i = 0, n-1 do
-		local check_addr = base_addr + ((i * entry_len)>>>16)
-		local value = getter(check_addr)
-			--log('  check addr: '..tohex(check_addr)..', found: '..tohex(value)..', compare against: '..tohex(a))
-		if (value == a) then
-			--log('    FOUND!')
-			found_addr = check_addr
+		if getter(base_addr) == a then
 			should_branch = true
 			break
 		end
+		base_addr += entry_len
 	end
 
-	_result(found_addr)
+	_result(base_addr<<16) --reconvert our shifted address to zword
 	_branch(should_branch)
 end
 
 function _copy_table(baddr1, baddr2, s)
+
 end
 
 
@@ -122,6 +120,7 @@ end
 
 function _add(a, b)
 	_result(a + b)
+	_result(op[1] + op[2])
 end
 
 function _sub(a, b)
@@ -585,7 +584,7 @@ end
 --8.10 Character based output
 
 function _print_char(n)
-	-- log('print_char '..n..': '..chr(n))
+	log('_print_char '..n..': '..chr(n))
 	if (n == 10) n = 13	
 	if (n != 0) output(chr(n))
 end
@@ -597,7 +596,7 @@ end
 
 function _print(string)
 	local zstring = get_zstring(string)
-	-- log('_print: '..zstring)
+	log('_print: '..zstring)
 	output(zstring)
 end
 
@@ -621,7 +620,7 @@ function _print_paddr(saddr)
 end
 
 function _print_num(s)
-	--log('print_num: '..s)
+	log('_print_num: '..s)
 	output(tostr(s))
 end
 
@@ -632,7 +631,16 @@ function _print_obj(obj)
 end
 
 function _print_table(baddr, x, y, n)
-	log('_print_table: Not Implemented')
+	local zaddress = zword_to_zaddress(baddr)
+	local zstring = get_zstring(zaddress)
+	local start = 1
+	for i = 1, y do
+		for j = start, start+x-1 do
+			_print_char(zstring[j])
+		end
+		start += x+n
+	end
+	log("_print_table: "..zstring.." in x: "..x..", y: "..y.." with skip: "..n)
 end
 
 
@@ -698,13 +706,10 @@ function _restore()
 end
 
 function _save_undo()
-	log('_save_undo: Not Implemented')
+	_result(-1)
 end
 
-function _restore_undo()
-	log('_restore_undo: Not Implemented')
-end
-
+--we don't support undo, so we nop return_undo (won't be called)
 
 
 --8.14 Miscellaneous
@@ -755,7 +760,7 @@ end
 
 function _pop_catch()
 	if _zm_version < 5 then
-		_pop()
+		stack_pop()
 	else
 		_catch()
 	end

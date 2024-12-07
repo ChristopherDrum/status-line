@@ -275,9 +275,9 @@ function get_zword(zaddress, indirect)
 		zaddress = _program_counter
 		_program_counter += 0x.0002
 	end	
+	local base = (zaddress & 0xffff)
 	local dword, bank, index, cell  = get_dword(zaddress, indirect)
 	-- log('  get_zword at address: '..tohex(zaddress,true)..', fetched: '..tohex(dword))
-	local base = (zaddress & 0xffff)
 
 	if base < 0xa then
 		dword <<= (8 * cell)
@@ -610,6 +610,7 @@ function load_instruction()
 	-- An instruction consists of opcode and operands
 	-- First 1 to 3 bytes contain opcode and operand types
 	-- Subsequent bytes are the operands
+	local pc = _program_counter
 	local op_definition = get_zbyte()
 	-- log(' op_definition: '..tohex(op_definition))
 	op_form = (op_definition >>> 6)
@@ -700,7 +701,7 @@ function load_instruction()
 	for i = 1, #operands do
 		op_string ..= tohex(operands[i])..', '
 	end
-	log(op_table_name..'['..(op_code+1)..'] ('..op_string..')')
+	log(sub(tohex(pc),8)..": "..op_table_name..(op_code+1)..'('..op_string..')')
 	local func = op_table[op_code+1]
 	return func, operands
 end
