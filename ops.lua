@@ -30,7 +30,7 @@ function _branch(should_branch)
 			_ret(offset)
 		else 
 			offset >>= 16 --keep the sign!
-			_program_counter += (offset - 0x.0002)
+			_program_counter += (offset - (2>>>16))
 		end
 	end
 end
@@ -91,26 +91,61 @@ end
 -- end
 
 function _scan_table(a, baddr, n, byte) --<result> <branch>
-	-- log('scan_table: '..tohex(a)..','..tohex(baddr)..','..n..','..tohex(byte))
+	log('scan_table: '..tohex(a)..','..tohex(baddr)..','..n..','..tohex(byte))
 	local base_addr = zword_to_zaddress(baddr)
 	local byte = byte or 0x82
 	local getter = ((byte & 0x80) == 0x80) and get_zword or get_zbyte
 	local entry_len = (byte & 0x7f)>>16 --strip the top bit
 
 	local should_branch = false
-	for i = 0, n-1 do
+	for i = 1, n do
 		if getter(base_addr) == a then
 			should_branch = true
 			break
 		end
 		base_addr += entry_len
 	end
-
-	_result(base_addr<<16) --reconvert our shifted address to zword
+	
+	if (should_branch == false) base_addr = 0
+	_result(base_addr<<16) --reconvert shifted zaddress to zword
 	_branch(should_branch)
 end
 
 function _copy_table(baddr1, baddr2, s)
+	log('_copy_table from: '..tohex(baddr1)..' to: '..tohex(baddr2)..','..s..' bytes')
+
+	local from = zword_to_zaddress(baddr1)
+	if baddr2 == 0 then
+		for i = 0, s-1 do
+			set_zbyte(from+(i>>>16), 0)
+			-- local copy = get_zbyte(from+offset)
+			-- log("clear byte at: "..tohex(from+offset))
+			-- log("  "..tohex(copy))
+		end
+	else
+		local to = zword_to_zaddress(baddr2)
+		if (s < 0) or (from > to) then
+			s = abs(s)
+			for i = 0, s-1 do
+				local offset = i>>>16
+				local byte = get_zbyte(from+offset)
+				set_zbyte(to+offset, byte)
+				local copy = get_zbyte(to+offset)
+				log("forward copy from: "..tohex(from+offset).." into: "..tohex(to+offset))
+				log("  "..tohex(byte).." --> "..tohex(copy))
+			end
+
+		else
+			for i = s-1, 0, -1 do
+				local offset = i>>>16
+				local byte = get_zbyte(from+offset)
+				set_zbyte(to+offset, byte)
+				local copy = get_zbyte(to+offset)
+				log("backward copy from: "..tohex(from+offset).." into: "..tohex(to+offset))
+				log("  "..tohex(byte).." --> "..tohex(copy))
+			end
+		end
+	end
 
 end
 
@@ -120,7 +155,6 @@ end
 
 function _add(a, b)
 	_result(a + b)
-	_result(op[1] + op[2])
 end
 
 function _sub(a, b)
@@ -258,7 +292,7 @@ function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
 		--z5 formula is "r = r + 1"
 		local r = zword_to_zaddress(raddr, true)
 		local l = get_zbyte(r) --num local vars
-		r += 0x.0001 -- "1"
+		r += (1>>>16) -- "1"
 		call_stack_push()
 		if (_zm_version >= 5) top_frame().pc = r
 
@@ -274,7 +308,7 @@ function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
 			end
 			var_str ..= tohex(zword)..'  '
 			set_zword(local_var_addr(i), zword)
-			r += 0x.0002 --"2 * l"
+			r += (2>>>16) --"2 * l"
 		end
 
 		--finish building out the top frame
@@ -360,9 +394,6 @@ end
 
 function _remove_obj(obj)
 	--log('remove_obj: '..zobject_name(obj)..'('..obj..')')
-	--set parent to 0 and stitch up the sibling chain gap
-	--children always move with their parent
-
 	local original_parent = zobject_family(obj, zparent)
 	if original_parent != 0 then
 
@@ -383,6 +414,7 @@ function _remove_obj(obj)
 	end
 	zobject_set_family(obj, zparent,  0)
 	zobject_set_family(obj, zsibling, 0)
+
 end
 
 function _insert_obj(obj1, obj2)
@@ -447,7 +479,7 @@ end
 function _get_prop_len(baddr)
 	--log('get_prop_len: '..tohex(baddr))
 	local baddr = zword_to_zaddress(baddr)
-	local len_byte = get_zbyte(baddr - 0x.0001)
+	local len_byte = get_zbyte(baddr - (1>>>16))
 	local len = extract_prop_len(len_byte)
 	_result(len)
 end
@@ -504,7 +536,7 @@ function _get_cursor(baddr)
 	baddr = zword_to_zaddress(baddr)
 	local zc = windows[active_window].z_cursor
 	set_zword(baddr, zc.y)
-	set_zword(baddr + 0x.0002, zc.x)
+	set_zword(baddr + (2>>>16), zc.x)
 end
 
 --_buffer_mode; not sure this applies to us so _nop() for now
@@ -639,6 +671,7 @@ function _print_table(baddr, x, y, n)
 			_print_char(zstring[j])
 		end
 		start += x+n
+		_new_line()
 	end
 	log("_print_table: "..zstring.." in x: "..x..", y: "..y.." with skip: "..n)
 end

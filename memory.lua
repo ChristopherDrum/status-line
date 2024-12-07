@@ -229,7 +229,7 @@ function get_zbytes(zaddress, num_bytes)
 
 	local bytes = {}
 	for i = 0, num_bytes - 1 do
-		add(bytes, get_zbyte(zaddress + (i*0x.0001)))
+		add(bytes, get_zbyte(zaddress + (i>>>16)))
 	end
 	return bytes
 end
@@ -340,7 +340,7 @@ function zobject_attributes_byte_bit(index, attribute_id)
 	-- local byte_count = (_zm_version == 3) and 4 or 6
 	local byte_index = flr(attribute_id>>3)
 	local attr_bit = attribute_id % 8
-	address += (0x.0001 * byte_index)
+	address += (byte_index>>>16)
 	-- log('  NEW zobject_attributes_byte_bit: '..get_zbyte(address)..', '..attr_bit..','..tohex(address))
 	return get_zbyte(address), attr_bit, address
 end
@@ -363,7 +363,7 @@ end
 --properties start at 1, not 0; offsets are (property - 1) * offset
 function zobject_default_property(property)
 	assert(property <= _zm_object_property_count, 'ERR: default object property '..property)
-	local address = _object_table_mem_addr + ((property - 1) * 0x.0002)
+	local address = _object_table_mem_addr + ((property - 1) >>> 15)
 	return get_zword(address)
 end
 
