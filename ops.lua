@@ -324,18 +324,14 @@ function _check_arg_count(n)
 end
 
 function _catch()
-	log("_catch "..#_call_stack)
 	_result(#_call_stack)
 end
 
 function _throw(a, fp)
 	assert(fp <= #_call_stack, "Tried to throw to a non-existant frame! We wanted frame #"..fp.." but only have "..#_call_stack)
-	log("_throw "..a.." by popping call stack from #"..#_call_stack.." to "..fp)
 	while #_call_stack > fp do
 		call_stack_pop()
 	end
-	assert(#_call_stack == fp, "Didn't pop properly: "..#_call_stack.." vs. "..fp)
-	log("  _throwing "..a.." to frame #"..fp)
 	_ret(a)
 end
 
