@@ -116,9 +116,7 @@ function _copy_table(baddr1, baddr2, s)
 			local byte = get_zbyte(from+offset)
 			set_zbyte(to+offset, byte)
 		end
-	
 	end
-
 end
 
 
@@ -191,12 +189,10 @@ function _not(a)
 end
 
 function _log_shift(a, t)
-	-- log("_log_shift: "..a..','..t)
 	_result(flr(a<<t))
 end
 
 function _art_shift(s, t)
-	-- log("_art_shift: "..s..','..t)
 	_result(s>>-t)
 end
 
@@ -205,22 +201,18 @@ end
 --8.4 Comparisons and jumps
 
 function _jz(a)
-	--log('jz: '..a)
 	_branch(a == 0)
 end
 
 function _je(a, b1, b2, b3)
-	--log('je: '..tohex(a)..','..tohex(b1)..','..tohex(b2)..','..tohex(b3))
 	_branch(del({b1,b2,b3},a) == a)
 end
 
 function _jl(s, t)
-	--log('jl: '..s..' < '..t) 
 	_branch(s < t)
 end
 
 function _jg(s, t)
-	--log('jg: '..s..' > '..t)
 	_branch(s > t)
 end
 
@@ -305,12 +297,10 @@ function _ret(a)
 end
 
 function _rtrue()
-	-- log('rtrue: ')
 	_ret(1)
 end
 
 function _rfalse()
-	-- log('rfalse: ')
 	_ret(0)
 end
 
@@ -508,13 +498,13 @@ end
 --_buffer_mode; not sure this applies to us so _nop() for now
 
 function _set_color(byte0, byte1)
-	log('_set_color: Not Implemented')
+	log('_set_color: '..tohex(byte0)..', '..tohex(byte1))
 end
 
 --_set_text_style defined in io.lua
 
 function _set_font(n)
-	log('_set_font: Not Implemented')
+	log('_set_font: '..n)
 	_result(0)
 end
 
