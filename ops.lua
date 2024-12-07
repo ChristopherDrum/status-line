@@ -729,16 +729,15 @@ function _nop()
 	-- log('_nop: ')
 end
 
-function _random(s, skip_result)
+function _random(s)
 	local rnd = 0
-	if (s < 0) then
-		srand(s) 
-	elseif (s > 0) then
+	if s > 0 then
 		rnd = flr(rnd(s)) + 1
 	else
-		srand(stat(93)..stat(94)..stat(95))
+		if (s == 0) s = stat(93)..stat(94)..stat(95)
+		srand(s)
 	end
-	if (not skip_result) _result(rnd)
+	_result(rnd)
 end
 
 --_restart() defined in memory.lua
