@@ -47,30 +47,23 @@ function _store(var, a)
 end
 
 function _loadw(baddr, n)
-	_load_store_bw(baddr, n, 15, get_zword)
+	baddr = zword_to_zaddress(baddr) + (n >>> 15)
+	_result(get_zword(baddr))
 end
 
 function _storew(baddr, n, zword)
-	_load_store_bw(baddr, n, 15, set_zword, zword)
+	baddr = zword_to_zaddress(baddr) + (n >>> 15)
+	set_zword(baddr, zword)
 end
 
 function _loadb(baddr, n)
-	_load_store_bw(baddr, n, 16, get_zbyte)
+	baddr = zword_to_zaddress(baddr) + (n >>> 16)
+	_result(get_zbyte(baddr))
 end
 
 function _storeb(baddr, n, zbyte)
-	_load_store_bw(baddr, n, 16, set_zbyte, zbyte)
-end
-
-function _load_store_bw(baddr, n, shift, func, val)
-	local offset = (abs(n)>>>shift)
-	if (n < 0) offset = -offset
-	baddr = zword_to_zaddress(baddr) + offset
-	if val then
-		func(baddr, val)
-	else
-		_result(func(baddr))
-	end
+	baddr = zword_to_zaddress(baddr) + (n >>> 16)
+	set_zbyte(baddr, zbyte)
 end
 
 -- _push(a) and _pop() ops are substituted with 
