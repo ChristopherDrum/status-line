@@ -369,7 +369,7 @@ function capture_input(char)
 			local word, index, z_adjust = unpack(tokens[i])
 			-- log('looking up word: '..word)
 			-- log('  substring: '..sub(word,1,_zm_dictionary_word_size-z_adjust))
-			local dict_addr = _dictionary_lookup[sub(word,1,_zm_dictionary_word_size-z_adjust)] or 0x0
+			local dict_addr = _main_dict[sub(word,1,_zm_dictionary_word_size-z_adjust)] or 0x0
 			-- log('  received: '..tohex(dict_addr))
 			set_zword(z_parse_buffer, dict_addr)
 			set_zbyte(z_parse_buffer+0x.0002, #word)

@@ -248,9 +248,10 @@ function _update60()
 	end
 end
 
-function build_dictionary_lookup(addr)
+function build_dictionary(addr)
+	local dict = {}
 	local num_separators = get_zbyte(addr)
-	addr += 0x.0001 + (0x.0001 * num_separators)
+	addr += 0x.0001 + (num_separators>>>16)
 
 	local entry_length = (get_zbyte(addr) >>> 16)
 	addr += 0x.0001
@@ -262,13 +263,12 @@ function build_dictionary_lookup(addr)
 		local zstring = get_zstring(addr,1)
 		local lower = ''
 		for j = 1, #zstring do
-			local c = ord(zstring,j)
-			if (in_range(c,65,90)) c += 32
-			lower ..= chr(c)
+			lower ..= case_setter(zstring[j], lowercase)
 		end
-		_dictionary_lookup[lower] = (addr << 16)
+		dict[lower] = (addr << 16)
 		addr += entry_length
 	end
+	return dict
 end
 
 function fetch_parser_separators()
@@ -343,7 +343,7 @@ function initialize_game()
 	setup_palette()
 	process_header()
 	fetch_parser_separators()
-	build_dictionary_lookup(_dictionary_mem_addr)
+	_main_dict = build_dictionary(_dictionary_mem_addr)
 
 	patch()
 

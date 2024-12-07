@@ -79,7 +79,7 @@ function flush_volatile_state()
 	max_input_length = 0
 	z_parse_buffer_length = 0
 	separators = {}
-	_dictionary_lookup = {}
+	_main_dict = {}
 	story_loaded = false
 end
 

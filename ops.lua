@@ -533,8 +533,8 @@ function _output_stream(n, baddr)
 	end
 end
 
-function _input_stream(operands)
-	output('_input_stream! (please report to the developer)')
+function _input_stream(n)
+	log('_input_stream '..n..'requested?!')
 end
 
 
