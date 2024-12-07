@@ -556,15 +556,15 @@ function _output_stream(n, baddr)
 end
 
 function _input_stream(operands)
-	log('_input_stream: Not Implemented')
+	output('_input_stream! (please report to the developer)')
 end
 
 
 
 --8.9 Input
+	--timer not yet implemented
 
 function _read(baddr1, baddr2, time, raddr)
-	--timer not yet implemented
 	if (not _interrupt) then
 		--log('s/read: '..tohex(baddr1)..','..tohex(baddr2)..', time: '..tohex(time)..', '..tohex(raddr))
 		flush_line_buffer()
@@ -582,7 +582,6 @@ function _read(baddr1, baddr2, time, raddr)
 end
 
 function _read_char(one, time, raddr)
-	--timer not yet implemented
 	--log('read_char: '..one..','..tohex(time)..','..tohex(raddr))
 	flush_line_buffer()
 	local char = wait_for_any_key()
@@ -594,7 +593,7 @@ end
 --8.10 Character based output
 
 function _print_char(n)
-	log('_print_char '..n..': '..chr(n))
+	-- log('_print_char '..n..': '..chr(n))
 	if (n == 10) n = 13	
 	if (n != 0) output(chr(n))
 end
@@ -730,17 +729,16 @@ function _nop()
 	-- log('_nop: ')
 end
 
-function _random(s, skip__result)
+function _random(s, skip_result)
+	local rnd = 0
 	if (s < 0) then
 		srand(s) 
-		if (not skip__result) _result(0)
 	elseif (s > 0) then
-		local rnd = flr(rnd(s)) + 1
-		if (not skip__result) _result(rnd)
+		rnd = flr(rnd(s)) + 1
 	else
-		srand(tonum(tostr(stat(93))..tostr(stat(94))..tostr(stat(95))))
-		if (not skip__result) _result(0)
+		srand(stat(93)..stat(94)..stat(95))
 	end
+	if (not skip_result) _result(rnd)
 end
 
 --_restart() defined in memory.lua
