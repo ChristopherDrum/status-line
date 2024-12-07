@@ -606,7 +606,7 @@ end
 
 function _print(string)
 	local zstring = get_zstring(string)
-	log('_print: '..zstring)
+	-- log('_print: '..zstring)
 	output(zstring)
 end
 
@@ -630,7 +630,7 @@ function _print_paddr(saddr)
 end
 
 function _print_num(s)
-	log('_print_num: '..s)
+	-- log('_print_num: '..s)
 	output(tostr(s))
 end
 
@@ -642,16 +642,17 @@ end
 
 function _print_table(baddr, x, y, n)
 	local zaddress = zword_to_zaddress(baddr)
-	local zstring = get_zstring(zaddress)
-	local start = 1
+	local offset = 0
 	for i = 1, y do
-		for j = start, start+x-1 do
-			_print_char(zstring[j])
+		for j = 0, x+n-1 do
+			if (j < x) then
+				local byte = get_zbyte(zaddress+offset)
+				_print_char(byte)
+			end
+			offset += 0x.0001
 		end
-		start += x+n
 		_new_line()
 	end
-	log("_print_table: "..zstring.." in x: "..x..", y: "..y.." with skip: "..n)
 end
 
 
