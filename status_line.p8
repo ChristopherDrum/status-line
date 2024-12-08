@@ -281,6 +281,7 @@ function process_header()
 	_zm_version = get_zbyte(_version_header_addr)
 
 	local i_flag = get_zbyte(_interpreter_flags_header_addr)
+	local p_flag = 0x0082
 
 	if _zm_version < 4 then
 		_zm_screen_height = 20
@@ -314,10 +315,13 @@ function process_header()
 		end
 
 		i_flag = 0x9e
-		if (full_color == true) i_flag |= 0x01
+		if full_color == true then
+			i_flag |= 0x01
+			p_flag = 0x00c2
+		end
 	end
 	set_zbyte(_interpreter_flags_header_addr, i_flag)
-	set_zword(_peripherals_header_addr, 0x00c2)
+	set_zword(_peripherals_header_addr, p_flag)
 	set_zword(_standard_revision_num_addr, 0x0100) --1.0 spec adherance
 
 	_program_counter 		= zaddress_at_zaddress(_program_counter_header_addr)
