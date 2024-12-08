@@ -158,6 +158,10 @@ function zword_to_zaddress(zaddress, is_packed)
 	return (zaddress >>> shift)
 end
 
+function zaddress_at_zaddress(zaddress, is_packed)
+	return zword_to_zaddress(get_zword(zaddress), is_packed)
+end
+
 -- "zaddress" is shifted as far right as possible to allow 3-byte addressing
 -- bank: which subtable in _memory
 -- index: index into the bank

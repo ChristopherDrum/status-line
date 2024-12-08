@@ -499,6 +499,11 @@ end
 
 function _set_color(byte0, byte1)
 	log('_set_color: '..tohex(byte0)..', '..tohex(byte1))
+	if (byte0 > 1) current_fg = byte0
+	if (byte1 > 1) current_bg = byte1
+	if (byte0 == 1) current_fg = get_zbyte(_default_fg_color_addr)
+	if (byte1 == 1) current_bg = get_zbyte(_default_bg_color_addr)
+	_set_text_style(current_text_style)
 end
 
 --_set_text_style defined in io.lua
@@ -704,14 +709,14 @@ function _nop()
 end
 
 function _random(s)
-	local rnd = 0
+	local r = 0
 	if s > 0 then
-		rnd = flr(rnd(s)) + 1
+		r = flr(rnd(s)) + 1
 	else
 		if (s == 0) s = stat(93)..stat(94)..stat(95)
 		srand(s)
 	end
-	_result(rnd)
+	_result(r)
 end
 
 --_restart() defined in memory.lua

@@ -13,13 +13,13 @@ _interrupt = nil
 
 checksum = 0x0
 story_loaded = false
--- full_color = false
+full_color = false
 
 punc = '.,!?_#'.."'"..'"/\\-:()'
 blank_line = '                                '
 
 function rehydrate_menu_vars()
-	local raw_strings = "screen_types`1`b&w,6,0`green,138,131`amber,9,128`blue,12,129`oldlcd,131,129`plasma,8,130`invert,0,6/scroll_speeds`3`slow,7`medium,5`fast,4`faster,2`fastest,0/clock_types`1`24-hour,24`12-hour,12/cursor_types`1`block,▮`square,■`bar,|`under,_`dotted,\^:150a150a15000000"
+	local raw_strings = "screen_types`1`ega,7,0`b&w,6,0`green,138,131`amber,9,128`blue,12,129`oldlcd,131,129`plasma,8,130`invert,0,6/scroll_speeds`3`slow,7`medium,5`fast,4`faster,2`fastest,0/clock_types`1`24-hour,24`12-hour,12/cursor_types`1`block,▮`square,■`bar,|`under,_`dotted,\^:150a150a15000000"
 	local strings = split(raw_strings, '/')
 	for str in all(strings) do
 		local def = split(str, '`')
@@ -35,7 +35,7 @@ function rehydrate_menu_vars()
 end
 
 function rehydrate_ops()
-	local raw_strings = "_zero_ops,_rtrue,_rfalse,_print,_print_rtrue,_nop,_save,_restore,_restart,_ret_pulled,_pop_catch,_quit,_new_line,_show_status,_btrue,_nop,_btrue/_short_ops,_jz,_get_sibling,_get_child,_get_parent,_get_prop_len,_inc,_dec,_print_addr,_call_f,_remove_obj,_print_obj,_ret,_jump,_print_paddr,_load,_not_call_p/_long_ops,_nop,_je,_jl,_jg,_dec_jl,_inc_jg,_jin,_test,_or,_and,_test_attr,_set_attr,_clear_attr,_store,_insert_obj,_loadw,_loadb,_get_prop,_get_prop_addr,_get_next_prop,_add,_sub,_mul,_div,_mod,_call_f,_call_p,_set_color,_throw/_var_ops,_call_f,_storew,_storeb,_put_prop,_read,_print_char,_print_num,_random,stack_push,_pull,_split_screen,_set_window,_call_f,_erase_window,_erase_line,_set_cursor,_get_cursor,_set_text_style,_nop,_output_stream,_input_stream,_sound_effect,_read_char,_scan_table,_not,_call_p,_call_p,_tokenise,_encode_text,_copy_table,_print_table,_check_arg_count/_ext_ops,_save,_restore,_log_shift,_art_shift,_set_font,_nop,_nop,_nop,_nop,_save_undo,_nop"
+	local raw_strings = "_zero_ops,_rtrue,_rfalse,_print,_print_rtrue,_nop,_save,_restore,_restart,_ret_pulled,_pop_catch,_quit,_new_line,_show_status,_btrue,_nop,_btrue/_short_ops,_jz,_get_sibling,_get_child,_get_parent,_get_prop_len,_inc,_dec,_print_addr,_call_f,_remove_obj,_print_obj,_ret,_jump,_print_paddr,_load,_not_call_p/_long_ops,_nop,_je,_jl,_jg,_dec_jl,_inc_jg,_jin,_test,_or,_and,_test_attr,_set_attr,_clear_attr,_store,_insert_obj,_loadw,_loadb,_get_prop,_get_prop_addr,_get_next_prop,_add,_sub,_mul,_div,_mod,_call_f,_call_p,_set_color,_throw/_var_ops,_call_f,_storew,_storeb,_put_prop,_read,_print_char,_print_num,_random,stack_push,_pull,_split_screen,_set_window,_call_f,_erase_window,_erase_line,_set_cursor,_get_cursor,_set_text_style,_nop,_output_stream,_input_stream,_sound_effect,_read_char,_scan_table,_not,_call_p,_call_p,_tokenise,_encode_text,_copy_table,_print_table,_check_arg_count/_ext_ops,_save,_restore,_log_shift,_art_shift,_set_font,_nop,_nop,_nop,_nop,_save_undo,_nop,_nop,_nop,_nop,_nop,_nop,_nop,_nop,_nop,_nop,_nop,_nop,_nop,_nop,_nop,_nop,_nop,_nop,_nop"
 	local strings = split(raw_strings,'/')
 	for str in all(strings) do
 		local def = split(str)
@@ -47,7 +47,7 @@ function rehydrate_ops()
 end
 
 function rehydrate_mem_addresses()
-	local raw_strings = "_paged_memory_mem_addr=0x0,_dictionary_mem_addr=0x0,_object_table_mem_addr=0x0,_global_var_table_mem_addr=0x0,_static_memory_mem_addr=0x0,_abbr_table_mem_addr=0x0,_dynamic_memory_mem_addr=0x0,_high_memory_mem_addr=0x0,_program_counter_mem_addr=0xc,_local_var_table_mem_addr=0xd,_stack_mem_addr=0xe,_version_header_addr=0x.0000,_interpreter_flags_header_addr=0x.0001,_release_number_header_addr=0x.0002,_paged_memory_header_addr=0x.0004,_program_counter_header_addr=0x.0006,_dictionary_header_addr=0x.0008,_object_table_header_addr=0x.000a,_global_var_table_header_addr=0x.000c,_static_memory_header_addr=0x.000e,_peripherals_header_addr=0x.0010,_serial_code_header_addr=0x.0012,_abbr_table_header_addr=0x.0018,_file_length_header_addr=0x.001a,_file_checksum_header_addr=0x.001c,_interpreter_number_header_addr=0x.001e,_interpreter_version_header_addr=0x.001f,_screen_height_header_addr=0x.0020,_screen_width_header_addr=0x.0021,_screen_width_units_addr=0x.0022,_screen_height_units_addr=0x.0024,_font_height_units_addr=0x.0026,_font_width_units_addr=0x.0027,_default_bg_color_addr=0x.002c,_default_fg_color_addr=0x.002d,_terminating_chars_table_addr=0x.002e,_alt_character_set_addr=0x.0034,_extension_table_addr=0x.0036"
+	local raw_strings = "_paged_memory_mem_addr=0x0,_dictionary_mem_addr=0x0,_object_table_mem_addr=0x0,_global_var_table_mem_addr=0x0,_static_memory_mem_addr=0x0,_abbr_table_mem_addr=0x0,_dynamic_memory_mem_addr=0x0,_high_memory_mem_addr=0x0,_program_counter_mem_addr=0xc,_local_var_table_mem_addr=0xd,_stack_mem_addr=0xe,_version_header_addr=0x.0000,_interpreter_flags_header_addr=0x.0001,_release_number_header_addr=0x.0002,_paged_memory_header_addr=0x.0004,_program_counter_header_addr=0x.0006,_dictionary_header_addr=0x.0008,_object_table_header_addr=0x.000a,_global_var_table_header_addr=0x.000c,_static_memory_header_addr=0x.000e,_peripherals_header_addr=0x.0010,_serial_code_header_addr=0x.0012,_abbr_table_header_addr=0x.0018,_file_length_header_addr=0x.001a,_file_checksum_header_addr=0x.001c,_interpreter_number_header_addr=0x.001e,_interpreter_version_header_addr=0x.001f,_screen_height_header_addr=0x.0020,_screen_width_header_addr=0x.0021,_screen_width_units_addr=0x.0022,_screen_height_units_addr=0x.0024,_font_height_units_addr=0x.0026,_font_width_units_addr=0x.0027,_default_bg_color_addr=0x.002c,_default_fg_color_addr=0x.002d,_terminating_chars_table_addr=0x.002e,_standard_revision_num_addr=0x.0032,_alt_character_set_addr=0x.0034,_extension_table_addr=0x.0036"
 	local strings = split(raw_strings)
 	for str in all(strings) do
 		local def = split(str,"=")
@@ -115,7 +115,8 @@ function wait_for_any_key()
 end
 
 function draw_cursor(c)
-	local c = c or (stat(85) % 2)
+	local toggle = {current_bg, current_fg}
+	local c = c or toggle[(stat(85) % 2)+1]
 	local px, py = unpack(windows[active_window].p_cursor)
 	print(cursor_type, px, py, c)
 end
@@ -169,7 +170,7 @@ function draw_splashscreen(did_load)
 		print('sTORY IS LOADING', 31, 100)
 	else
 		sspr(114,124,14,4,103,116)
-		print('DRAG IN A Z3/4 STORY\n  TO START PLAYING', 24, 92)
+		print('DRAG IN A Z3/4/5 STORY\n  TO START PLAYING', 24, 92)
 	end
 
 	color()
@@ -178,17 +179,18 @@ end
 
 function game_id()
 	local id = checksum
-	if (_zm_version == 3) id = (zword_to_zaddress(get_zword(_static_memory_mem_addr))<<16)
+	if (_zm_version == 3) id = get_zword(_static_memory_mem_addr)
 	return tohex(id, false)
 end
 
 function setup_palette()
 	pal()
 	local st = dget(0) or 1
-	local type = screen_types.values[st]
-	full_color = type[1] == 'ega'
-	fg, bg = type[2], type[3]
-	pal({fg,0,8,139,10,140,136,12,7,10,11,12,13,14,15,bg},1)
+	local mode, fg, bg = unpack(screen_types.values[st]) 
+	full_color = mode == 'ega'
+	p = split("0,0,8,139,10,140,136,12,7,6,5,133,14,15")
+	p[0], p[15] = bg, fg
+	pal(p,1)
 	palt(0,false)
 end
 
@@ -215,9 +217,7 @@ function _update60()
 			_interrupt(key)
 			-- draw_cursor()
 		else
-			--I found this method of running multiple vm instructions
-			--per frame more consistent and easier to regulate
-			-- erase_cursor()
+			--I found this method of running multiple vm instructions per frame easier to regulate
 			local count = 0
 			local max_instruction = 50
 			while count < max_instruction and 
@@ -238,7 +238,7 @@ function _update60()
 			if _program_counter != 0x0 then
 				--let the player see end-of-game text
 				flush_line_buffer()
-				screen("\^i\#0\f1       ~ END OF SESSION ~       ")
+				screen("\^i"..current_color_string().."       ~ END OF SESSION ~       ")
 				wait_for_any_key()
 				clear_all_memory()
 			end
@@ -309,8 +309,8 @@ function process_header()
 			set_zword(_screen_height_units_addr, 128)
 			set_zbyte(_font_height_units_addr, 5)
 			set_zbyte(_font_width_units_addr, 3)
-			set_zbyte(_default_bg_color_addr, 2) --black
-			set_zbyte(_default_fg_color_addr, 9) --white
+			set_zbyte(_default_bg_color_addr, 0) --current palette fg
+			set_zbyte(_default_fg_color_addr, 15) --current palette bg
 		end
 
 		i_flag = 0x9e
@@ -318,14 +318,15 @@ function process_header()
 	end
 	set_zbyte(_interpreter_flags_header_addr, i_flag)
 	set_zword(_peripherals_header_addr, 0x00c2)
+	set_zword(_standard_revision_num_addr, 0x0100) --1.0 spec adherance
 
-	_program_counter 		= zword_to_zaddress(get_zword(_program_counter_header_addr))
-	_paged_memory_mem_addr 	= zword_to_zaddress(get_zword(_paged_memory_header_addr))
-	_dictionary_mem_addr 	= zword_to_zaddress(get_zword(_dictionary_header_addr))
-	_object_table_mem_addr 	= zword_to_zaddress(get_zword(_object_table_header_addr))
-	_global_var_table_mem_addr = zword_to_zaddress(get_zword(_global_var_table_header_addr))
-	_abbr_table_mem_addr 	= zword_to_zaddress(get_zword(_abbr_table_header_addr))
-	_static_memory_mem_addr = zword_to_zaddress(get_zword(_static_memory_header_addr))
+	_program_counter 		= zaddress_at_zaddress(_program_counter_header_addr)
+	-- _paged_memory_mem_addr 	= zaddress_at_zaddress(_paged_memory_header_addr)
+	_dictionary_mem_addr 	= zaddress_at_zaddress(_dictionary_header_addr)
+	_object_table_mem_addr 	= zaddress_at_zaddress(_object_table_header_addr)
+	_global_var_table_mem_addr = zaddress_at_zaddress(_global_var_table_header_addr)
+	_abbr_table_mem_addr 	= zaddress_at_zaddress(_abbr_table_header_addr)
+	_static_memory_mem_addr = zaddress_at_zaddress(_static_memory_header_addr)
 
 	checksum = get_zword(_file_checksum_header_addr)
 end

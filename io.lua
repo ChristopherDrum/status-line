@@ -1,16 +1,15 @@
 function reset_io_state()
-	current_bg, current_fg, current_font = 0, 1, 1
+	current_bg, current_fg, current_font = 0, 15, 1
 	
-	current_format = ''
-	current_format_updated = false
+	current_text_style = 0
+	current_format, current_format_updated = '', false
 	window_attributes = 0b00000000.00001010
 
 	emit_rate = 0 --the lower the faster
 	clock_type, cursor_type = nil, nil
-	make_bold, make_inverse = false, true
+	make_bold, make_inverse = false, false
 
-	screen_output = true
-	memory_output = {}
+	screen_output, memory_output = true, {}
 
 	active_window = 0
 	windows = {
@@ -46,7 +45,12 @@ function reset_io_state()
 	show_warning = true
 end
 
+function current_color_string()
+	return '\f'..tostr(current_fg,true)[6]..'\#'..tostr(current_bg,true)[6]
+end
+
 function _set_text_style(n)
+	-- log("_set_text_style to: "..n)
 	local inverse, emphasis = '\^-i\^-b', '\015'
 	make_bold = (n&2 == 2)
 	make_inverse = (n&1 == 1)
@@ -59,9 +63,9 @@ function _set_text_style(n)
 			inverse, emphasis, make_bold = '\^i', '\015', false
 		end
 	end
-
-	current_format = inverse..emphasis..'\f'..current_fg..'\#'..current_bg
+	current_format = inverse..emphasis..current_color_string()
 	current_format_updated = true
+	current_text_style = n
 end
 
 function update_screen_rect(zwin_num)
@@ -197,7 +201,7 @@ function flush_line_buffer()
 			-- if sub(str, -1) != '>' then
 			if #buffer != 0 then
 				if lines_shown == (win.h - 1) then
-					screen("\^i\#0\f1          - - MORE - -          ")
+					screen("\^i"..current_color_string().."          - - MORE - -          ")
 					reuse_last_line = true
 					wait_for_any_key()
 					lines_shown = 0
@@ -547,5 +551,5 @@ function show_status()
 	for i = 1, #loc do
 		flipped ..= case_setter(ord(loc,i), flipcase)
 	end
-	print('\^i\#'..current_bg..'\f'..current_fg..flipped, 1, 1)
+	print('\^i'..current_color_string()..flipped, 1, 1)
 end
