@@ -314,7 +314,7 @@ function process_header()
 			set_zbyte(_default_fg_color_addr, 15) --current palette bg
 		end
 
-		i_flag = 0x9e
+		i_flag = 0x1c --sound fx and timed keyboard disabled
 		if full_color == true then
 			i_flag |= 0x01
 			p_flag = 0x00c2
