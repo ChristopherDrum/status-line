@@ -416,8 +416,6 @@ end
 
 function _get_next_prop(obj, prop)
 	--log('get_next_prop: '..obj)
-	--If prop is 0, result is highest numbered prop
-	--Else,  next lower numbered prop; else, 0
 	local next_prop = 0
 	local prop_list = zobject_prop_data_addr_or_prop_list(obj)
 	if prop == 0 then 
@@ -429,7 +427,7 @@ function _get_next_prop(obj, prop)
 			end
 		end
 	end
-	--log('next prop: '..next_prop)
+	--log('  next prop: '..next_prop)
 	_result(next_prop)
 end
 
@@ -439,9 +437,8 @@ function _get_prop_len(baddr)
 		_result(0)
 	else
 		local baddr = zword_to_zaddress(baddr)
-		local len_byte = get_zbyte(baddr - (1>>>16))
-		local len = extract_prop_len(len_byte)
-		_result(len)
+		local len_byte = get_zbyte(baddr - 0x.0001)
+		_result(extract_prop_len(len_byte))
 	end
 end
 
@@ -455,13 +452,10 @@ function _split_screen(lines)
 	local win0, win1 = windows[0], windows[1]
 	local cur_y_offset = max(0, win0.h - win0.z_cursor.y)
 	if lines == 0 then --unsplit
-		win1.y = 1
-		win1.h = 0
-		win0.y = 1
-		win0.h = _zm_screen_height
+		win1.y, win1.h = 1, 0
+		win0.y, win0.h = 1, _zm_screen_height
 	else
-		win1.y = 1
-		win1.h = lines
+		win1.y, win1.h = 1, lines
 		win0.y = lines + 1
 		win0.h = max(0, _zm_screen_height - win1.h)
 	end
@@ -502,7 +496,7 @@ end
 --_buffer_mode; not sure this applies to us so _nop() for now
 
 function _set_color(byte0, byte1)
-	log('_set_color: '..tohex(byte0)..', '..tohex(byte1))
+	-- log('_set_color: '..tohex(byte0)..', '..tohex(byte1))
 	if (byte0 > 1) current_fg = byte0
 	if (byte1 > 1) current_bg = byte1
 	if (byte0 == 1) current_fg = get_zbyte(_default_fg_color_addr)
@@ -513,7 +507,7 @@ end
 --_set_text_style defined in io.lua
 
 function _set_font(n)
-	log('_set_font: '..n)
+	-- log('_set_font: '..n)
 	_result(0)
 end
 
@@ -580,24 +574,24 @@ end
 --8.10 Character based output
 
 function _print_char(n)
-	log('_print_char '..n..': '..chr(n))
+	-- log('_print_char '..n..': '..chr(n))
 	if (n == 10) n = 13	
 	if (n != 0) output(chr(n))
 end
 
 function _new_line()
-	log('new_line')
+	-- log('new_line')
 	_print_char(10)
 end
 
 function _print(string)
 	local zstring = get_zstring(string)
-	log('_print: '..zstring)
+	-- log('_print: '..zstring)
 	output(zstring)
 end
 
 function _print_rtrue(string)
-	log('_print_rtrue')
+	-- log('_print_rtrue')
 	_print(string)
 	_new_line()
 	_rtrue()
@@ -607,7 +601,7 @@ function _print_addr(baddr, is_packed)
 	local is_packed = is_packed or false
 	local zaddress = zword_to_zaddress(baddr, is_packed)
 	local zstring = get_zstring(zaddress)
-	log('print_addr: '..zstring)
+	-- log('print_addr: '..zstring)
 	output(zstring)
 end
 
@@ -616,13 +610,13 @@ function _print_paddr(saddr)
 end
 
 function _print_num(s)
-	log('_print_num: '..s)
+	-- log('_print_num: '..s)
 	output(tostr(s))
 end
 
 function _print_obj(obj)
 	local name, zchars = zobject_name(obj)
-	log('print_obj with name: '..name)
+	-- log('print_obj with name: '..name)
 	output(name)
 end
 
