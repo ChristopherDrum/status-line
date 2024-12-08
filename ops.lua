@@ -553,14 +553,13 @@ function _read(baddr1, baddr2, time, raddr)
 		flush_line_buffer()
 		--cache addresses for capture_input()
 		z_text_buffer = zword_to_zaddress(baddr1)
-		z_parse_buffer = zword_to_zaddress(baddr2)
+		z_parse_buffer = baddr2 --hold this and use it in capture_input if it exists
 		_show_status()
 		_interrupt = capture_input
 
 	else
-		z_text_buffer, z_parse_buffer = 0x0, 0x0
-		_interrupt = nil
-		if (_zm_version > 4) _ret(13) --'\r' in zscii
+		z_text_buffer, z_parse_buffer, _interrupt = nil, nil, nil
+		if (_zm_version > 4) _result(13) --'\r' in zscii
 	end
 end
 

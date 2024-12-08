@@ -39,7 +39,7 @@ function reset_io_state()
 	did_trim_nl, clear_last_line = false, false
 	lines_shown = 0
 
-	z_text_buffer, z_parse_buffer = 0x0, 0x0
+	z_text_buffer, z_parse_buffer = nil, nil
 	current_input, visible_input = '', ''
 
 	show_warning = true
@@ -264,7 +264,7 @@ end
 
 function tokenise(str)
 	-- log('tokenise: '..str)
-	local tokens, bytes = {}, {}
+	local tokens, bytes = {}
 	local index = 0
 	local z_adjust = 0
 
@@ -278,8 +278,6 @@ function tokenise(str)
 
 	for i = 1, #str do
 		local char = str[i]
-		-- log('  char '..i..': '..ord(char))
-		add(bytes, ord(char))
 
 		if (in_set(char, punc)) z_adjust += 1
 
@@ -296,8 +294,7 @@ function tokenise(str)
 		end
 	end
 	commit(#str+1)
-	add(bytes, 0x0)
-	return bytes, tokens
+	return tokens
 end
 
 
@@ -352,7 +349,6 @@ function capture_input(char)
 	draw_cursor(current_bg)
 
 	if (max_input_length == 0) max_input_length = get_zbyte(z_text_buffer) - 1
-	if (z_parse_buffer_length == 0) z_parse_buffer_length = get_zbyte(z_parse_buffer)
 
 	log('current input: '..current_input)
 	if char == '\r' then
@@ -360,28 +356,47 @@ function capture_input(char)
 		--normalize the current input
 		current_input = strip(current_input)
 
-		--tokenize and byte it
-		local bytes, tokens = tokenise(current_input)
-
 		--fill text buffer
-		local addr = z_text_buffer + 0x.0001
-		set_zbytes(addr, bytes)
-
-		local max_tokens = min(#tokens, z_parse_buffer_length)
-		set_zbyte(z_parse_buffer+0x.0001, max_tokens)
-		z_parse_buffer += 0x.0002
-		for i = 1, max_tokens do
-			local word, index, z_adjust = unpack(tokens[i])
-			-- log('looking up word: '..word)
-			-- log('  substring: '..sub(word,1,_zm_dictionary_word_size-z_adjust))
-			local dict_addr = _main_dict[sub(word,1,_zm_dictionary_word_size-z_adjust)] or 0x0
-			-- log('  received: '..tohex(dict_addr))
-			set_zword(z_parse_buffer, dict_addr)
-			set_zbyte(z_parse_buffer+0x.0002, #word)
-			set_zbyte(z_parse_buffer+0x.0003, index)
-			z_parse_buffer += 0x.0004
+		local bytes = {}
+		for i = 1, #current_input do
+			local char = current_input[i]
+			add(bytes, ord(char))
 		end
+
+		local addr = z_text_buffer + 0x.0001
+		if _zm_version >= 5 then
+			local num_bytes = get_zbyte(addr)
+			set_zbyte(addr, #bytes)
+			addr += 0x.0001 + (num_bytes>>>16)
+		else 
+			add(bytes, 0x0)
+		end
+		set_zbytes(addr, bytes)
 		
+		--handle the parse buffer
+		if z_parse_buffer != nil then
+
+			--tokenize as its own step now; needs to receive addresses later
+			local tokens = tokenise(current_input)
+
+			z_parse_buffer = zword_to_zaddress(z_parse_buffer)
+			if (z_parse_buffer_length == 0) z_parse_buffer_length = get_zbyte(z_parse_buffer)
+
+			local max_tokens = min(#tokens, z_parse_buffer_length)
+			set_zbyte(z_parse_buffer+0x.0001, max_tokens)
+			z_parse_buffer += 0x.0002
+			for i = 1, max_tokens do
+				local word, index, z_adjust = unpack(tokens[i])
+				-- log('looking up word: '..word)
+				-- log('  substring: '..sub(word,1,_zm_dictionary_word_size-z_adjust))
+				local dict_addr = _main_dict[sub(word,1,_zm_dictionary_word_size-z_adjust)] or 0x0
+				-- log('  received: '..tohex(dict_addr))
+				set_zword(z_parse_buffer, dict_addr)
+				set_zbyte(z_parse_buffer+0x.0002, #word)
+				set_zbyte(z_parse_buffer+0x.0003, index)
+				z_parse_buffer += 0x.0004
+			end
+		end
 		current_input, visible_input = '', ''
 		_read()
 
