@@ -590,9 +590,9 @@ end
 function load_instruction()
 
 	local op_table, op_code, operands = nil, 0, {}
-	local function extract_operands(info, count)
-		-- log(' type_information: '..tohex(info))
-		for i = count-1, 0, -1 do
+	local function extract_operands(info, _count)
+		-- log(' extract_operands: '..tohex(info)..', '.._count)
+		for i = _count-1, 0, -1 do
 			local op_type = (info >>> (i*2)) & 0x03
 			-- log('  byte '..i..', op type: '..op_type)
 			local operand
@@ -622,7 +622,7 @@ function load_instruction()
 
 	local op_table_name
 	if op_form <= 0x01 then
-		op_table_name = 'long'
+		-- op_table_name = 'long'
 		-- The first byte of a long instruction is %0abxxxxx where
 		-- 0 == "long instruction" indicator
 		-- a == "operand type of first byte"
@@ -640,7 +640,7 @@ function load_instruction()
 		end
 
 	elseif op_form == 0xbe and _zm_version >= 5 then
-		op_table_name = 'ext'
+		-- op_table_name = 'ext'
 		-- the first byte of an extended instruction is $BE, it is an extended instruction. 
 		-- The second byte contains the EXT opcode.
 		-- Then follow the operand types (one byte) and the operands themselves,
@@ -651,7 +651,7 @@ function load_instruction()
 		extract_operands(type_information,4)
 
 	elseif op_form == 0x02 then
-		op_table_name = 'short'
+		-- op_table_name = 'short'
 		-- The first byte of a short instruction is %10ttxxxx.
 		-- %tt is the type of the operand (or %11 if absent),
 		-- %xxxx is the 1OP (0OP if operand absent) opcode
@@ -666,14 +666,14 @@ function load_instruction()
 			operands = get_var()
 		elseif op_type == 3 then
 			-- log(' - a zero op')
-			op_table_name = 'zero'
+			-- op_table_name = 'zero'
 			op_table = _zero_ops
 			operands = nil
 		end
 		operands = {operands}
 
 	elseif op_form == 0x03 then
-		op_table_name = 'var'
+		-- op_table_name = 'var'
 		-- The first byte of a v3 variable instruction is %11axxxxx
 		-- (two exceptions for v4+) where %xxxxx is the VAR opcode.
 		-- If %a is %1 its a VAR opcode (if %0, a 2OP opcode)
@@ -685,7 +685,7 @@ function load_instruction()
 
 		op_table = _var_ops
 		if (op_definition & 0x20 == 0) then
-			op_table_name = '2OP'
+			-- op_table_name = '2OP'
 			op_table = _long_ops
 		end
 		op_code = (op_definition & 0x1f)
@@ -700,10 +700,10 @@ function load_instruction()
 		extract_operands(type_information, num_bytes)
 		if ((op_table == _long_ops) and (#operands == 1) and (op_code > 1)) get_zbyte()
 	end
-	local op_string = ''
-	for i = 1, #operands do
-		op_string ..= tohex(operands[i])..', '
-	end
+	-- local op_string = ''
+	-- for i = 1, #operands do
+	-- 	op_string ..= tohex(operands[i])..', '
+	-- end
 	-- log(sub(tohex(pc),8)..": "..op_table_name..(op_code+1)..'('..op_string..')')
 	local func = op_table[op_code+1]
 	return func, operands

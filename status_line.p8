@@ -218,14 +218,14 @@ function _update60()
 			-- draw_cursor()
 		else
 			--I found this method of running multiple vm instructions per frame easier to regulate
-			local count = 0
+			local _count = 0
 			local max_instruction = 50
-			while count < max_instruction and 
+			while _count < max_instruction and 
 					_interrupt == nil and
 					story_loaded == true do
 				local func, operands = load_instruction()
 				func(unpack(operands))
-				count += 1
+				_count += 1
 				-- log('instruction count: '..count)
 			end
 		end

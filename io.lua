@@ -125,7 +125,7 @@ function p8scii_to_zscii(str)
 end
 
 function output(str, flush_now)
-	-- log('('..active_window..') output str: '..str)
+	log('('..active_window..') output str: '..str)
 	if #memory_output > 0 then
 		-- log('   redirected to memory')
 		memory(str) 
@@ -344,6 +344,7 @@ end
 
 --called by read; buffer addresses must be non-zero
 function capture_input(char)
+	-- log("capture_input")
 	lines_shown = 0
 	if (not char) draw_cursor() return
 	poke(0x5f30,1)
@@ -353,7 +354,7 @@ function capture_input(char)
 	if (max_input_length == 0) max_input_length = get_zbyte(z_text_buffer) - 1
 	if (z_parse_buffer_length == 0) z_parse_buffer_length = get_zbyte(z_parse_buffer)
 
-	-- log('current input: '..current_input)
+	log('current input: '..current_input)
 	if char == '\r' then
 
 		--normalize the current input

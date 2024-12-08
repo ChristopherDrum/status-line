@@ -547,8 +547,9 @@ end
 	--timer not yet implemented; disabled in header flags at startup
 
 function _read(baddr1, baddr2, time, raddr)
+	--from etude, what happens when baddr2 is nil or zero? What are we supposed to do?
 	if (not _interrupt) then
-		--log('s/read: '..tohex(baddr1)..','..tohex(baddr2)..', time: '..tohex(time)..', '..tohex(raddr))
+		-- log('s/read: '..tohex(baddr1)..','..tohex(baddr2)..', time: '..tohex(time)..', '..tohex(raddr))
 		flush_line_buffer()
 		--cache addresses for capture_input()
 		z_text_buffer = zword_to_zaddress(baddr1)
