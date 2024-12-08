@@ -435,10 +435,14 @@ end
 
 function _get_prop_len(baddr)
 	--log('get_prop_len: '..tohex(baddr))
-	local baddr = zword_to_zaddress(baddr)
-	local len_byte = get_zbyte(baddr - (1>>>16))
-	local len = extract_prop_len(len_byte)
-	_result(len)
+	if baddr == 0 then
+		_result(0)
+	else
+		local baddr = zword_to_zaddress(baddr)
+		local len_byte = get_zbyte(baddr - (1>>>16))
+		local len = extract_prop_len(len_byte)
+		_result(len)
+	end
 end
 
 
@@ -545,7 +549,7 @@ end
 
 
 --8.9 Input
-	--timer not yet implemented
+	--timer not yet implemented; disabled in header flags at startup
 
 function _read(baddr1, baddr2, time, raddr)
 	if (not _interrupt) then
@@ -576,24 +580,24 @@ end
 --8.10 Character based output
 
 function _print_char(n)
-	-- log('_print_char '..n..': '..chr(n))
+	log('_print_char '..n..': '..chr(n))
 	if (n == 10) n = 13	
 	if (n != 0) output(chr(n))
 end
 
 function _new_line()
-	-- log('new_line')
+	log('new_line')
 	_print_char(10)
 end
 
 function _print(string)
 	local zstring = get_zstring(string)
-	-- log('_print: '..zstring)
+	log('_print: '..zstring)
 	output(zstring)
 end
 
 function _print_rtrue(string)
-	--log('_print_rtrue')
+	log('_print_rtrue')
 	_print(string)
 	_new_line()
 	_rtrue()
@@ -603,7 +607,7 @@ function _print_addr(baddr, is_packed)
 	local is_packed = is_packed or false
 	local zaddress = zword_to_zaddress(baddr, is_packed)
 	local zstring = get_zstring(zaddress)
-	--log('print_addr: '..zstring)
+	log('print_addr: '..zstring)
 	output(zstring)
 end
 
@@ -612,13 +616,13 @@ function _print_paddr(saddr)
 end
 
 function _print_num(s)
-	-- log('_print_num: '..s)
+	log('_print_num: '..s)
 	output(tostr(s))
 end
 
 function _print_obj(obj)
 	local name, zchars = zobject_name(obj)
-	--log('print_obj with name: '..name)
+	log('print_obj with name: '..name)
 	output(name)
 end
 
