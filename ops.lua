@@ -46,23 +46,29 @@ function _store(var, a)
 	_result(a, var, true)
 end
 
+function _offset(n, amt)
+	local offset = (abs(n)>>>amt)
+	if (n < 0) offset = -offset
+	return offset
+end
+
 function _loadw(baddr, n)
-	baddr = zword_to_zaddress(baddr) + (n >>> 15)
+	baddr = zword_to_zaddress(baddr) + _offset(n,15)
 	_result(get_zword(baddr))
 end
 
 function _storew(baddr, n, zword)
-	baddr = zword_to_zaddress(baddr) + (n >>> 15)
+	baddr = zword_to_zaddress(baddr) + _offset(n,15)
 	set_zword(baddr, zword)
 end
 
 function _loadb(baddr, n)
-	baddr = zword_to_zaddress(baddr) + (n >>> 16)
+	baddr = zword_to_zaddress(baddr) + _offset(n,16)
 	_result(get_zbyte(baddr))
 end
 
 function _storeb(baddr, n, zbyte)
-	baddr = zword_to_zaddress(baddr) + (n >>> 16)
+	baddr = zword_to_zaddress(baddr) + _offset(n,16)
 	set_zbyte(baddr, zbyte)
 end
 
@@ -135,21 +141,17 @@ function _mul(a, b)
 	_result(a * b)
 end
 
-function _div(a, b)
+function _div(a, b, help)
 	local op = ceil
 	if ((a&0x8000) == (b&0x8000)) op = flr
 	-- if ((a > 0 and b > 0) or (a < 0 and b < 0)) then
 	local d = op(a/b)
-	_result(d)
+	if (help) return d else _result(d)
 end
 
 function _mod(a, b)
-	--p8 mod gives non-compliant results
-	--ex: -13 % -5, p8: "2", zmachine: "-3"
-	local op = ceil
-	if ((a&0x8000) == (b&0x8000)) op = flr
-	local m = a - (op(a/b) * b)
-	_result(m)
+	--p8 mod gives non-compliant results: -13 % -5, p8: "2", zm: "-3"
+	_result(a - (_div(a,b,true) * b))
 end
 
 function _inc(var)
@@ -405,8 +407,7 @@ end
 
 function _get_prop(obj, prop)
 	--log('get_prop: '..obj..','..prop)
-	local p = zobject_get_prop(obj, prop)
-	_result(p)
+	_result(zobject_get_prop(obj, prop))
 end
 
 function _get_prop_addr(obj, prop)
@@ -615,7 +616,7 @@ function _print_num(s)
 end
 
 function _print_obj(obj)
-	local name, zchars = zobject_name(obj)
+	local name, _ = zobject_name(obj)
 	-- log('print_obj with name: '..name)
 	output(name)
 end
@@ -637,7 +638,7 @@ end
 
 function _erase_line(val)
 	--log('erase_line: '..val)
-	if (val == 1) screen("\^i\#"..current_fg..'\f'..current_bg..blank_line)
+	if (val == 1) screen("\^i"..current_color_string()..blank_line)
 end
 
 function _erase_window(win)
@@ -675,22 +676,14 @@ function _save(did_save)
 		_interrupt = save_game
 	else
 		_interrupt = nil
-		if _zm_version == 3 then
-			_branch(did_save)
-		else 
-			_result(did_save)
-		end
+		if (_zm_version == 3) _branch(did_save) else _result(did_save)
 	end
 end
 
 function _restore()
 	--log('restore: ')
 	local rg = restore_game()
-	if _zm_version == 3 then
-		_branch(rg)
-	else
-		_result(rg)
-	end
+	if (_zm_version == 3) _branch(rg) else _result(rg)
 end
 
 function _save_undo()
@@ -745,17 +738,9 @@ end
 -- Overloads; functions to route calls based on zm version
 
 function _pop_catch()
-	if _zm_version < 5 then
-		stack_pop()
-	else
-		_catch()
-	end
+	if (_zm_version < 5) stack_pop() else _catch()
 end
 
 function _not_call_p(raddr, a1, a2, a3, a4, a5, a6, a7)
-	if _zm_version < 5 then
-		_not(raddr)
-	else
-		_call_p(raddr, a1, a2, a3, a4, a5, a6, a7)
-	end
+	if (_zm_version < 5) _not(raddr) else _call_p(raddr, a1, a2, a3, a4, a5, a6, a7)
 end

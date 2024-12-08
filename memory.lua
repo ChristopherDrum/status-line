@@ -704,7 +704,7 @@ function load_instruction()
 	for i = 1, #operands do
 		op_string ..= tohex(operands[i])..', '
 	end
-	log(sub(tohex(pc),8)..": "..op_table_name..(op_code+1)..'('..op_string..')')
+	-- log(sub(tohex(pc),8)..": "..op_table_name..(op_code+1)..'('..op_string..')')
 	local func = op_table[op_code+1]
 	return func, operands
 end
