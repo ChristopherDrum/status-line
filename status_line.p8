@@ -103,11 +103,6 @@ function wait_for_any_key()
 		local clear = (c+1)%2
 		draw_cursor(clear)
 	else
-		-- log('wait for any key, window 0: ')
-		-- log('  did_trim_nl = '..tostr(did_trim_nl))
-		-- log('  reuse_last_line = '..tostr(reuse_last_line))
-		-- log('  last_line = '..windows[0].last_line)
-		-- log('  buffer len = '..#windows[0].buffer)
 		if did_trim_nl == false then
 			reuse_last_line = true
 			if #windows[0].buffer == 0 then

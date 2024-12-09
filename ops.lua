@@ -720,15 +720,12 @@ function _show_status()
 end
 
 --_verify() and _piracy() are just _branch(true)
+
 function _btrue()
 	_branch(true)
 end
 
---_tokenise and _encode_text moved to io.lua
-function _tokenise(baddr1, baddr2, baddr3, bit)
-	log('_tokenise: Not Correctly Implemented')
-	tokenise(baddr1, baddr2, baddr3, bit)
-end
+--_tokenise  moved to io.lua
 
 function _encode_text(baddr1, n, p, baddr2)
 	log('_encode_text: In Progress')

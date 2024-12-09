@@ -125,7 +125,7 @@ function p8scii_to_zscii(str)
 end
 
 function output(str, flush_now)
-	log('('..active_window..') output str: '..str)
+	-- log('('..active_window..') output str: '..str)
 	if #memory_output > 0 then
 		-- log('   redirected to memory')
 		memory(str) 
@@ -262,7 +262,7 @@ function screen(str)
 	clip()
 end
 
-function tokenise(baddr1, baddr2, baddr3, _bit)
+function _tokenise(baddr1, baddr2, baddr3, _bit)
 	-- log('_tokenise from: '..tohex(baddr1)..' into: '..tohex(baddr2)..' alt dict: '..tohex(baddr3)..' bit?: '..tohex(bit))
 	local tokens, index, z_adjust = {}, 0, 0
 	local bit = _bit or 0
@@ -315,6 +315,8 @@ function tokenise(baddr1, baddr2, baddr3, _bit)
 	end
 	commit(#str+1)
 	-- log("token count: "..#tokens)
+	local dict = _main_dict
+	if (baddr3 != nil) dict = build_dictionary(zaddress_at_zaddress(baddr3))
 
 	local parse_buffer_length = get_zbyte(parse_buffer)
 	local max_tokens = min(#tokens, parse_buffer_length)
@@ -324,7 +326,7 @@ function tokenise(baddr1, baddr2, baddr3, _bit)
 	for i = 1, max_tokens do
 		local word, index, z_adjust = unpack(tokens[i])
 		-- log('  looking up substring: '..sub(word,1,_zm_dictionary_word_size-z_adjust))
-		local dict_addr = _main_dict[sub(word,1,_zm_dictionary_word_size-z_adjust)] or 0x0
+		local dict_addr = dict[sub(word,1,_zm_dictionary_word_size-z_adjust)] or 0x0
 		
 		if bit > 0 and dict_addr == nil then
 			parse_buffer += 0x.0004
@@ -379,9 +381,8 @@ function process_input_char(real, visible, max_length)
 	screen(windows[active_window].last_line..sub(visible_input, -30))
 end
 
---called by read; buffer addresses must be non-zero
+--called by read; z_text_buffer must be non-zero, other might be for strict read-only
 function capture_input(char)
-	-- log("capture_input")
 	lines_shown = 0
 	if (not char) draw_cursor() return
 	poke(0x5f30,1)
@@ -390,7 +391,7 @@ function capture_input(char)
 
 	if (max_input_length == 0) max_input_length = get_zbyte(zword_to_zaddress(z_text_buffer)) - 1
 
-	log('current input: '..current_input)
+	-- log('current input: '..current_input)
 	if char == '\r' then
 
 		--normalize the current input
@@ -415,9 +416,7 @@ function capture_input(char)
 		set_zbytes(addr, bytes)
 		
 		--handle the parse buffer
-		if z_parse_buffer != nil then
-			tokenise(z_text_buffer, z_parse_buffer)
-		end
+		if (z_parse_buffer) _tokenise(z_text_buffer, z_parse_buffer)
 
 		current_input, visible_input = '', ''
 		_read()
