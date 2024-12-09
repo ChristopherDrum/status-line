@@ -547,12 +547,11 @@ end
 	--timer not yet implemented; disabled in header flags at startup
 
 function _read(baddr1, baddr2, time, raddr)
-	--from etude, what happens when baddr2 is nil or zero? What are we supposed to do?
 	if (not _interrupt) then
 		-- log('s/read: '..tohex(baddr1)..','..tohex(baddr2)..', time: '..tohex(time)..', '..tohex(raddr))
 		flush_line_buffer()
 		--cache addresses for capture_input()
-		z_text_buffer = zword_to_zaddress(baddr1)
+		z_text_buffer = baddr1
 		z_parse_buffer = baddr2 --hold this and use it in capture_input if it exists
 		_show_status()
 		_interrupt = capture_input
@@ -725,12 +724,14 @@ function _btrue()
 	_branch(true)
 end
 
+--_tokenise and _encode_text moved to io.lua
 function _tokenise(baddr1, baddr2, baddr3, bit)
-	log('_tokenise: Not Implemented')
+	log('_tokenise: Not Correctly Implemented')
+	tokenise(baddr1, baddr2, baddr3, bit)
 end
 
 function _encode_text(baddr1, n, p, baddr2)
-	log('_encode_text: Not Implemented')
+	log('_encode_text: In Progress')
 end
 
 

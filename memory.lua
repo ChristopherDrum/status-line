@@ -2,12 +2,6 @@ _memory = {{}}
 _memory_start_state = nil
 _memory_bank_size = 16384 -- (1024*64)/4; four 64K banks
 
--- FRAME DEFINITION --
-
--- 2024/11/27, switched to a proper "frame" concept
--- this makes it easier to keep frame data updated
--- and also I'm have each frame to hold its own part of the stack
--- so when we pop a frame, the stack is automatically ready to go
 
 -- used for throw/catch
 call_type = { none = 0, func = 1, proc = 2, intr = 3 }
@@ -77,7 +71,6 @@ function flush_volatile_state()
 	_current_state = ''
 	active_table = 1
 	max_input_length = 0
-	z_parse_buffer_length = 0
 	separators = {}
 	_main_dict = {}
 	story_loaded = false

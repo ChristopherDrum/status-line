@@ -262,18 +262,38 @@ function screen(str)
 	clip()
 end
 
-function tokenise(str)
-	-- log('tokenise: '..str)
-	local tokens, bytes = {}
-	local index = 0
-	local z_adjust = 0
+function tokenise(baddr1, baddr2, baddr3, _bit)
+	-- log('_tokenise from: '..tohex(baddr1)..' into: '..tohex(baddr2)..' alt dict: '..tohex(baddr3)..' bit?: '..tohex(bit))
+	local tokens, index, z_adjust = {}, 0, 0
+	local bit = _bit or 0
+	str = ''
 
 	local function commit(i)
 		if (index == 0) return
 		local s = sub(str,index,i-1)
 		add(tokens, {s,index,z_adjust})
-		index = 0
-		z_adjust = 0
+		index, z_adjust = 0, 0
+	end
+
+	local text_buffer = zword_to_zaddress(baddr1)
+	local parse_buffer = zword_to_zaddress(baddr2)
+
+	local addr = text_buffer + 0x.0001
+	local num_bytes = nil
+	if _zm_version >= 5 then
+		num_bytes = get_zbyte(addr)
+		addr += 0x.0001
+	end
+
+	--this is redundant work for a direct pipeline
+	local j = 1
+	while true do
+		if (j == num_bytes) break
+		local c = get_zbyte(addr)
+		if (_zm_version < 5 and c == 0) break
+		str ..= chr(c)
+		addr += 0x.0001
+		j+=1
 	end
 
 	for i = 1, #str do
@@ -294,7 +314,27 @@ function tokenise(str)
 		end
 	end
 	commit(#str+1)
-	return tokens
+	-- log("token count: "..#tokens)
+
+	local parse_buffer_length = get_zbyte(parse_buffer)
+	local max_tokens = min(#tokens, parse_buffer_length)
+	parse_buffer += 0x.0001
+	set_zbyte(parse_buffer, max_tokens)
+	parse_buffer += 0x.0001
+	for i = 1, max_tokens do
+		local word, index, z_adjust = unpack(tokens[i])
+		-- log('  looking up substring: '..sub(word,1,_zm_dictionary_word_size-z_adjust))
+		local dict_addr = _main_dict[sub(word,1,_zm_dictionary_word_size-z_adjust)] or 0x0
+		
+		if bit > 0 and dict_addr == nil then
+			parse_buffer += 0x.0004
+		else
+			set_zword(parse_buffer, dict_addr)
+			set_zbyte(parse_buffer+0x.0002, #word)
+			set_zbyte(parse_buffer+0x.0003, index)
+			parse_buffer += 0x.0004
+		end
+	end
 end
 
 
@@ -348,7 +388,7 @@ function capture_input(char)
 
 	draw_cursor(current_bg)
 
-	if (max_input_length == 0) max_input_length = get_zbyte(z_text_buffer) - 1
+	if (max_input_length == 0) max_input_length = get_zbyte(zword_to_zaddress(z_text_buffer)) - 1
 
 	log('current input: '..current_input)
 	if char == '\r' then
@@ -363,7 +403,8 @@ function capture_input(char)
 			add(bytes, ord(char))
 		end
 
-		local addr = z_text_buffer + 0x.0001
+		local text_buffer = zword_to_zaddress(z_text_buffer)
+		local addr = text_buffer + 0x.0001
 		if _zm_version >= 5 then
 			local num_bytes = get_zbyte(addr)
 			set_zbyte(addr, #bytes)
@@ -375,28 +416,9 @@ function capture_input(char)
 		
 		--handle the parse buffer
 		if z_parse_buffer != nil then
-
-			--tokenize as its own step now; needs to receive addresses later
-			local tokens = tokenise(current_input)
-
-			z_parse_buffer = zword_to_zaddress(z_parse_buffer)
-			if (z_parse_buffer_length == 0) z_parse_buffer_length = get_zbyte(z_parse_buffer)
-
-			local max_tokens = min(#tokens, z_parse_buffer_length)
-			set_zbyte(z_parse_buffer+0x.0001, max_tokens)
-			z_parse_buffer += 0x.0002
-			for i = 1, max_tokens do
-				local word, index, z_adjust = unpack(tokens[i])
-				-- log('looking up word: '..word)
-				-- log('  substring: '..sub(word,1,_zm_dictionary_word_size-z_adjust))
-				local dict_addr = _main_dict[sub(word,1,_zm_dictionary_word_size-z_adjust)] or 0x0
-				-- log('  received: '..tohex(dict_addr))
-				set_zword(z_parse_buffer, dict_addr)
-				set_zbyte(z_parse_buffer+0x.0002, #word)
-				set_zbyte(z_parse_buffer+0x.0003, index)
-				z_parse_buffer += 0x.0004
-			end
+			tokenise(z_text_buffer, z_parse_buffer)
 		end
+
 		current_input, visible_input = '', ''
 		_read()
 
@@ -556,7 +578,6 @@ function show_status()
 	end
 
 	local score = scorea..separator..scoreb..' '
-	-- useful to use status bar for debug info
 	-- score = tostr(stat(0))
 	local loc = ' '..sub(location, 1, 30-#score-2)
 	if (#loc < #location) loc = sub(loc, 1, -2)..chr(144)
