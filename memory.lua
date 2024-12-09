@@ -507,6 +507,7 @@ function get_zstring(zaddress)
 
 	while end_found == false do
 		local zword = get_zword(zaddress)
+		log("zstring word: "..tohex(zword))
 		add(zchars, ((zword & 0x7c00)>>>10))
 		add(zchars, ((zword & 0x03e0)>>>5))
 		add(zchars, (zword & 0x001f))
@@ -527,10 +528,11 @@ local zchar_tables = {l_zchars, u_zchars, p_zchars}
 local zscii, zscii_decode, abbr_code = nil, false, nil
 
 function zscii_to_p8scii(zchars)
+	-- log("converting zchars: ")
 	local zstring = ''
 	for i = 1, #zchars do
 		local zchar = zchars[i]
-		-- log('  zchar: '..zchar..', table: '..active_table)
+		-- log('  zchar: '..zchar)
 		if zscii_decode == true then
 			if zscii == nil then
 				zscii = zchar << 5
@@ -577,6 +579,7 @@ function zscii_to_p8scii(zchars)
 			active_table = 1
 		end
 	end
+	log("   became: "..zstring)
 	return zstring
 end
 

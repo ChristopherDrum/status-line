@@ -339,6 +339,10 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 	end
 end
 
+function _encode_text(baddr1, n, p, baddr2)
+
+end
+
 
 lowercase, visual_case, flipcase = 1, 2, 3
 function case_setter(char, case)

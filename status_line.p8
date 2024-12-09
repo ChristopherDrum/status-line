@@ -4,7 +4,7 @@ __lua__
 --status line 2.1
 --by christopher drum
 
-_engine_version = '2.1'
+_engine_version = '3.0'
 
 _program_counter = 0x0
 _interrupt = nil
@@ -13,7 +13,7 @@ checksum = 0x0
 story_loaded = false
 full_color = false
 
-punc = '.,!?_#'.."'"..'"/\\-:()'
+punc = '.,!?_#\'"/\\-:()'
 blank_line = '                                '
 
 function rehydrate(raw_strings, func)
