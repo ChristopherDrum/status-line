@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
---status line 2.1
+--status line 3.0
 --by christopher drum
 
 _engine_version = '3.0'
@@ -79,12 +79,11 @@ function tohex(value, full)
 end
 
 function log(str)
-	printh(str, 'status_line_log_21')
+	printh(str, 'status_line_log_30')
 end
 
 function wait_for_any_key()
-	--cursor blinking is suppressed because
-	--this routine is outside the t() measurement
+	--cursor blinking suppressed; this routine is outside t() measurement
 	lines_shown = 0
 	local c = (make_inverse == false) and current_fg or current_bg
 	local keypress = ''
@@ -205,9 +204,7 @@ function setup_user_prefs()
 end
 
 function _update60()
-
 	if (story_loaded == true) then
-		--_interrupt is set when _read() is called
 		if _interrupt then
 			local key = nil
 			if stat(30) and not key then
@@ -215,7 +212,6 @@ function _update60()
 				key = stat(31)
 			end
 			_interrupt(key)
-			-- draw_cursor()
 		else
 			--I found this method of running multiple vm instructions per frame easier to regulate
 			local _count = 0
@@ -259,6 +255,7 @@ function build_dictionary(addr)
 	local word_count = abs(get_zword(addr))
 	addr += 0x.0002
 
+	log("build dictionary...")
 	for i = 1, word_count do
 		local zstring = get_zstring(addr,1)
 		local lower = ''
@@ -266,6 +263,7 @@ function build_dictionary(addr)
 			lower ..= case_setter(zstring[j], lowercase)
 		end
 		dict[lower] = (addr << 16)
+		log("  "..lower)
 		addr += entry_length
 	end
 	return dict

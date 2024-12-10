@@ -563,7 +563,7 @@ end
 --8.10 Character based output
 
 function _print_char(n)
-	-- log('_print_char '..n..': '..chr(n))
+	log('_print_char '..n..': '..chr(n))
 	if (n == 10) n = 13	
 	if (n != 0) output(chr(n))
 end
@@ -575,7 +575,7 @@ end
 
 function _print(string)
 	local zstring = get_zstring(string)
-	-- log('_print: '..zstring)
+	log('_print: '..zstring)
 	output(zstring)
 end
 
@@ -590,7 +590,7 @@ function _print_addr(baddr, is_packed)
 	local is_packed = is_packed or false
 	local zaddress = zword_to_zaddress(baddr, is_packed)
 	local zstring = get_zstring(zaddress)
-	-- log('print_addr: '..zstring)
+	log('print_addr: '..zstring)
 	output(zstring)
 end
 
@@ -599,13 +599,13 @@ function _print_paddr(saddr)
 end
 
 function _print_num(s)
-	-- log('_print_num: '..s)
+	log('_print_num: '..s)
 	output(tostr(s))
 end
 
 function _print_obj(obj)
 	local name, _ = zobject_name(obj)
-	-- log('print_obj with name: '..name)
+	log('print_obj with name: '..name)
 	output(name)
 end
 
@@ -679,7 +679,6 @@ end
 function _save_undo()
 	_result(-1)
 end
-
 --we don't support undo, so we nop return_undo (won't be called)
 
 

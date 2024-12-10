@@ -127,7 +127,7 @@ function output(str, flush_now)
 		memory(str) 
 	else
 		if (screen_output == false) return
-		-- log('   output to screen '..active_window..': '..str)
+		log('   output to screen '..active_window..': '..str)
 		local buffer = windows[active_window].buffer
 		local current_line = nil
 		if (#buffer > 0) current_line = deli(buffer)
@@ -167,8 +167,6 @@ function output(str, flush_now)
 				-- log('on split next: '..next_line)
 
 				add(buffer, current_line)
-				-- add(buffer, '')
-				-- flush_line_buffer()
 
 				visual_len = print(next_line, 0, -20)
 				current_line = next_line
