@@ -725,12 +725,7 @@ function _btrue()
 	_branch(true)
 end
 
---_tokenise  moved to io.lua
-
-function _encode_text(baddr1, n, p, baddr2)
-	log('_encode_text: In Progress')
-end
-
+--_tokenise and _encode_text moved to io.lua
 
 
 -- Overloads; functions to route calls based on zm version

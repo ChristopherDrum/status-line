@@ -328,6 +328,13 @@ function set_zword(zaddress, _zword, indirect)
 	end
 end
 
+function set_zwords(zaddress, words)
+	for word in all(words) do
+		set_zword(zaddress, word)
+		zaddress += 0x.0002
+	end
+end
+
 function zobject_attributes_byte_bit(index, attribute_id)
 	-- old_zobject_attributes(index)
 	local address = zobject_address(index)
@@ -515,7 +522,6 @@ function get_zstring(zaddress)
 end
 
 --the upper and lower are reversed for p8scii
---set them to the same if you don't like mixed case
 local zchar_tables = {
 	'     abcdefghijklmnopqrstuvwxyz', 
 	'     ABCDEFGHIJKLMNOPQRSTUVWXYZ', 
@@ -598,7 +604,6 @@ function load_instruction()
 		end
 	end
 	
-	-- An instruction consists of opcode and operands
 	-- First 1 to 3 bytes contain opcode and operand types
 	-- Subsequent bytes are the operands
 	local pc = _program_counter
@@ -612,10 +617,8 @@ function load_instruction()
 	if op_form <= 0x01 then
 		op_table_name = 'long'
 		-- The first byte of a long instruction is %0abxxxxx where
-		-- 0 == "long instruction" indicator
-		-- a == "operand type of first byte"
-		-- b == "operand type of second byte"
-		-- %xxxxx == "5 bits which indicate the 2OP opcode"
+		-- a, b == operand types of 1st and 2nd bytes
+		-- %xxxxx == can indicate a 2OP opcode
 		op_table = _long_ops
 		op_code = (op_definition & 0x1f)
 		operands[1] = get_zbyte()
@@ -629,10 +632,9 @@ function load_instruction()
 
 	elseif op_form == 0xbe and _zm_version >= 5 then
 		op_table_name = 'ext'
-		-- the first byte of an extended instruction is $BE, it is an extended instruction. 
-		-- The second byte contains the EXT opcode.
-		-- Then follow the operand types (one byte) and the operands themselves,
-		-- in the same format as for variable instructions (as op_form 0x03 below).
+		-- $BE indicates an extended instruction
+		-- Next bytes: opcode, operand types, operands.
+		-- same format as for var ops (0x03 below)
 		op_table = _ext_ops
 		op_code = get_zbyte()
 		type_information = get_zbyte()
@@ -642,7 +644,7 @@ function load_instruction()
 		op_table_name = 'short'
 		-- The first byte of a short instruction is %10ttxxxx.
 		-- %tt is the type of the operand (or %11 if absent),
-		-- %xxxx is the 1OP (0OP if operand absent) opcode
+		-- %xxxx is the 1OP (0OP if absent)
 		op_table = _short_ops
 		op_code = (op_definition & 0xf)
 		local op_type = (op_definition & 0x30) >>> 4
@@ -660,26 +662,20 @@ function load_instruction()
 		operands = {operands}
 
 	elseif op_form == 0x03 then
-		op_table_name = 'var'
 		-- The first byte of a v3 variable instruction is %11axxxxx
 		-- (two exceptions for v4+) where %xxxxx is the VAR opcode.
-		-- If %a is %1 its a VAR opcode (if %0, a 2OP opcode)
-		-- The second byte contains type info for the operands.
-		-- It is divided into pairs of bits, 
-		-- each indicating the operand type, beginning with top bits.
-		-- Subsequent bytes contain the operands in that order.
+		-- %a : %0 == 2OP, %1 == VAR
+		-- Byte 2 holds type info for operands.
+		-- Each pair of bits indicates operand type; operand bytes follow.
 		-- A %11 pair means ‘no operand’
 
-		op_table = _var_ops
-		if (op_definition & 0x20 == 0) then
-			op_table_name = '2OP'
-			op_table = _long_ops
-		end
+		op_table = (op_definition & 0x20 == 0) and _long_ops or _var_ops
 		op_code = (op_definition & 0x1f)
+		op_table_name = (op_table == _var_ops) and 'var' or '2OP'
 
 		local type_information, num_bytes
 		if ((_zm_version > 3) and (op_definition == 0xec or op_definition == 0xfa)) then
-			log('double var')
+			op_table_name = 'doublevar'
 			type_information, num_bytes = get_zword(), 8
 		else
 			type_information, num_bytes = get_zbyte(), 4
@@ -687,11 +683,11 @@ function load_instruction()
 		extract_operands(type_information, num_bytes)
 		if ((op_table == _long_ops) and (#operands == 1) and (op_code > 1)) get_zbyte()
 	end
-	local op_string = ''
-	for i = 1, #operands do
-		op_string ..= tohex(operands[i])..', '
-	end
-	log(sub(tohex(pc),8)..": "..op_table_name..(op_code+1)..'('..op_string..')')
+	-- local op_string = ''
+	-- for i = 1, #operands do
+	-- 	op_string ..= tohex(operands[i])..', '
+	-- end
+	-- log(sub(tohex(pc),8)..": "..op_table_name..(op_code+1)..'('..op_string..')')
 	local func = op_table[op_code+1]
 	return func, operands
 end
@@ -736,14 +732,12 @@ function capture_state(state)
 			memory_dump ..= dword_to_str(frame.call)
 			memory_dump ..= dword_to_str(frame.args)
 			-- log("saving frame"..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args))
-			--save local stack size and values
 			memory_dump ..= dword_to_str(#frame.stack)
 			-- log("---frame stack---")
 			for j = 1, #frame.stack do
 				memory_dump ..= dword_to_str(frame.stack[j])
 				-- log("  "..j..': '..tohex(frame.stack[j])..' -> '..dword_to_str(frame.stack[j]))
 			end
-			--save local vars (always 16)
 			-- log("---frame vars---")
 			for k = 1, 16 do
 				memory_dump ..= dword_to_str(frame.vars[k])

@@ -1,3 +1,20 @@
+zchar_map_str = [[
+	00, 00, 00, 00, 05, 00, 00, 00, 00, 07,
+    00, 00, 00, 00, 00, 00, 00, 00, 00, 00,
+    00, 00, 00, 00, 00, 00, 00, 00, 00, 00,
+    00, 32, 20, 25, 23, 00, 00, 00, 24, 30,
+    31, 00, 00, 19, 28, 18, 26, 00, 01, 02,
+    03, 04, 05, 06, 07, 08, 09, 29, 00, 00,
+    00, 00, 21, 00, 06, 07, 08, 09, 10, 11,
+    12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+    22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+    00, 27, 00, 00, 22, 00, 06, 07, 08, 09,
+    10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+    20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+    30, 31
+]]
+zchar_map = split(zchar_map_str)
+
 function reset_io_state()
 	current_bg, current_fg, current_font = 0, 15, 1
 	
@@ -52,8 +69,7 @@ end
 function _set_text_style(n)
 	-- log("_set_text_style to: "..n)
 	local inverse, emphasis = '\^-i\^-b', '\015'
-	make_bold = (n&2 == 2)
-	make_inverse = (n&1 == 1)
+	make_bold, make_inverse = (n&2 == 2), (n&1 == 1)
 
 	if (make_inverse == true) inverse = '\^i'
 	if (n > 1) emphasis = '\014'
@@ -316,7 +332,41 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 end
 
 function _encode_text(baddr1, n, p, baddr2)
+	log("_encode_text: "..tohex(baddr1)..', '..n..', '..p)
+	if (not baddr2) return --we don't use this function ourselves
 
+	local zwords, word, count = {}, 0, 1
+
+	local function commit(v)
+		word = (word << 5) | v
+		if count % 3 == 0 then
+			add(zwords, word)
+			word = 0
+		end
+		count += 1
+	end
+
+	local input_addr = zword_to_zaddress(baddr1 + p)
+	local bytes = get_zbytes(input_addr, n)
+	local max_words = (_zm_version < 4) and 2 or 3
+
+	for i = 1, max_words*3 do
+		local o = ord(str[i]) or 5
+		if mid(65, o, 90) == o then 
+			commit(4)
+		elseif o == 10 or
+				mid(48, o, 57) == o or
+				in_set(str[i], punc) then
+			commit(5)
+		end
+		commit(zchar_map[o])
+
+		if (#zwords >= max_words) break
+	end
+	zwords[#zwords] |= 0x8000 -- set bit flag for end of zstring
+	local out_addr = zword_to_zaddress(baddr2)
+	set_zwords(baddr2, zwords)
+	
 end
 
 
@@ -348,8 +398,8 @@ end
 function process_input_char(real, visible, max_length)
 	if real == '\b' then
 		if #current_input > 0 then
-			current_input = sub(current_input, 1, #current_input - 1)
-			visible_input = sub(visible_input, 1, #visible_input - 1)
+			current_input = sub(current_input, 1, -2)
+			visible_input = sub(visible_input, 1, -2)
 		end
 	elseif real != '' then
 		if #current_input < max_length then
@@ -380,7 +430,7 @@ function capture_input(char)
 			if (#w > 0) stripped ..= (#stripped == 0 and '' or ' ')..w
 		end
 		current_input = stripped
-r
+
 		--fill text buffer
 		local bytes = pack(ord(current_input, 1, #current_input))
 
