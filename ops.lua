@@ -45,29 +45,30 @@ function _store(var, a)
 	_result(a, var, true)
 end
 
-function _offset(n, amt)
+function addr_offset(baddr, n, amt)
+	local addr = zword_to_zaddress(baddr)
 	local offset = (abs(n)>>>amt)
 	if (n < 0) offset = -offset
-	return offset
+	return addr + offset
 end
 
 function _loadw(baddr, n)
-	baddr = zword_to_zaddress(baddr) + _offset(n,15)
+	baddr = addr_offset(baddr, n, 15)
 	_result(get_zword(baddr))
 end
 
 function _storew(baddr, n, zword)
-	baddr = zword_to_zaddress(baddr) + _offset(n,15)
+	baddr = addr_offset(baddr, n, 15)
 	set_zword(baddr, zword)
 end
 
 function _loadb(baddr, n)
-	baddr = zword_to_zaddress(baddr) + _offset(n,16)
+	baddr = addr_offset(baddr, n, 16)
 	_result(get_zbyte(baddr))
 end
 
 function _storeb(baddr, n, zbyte)
-	baddr = zword_to_zaddress(baddr) + _offset(n,16)
+	baddr = addr_offset(baddr, n, 16)
 	set_zbyte(baddr, zbyte)
 end
 
@@ -635,7 +636,7 @@ function _erase_window(win)
 	if win >= 0 then
 		local a,b,c,d = unpack(windows[win].screen_rect)
 		rectfill(a,b,c,d,current_bg)
-
+		if (_zm_version >= 5) _set_cursor(1,1)
 	else
 		cls(current_bg)
 		_split_screen(0)

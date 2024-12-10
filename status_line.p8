@@ -10,8 +10,7 @@ _program_counter = 0x0
 _interrupt = nil
 
 checksum = 0x0
-story_loaded = false
-full_color = false
+story_loaded, full_color = false, false
 
 punc = '.,!?_#\'"/\\-:()'
 blank_line = '                                '
@@ -257,7 +256,7 @@ function build_dictionary(addr)
 	local entry_length = (get_zbyte(addr) >>> 16)
 	addr += 0x.0001
 
-	local word_count = get_zword(addr)
+	local word_count = abs(get_zword(addr))
 	addr += 0x.0002
 
 	for i = 1, word_count do
@@ -296,7 +295,7 @@ function process_header()
 
 	else
 		_zm_screen_height = 21
-		_zm_packed_shift = 2
+		_zm_packed_shift = (_zm_version < 8) and 2 or 3
 		_zm_object_property_count = 63
 		_zm_object_entry_size = 0x.000e
 		_zm_dictionary_word_size = 9
@@ -352,6 +351,7 @@ function initialize_game()
 
 	call_stack_push()
 	top_frame().pc = _program_counter
+	top_frame().args = 0
 
 	if (_memory_start_state == nil) capture_state(_memory_start_state)
 	_split_screen(0)
