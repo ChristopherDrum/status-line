@@ -353,6 +353,7 @@ function zobject_has_attribute(index, attribute_id)
 end
 
 function zobject_set_attribute(index, attribute_id, val)
+	if ((index < 1) or (attribute_id > 31) or (val > 1)) return
 	-- log('zobject_set_attribute object: '..index..', set attr '..attribute_id..' to: '..val)
 	-- assert(val <= 1, 'can only set binary value on attributes,'..index..','..attribute_id..','..val)
 	local attr_byte, attr_bit, address = zobject_attributes_byte_bit(index, attribute_id)
@@ -608,14 +609,14 @@ function load_instruction()
 	-- Subsequent bytes are the operands
 	local pc = _program_counter
 	local op_definition = get_zbyte()
-	log(' op_definition: '..tohex(op_definition))
+	-- log(' op_definition: '..tohex(op_definition))
 	op_form = (op_definition >>> 6)
 	if (op_definition == 0xbe) op_form = 0xbe
 	op_form &= 0xff
 
-	local op_table_name
+	-- local op_table_name
 	if op_form <= 0x01 then
-		op_table_name = 'long'
+		-- op_table_name = 'long'
 		-- The first byte of a long instruction is %0abxxxxx where
 		-- a, b == operand types of 1st and 2nd bytes
 		-- %xxxxx == can indicate a 2OP opcode
@@ -631,7 +632,7 @@ function load_instruction()
 		end
 
 	elseif op_form == 0xbe and _zm_version >= 5 then
-		op_table_name = 'ext'
+		-- op_table_name = 'ext'
 		-- $BE indicates an extended instruction
 		-- Next bytes: opcode, operand types, operands.
 		-- same format as for var ops (0x03 below)
@@ -641,7 +642,7 @@ function load_instruction()
 		extract_operands(type_information,4)
 
 	elseif op_form == 0x02 then
-		op_table_name = 'short'
+		-- op_table_name = 'short'
 		-- The first byte of a short instruction is %10ttxxxx.
 		-- %tt is the type of the operand (or %11 if absent),
 		-- %xxxx is the 1OP (0OP if absent)
@@ -655,7 +656,7 @@ function load_instruction()
 		elseif op_type == 2 then
 			operands = get_var()
 		elseif op_type == 3 then
-			op_table_name = 'zero'
+			-- op_table_name = 'zero'
 			op_table = _zero_ops
 			operands = nil
 		end
@@ -665,17 +666,16 @@ function load_instruction()
 		-- The first byte of a v3 variable instruction is %11axxxxx
 		-- (two exceptions for v4+) where %xxxxx is the VAR opcode.
 		-- %a : %0 == 2OP, %1 == VAR
-		-- Byte 2 holds type info for operands.
-		-- Each pair of bits indicates operand type; operand bytes follow.
+		-- Byte 2 holds operand type info by "bit pairs"
 		-- A %11 pair means ‘no operand’
 
 		op_table = (op_definition & 0x20 == 0) and _long_ops or _var_ops
 		op_code = (op_definition & 0x1f)
-		op_table_name = (op_table == _var_ops) and 'var' or '2OP'
+		-- op_table_name = (op_table == _var_ops) and 'var' or '2OP'
 
 		local type_information, num_bytes
 		if ((_zm_version > 3) and (op_definition == 0xec or op_definition == 0xfa)) then
-			op_table_name = 'doublevar'
+			-- op_table_name = 'doublevar'
 			type_information, num_bytes = get_zword(), 8
 		else
 			type_information, num_bytes = get_zbyte(), 4

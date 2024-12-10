@@ -1,7 +1,7 @@
 --follows zmach06e.pdf
---<result> call _result(some value)
---<branch> call _branch(true/false)
-
+--<result> == _result(some value)
+--<branch> == _branch(true/false)
+--<return> == _ret(value)
 --alias for for clarity in result handling
 _result = set_var
 
@@ -38,7 +38,6 @@ end
 --8.2 Reading and writing memory
 
 function _load(var)
-	--log('load: '..var)
 	_result(get_var(var,true))
 end
 
@@ -72,8 +71,7 @@ function _storeb(baddr, n, zbyte)
 	set_zbyte(baddr, zbyte)
 end
 
--- _push(a) and _pop() ops are substituted with 
--- stack_push and stack_pop, defined in memory.lua
+-- _push(a) and _pop() are _stack_push and _stack_pop in memory.lua
 
 function _pull(var)
 	local a = stack_pop()
@@ -104,7 +102,6 @@ end
 
 function _copy_table(baddr1, baddr2, s)
 	-- log('_copy_table from: '..tohex(baddr1)..' to: '..tohex(baddr2)..','..s..' bytes')
-
 	local from = zword_to_zaddress(baddr1)
 	if baddr2 == 0 then
 		for i = 0, s-1 do
@@ -226,12 +223,10 @@ function _jin(obj, n)
 end
 
 function _test(a, b)
-	--log('test:('..a..'&'..b..') == '..b..'?')
 	_branch((a & b) == b)
 end
 
 function _jump(s)
-	--log('jump: '..tohex(s))
 	_program_counter += ((s - 2) >> 16) --keep the sign
 end
 
@@ -307,7 +302,6 @@ function _rfalse()
 end
 
 function _ret_pulled()
-	--log('_ret_pulled: ')
 	_ret(stack_pop())
 end
 
@@ -386,32 +380,26 @@ function _insert_obj(obj1, obj2)
 end	
 
 function _test_attr(obj, attr)
-	--log('test_attr: '..tohex(obj)..','..tohex(attr))
 	_branch(zobject_has_attribute(obj, attr))
 end
 
 function _set_attr(obj, attr)
-	--log('set_attr: '..tohex(obj)..','..tohex(attr))
 	zobject_set_attribute(obj, attr, 1)
 end
 
 function _clear_attr(obj, attr)
-	--log('clear_attr: '..tohex(obj)..','..tohex(attr))
 	zobject_set_attribute(obj, attr, 0)
 end
 
 function _put_prop(obj, prop, a)
-	--log('put_prop: '..obj..','..prop..','..tohex(a))
 	zobject_set_prop(obj, prop, a)
 end
 
 function _get_prop(obj, prop)
-	--log('get_prop: '..obj..','..prop)
 	_result(zobject_get_prop(obj, prop))
 end
 
 function _get_prop_addr(obj, prop)
-	--log('get_prop_addr: '..obj..','..prop)
 	_result(zobject_prop_data_addr_or_prop_list(obj, prop) << 16)
 end
 
@@ -477,7 +465,7 @@ function _set_window(win)
 end
 
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
---autosplitting on z4 Nord & Bert reveals a status line bug in the game (!)
+--autosplitting on z4 Nord & Bert revealed a status line bug in the game (!)
 function _set_cursor(lin, col)
 	--log('_set_zcursor to line '..lin..', col '..col)
 	flush_line_buffer()
@@ -508,7 +496,7 @@ end
 --_set_text_style defined in io.lua
 
 function _set_font(n)
-	-- log('_set_font: '..n)
+	log('_set_font: '..n)
 	_result(0)
 end
 
@@ -523,8 +511,8 @@ function _output_stream(n, baddr)
 
 	elseif abs(n) == 2 then
 		local p_flag = get_zbyte(_peripherals_header_addr)
-		if (n > 0) p_flag |= 0x01 --turn on transcription
-		if (n < 0) p_flag &= 0xfe --turn off transcription
+		if (n > 0) p_flag |= 0x01 --transcription on
+		if (n < 0) p_flag &= 0xfe --off
 		set_zbyte(_peripherals_header_addr, p_flag)
 
 	else
@@ -538,13 +526,13 @@ function _output_stream(n, baddr)
 end
 
 function _input_stream(n)
-	log('_input_stream '..n..'requested?!')
+	output('_input_stream '..n..'requested?!')
 end
 
 
 
 --8.9 Input
-	--timer not yet implemented; disabled in header flags at startup
+	--timer disabled in header flags at startup
 
 function _read(baddr1, baddr2, time, raddr)
 	if (not _interrupt) then

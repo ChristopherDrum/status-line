@@ -280,7 +280,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 	--this is redundant work for a direct pipeline
 	local j = 1
 	while true do
-		if (j == num_bytes) break
+		if (j > num_bytes) break
 		local c = get_zbyte(addr)
 		if (_zm_version < 5 and c == 0) break
 		str ..= chr(c)
