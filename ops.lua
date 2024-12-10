@@ -46,10 +46,15 @@ function _store(var, a)
 end
 
 function addr_offset(baddr, n, amt)
+	log("addr_offset: "..tohex(baddr)..','..n..','..amt)
 	local addr = zword_to_zaddress(baddr)
+	log("   addr : "..tohex(addr))
 	local offset = (abs(n)>>>amt)
+	log("   offset : "..)
 	if (n < 0) offset = -offset
-	return addr + offset
+	addr += offset
+	log("   + offset: "..tohex(addr))
+	return addr
 end
 
 function _loadw(baddr, n)
@@ -63,6 +68,7 @@ function _storew(baddr, n, zword)
 end
 
 function _loadb(baddr, n)
+	log("_loadb ")
 	baddr = addr_offset(baddr, n, 16)
 	_result(get_zbyte(baddr))
 end
