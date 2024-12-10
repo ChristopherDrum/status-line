@@ -86,21 +86,7 @@ function update_p_cursor()
 	py += (cy - 1)*6 + 1
 	if (_zm_version == 3) py -= 1
 	win.p_cursor = {px, py}
-	return px, py
 end
-
---remove extraneous white space from player input
-function strip(str)
-	local words = split(str, ' ', false)
-	local stripped = ''
-	for i = 1, #words do
-		local w = words[i]
-		if (w != '') stripped ..= w..' '
-	end
-	if (stripped[-1] == ' ') stripped = sub(stripped, 1, -2)
-	return stripped
-end
-
 
 function memory(str)
 	-- log('==> memory at level: '..#memory_output)
@@ -388,9 +374,13 @@ function capture_input(char)
 	-- log('current input: '..current_input)
 	if char == '\r' then
 
-		--normalize the current input
-		current_input = strip(current_input)
-
+		--strip whitespace; was external function but only used here
+		local words, stripped = split(current_input, ' ', false), ''
+		for w in all(words) do
+			if (#w > 0) stripped ..= (#stripped == 0 and '' or ' ')..w
+		end
+		current_input = stripped
+r
 		--fill text buffer
 		local bytes = pack(ord(current_input, 1, #current_input))
 
