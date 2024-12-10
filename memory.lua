@@ -144,9 +144,10 @@ function decode_var_address(var_byte)
 end
 
 function zword_to_zaddress(zaddress, is_packed)
-	local shift = 16
-	if (is_packed) shift -= _zm_packed_shift
-	return (zaddress >>> shift)
+	zaddress >>>= 16
+	if (is_packed) zaddress <<= _zm_packed_shift
+	log("zword_to_zaddress returning: "..tohex(zaddress))
+	return zaddress
 end
 
 function zaddress_at_zaddress(zaddress, is_packed)
@@ -687,7 +688,7 @@ function load_instruction()
 	for i = 1, #operands do
 		op_string ..= tohex(operands[i])..', '
 	end
-	log(sub(tohex(pc),8)..": "..op_table_name..(op_code+1)..'('..op_string..')')
+	log(sub(tohex(pc),6)..": "..op_table_name..(op_code+1)..'('..op_string..')')
 	local func = op_table[op_code+1]
 	return func, operands
 end

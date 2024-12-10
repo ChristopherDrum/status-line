@@ -46,10 +46,14 @@ function _store(var, a)
 end
 
 function addr_offset(baddr, n, amt)
+	-- log("addr_offset: "..tohex(baddr)..", "..tohex(n)..", "..amt)
 	local addr = zword_to_zaddress(baddr)
+	-- log("  addr: "..tohex(addr))
 	local offset = (abs(n)>>>amt)
 	if (n < 0) offset = -offset
-	return addr + offset
+	local temp = addr + offset
+	if (temp < 0) temp = addr - offset
+	return temp
 end
 
 function _loadw(baddr, n)
