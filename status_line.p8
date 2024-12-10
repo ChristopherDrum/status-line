@@ -219,7 +219,7 @@ function _update60()
 		else
 			--I found this method of running multiple vm instructions per frame easier to regulate
 			local _count = 0
-			local max_instruction = 50
+			local max_instruction = 150
 			while _count < max_instruction and 
 					_interrupt == nil and
 					story_loaded == true do
