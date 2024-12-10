@@ -441,7 +441,7 @@ end
 --8.7 Windows
 
 function _split_screen(lines)
-	--log('split_window called: '..lines)
+	log('split_window called: '..lines)
 	flush_line_buffer(0)
 	local win0, win1 = windows[0], windows[1]
 	local cur_y_offset = max(0, win0.h - win0.z_cursor.y)
@@ -463,7 +463,7 @@ function _split_screen(lines)
 end
 
 function _set_window(win)
-	--log('set_window: '..win)
+	log('set_window: '..win)
 	flush_line_buffer()
 	active_window = win
 	if (win == 1) _set_cursor(1,1)
@@ -472,7 +472,7 @@ end
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
 --autosplitting on z4 Nord & Bert revealed a status line bug in the game (!)
 function _set_cursor(lin, col)
-	--log('_set_zcursor to line '..lin..', col '..col)
+	log('_set_zcursor to line '..lin..', col '..col)
 	flush_line_buffer()
 	if ((_zm_version > 4) and (lin > windows[1].h)) _split_screen(lin)
 	windows[1].z_cursor = {x=col, y=lin}
@@ -480,7 +480,7 @@ function _set_cursor(lin, col)
 end
 
 function _get_cursor(baddr)
-	--log('_get_cursor called')
+	log('_get_cursor called')
 	baddr = zword_to_zaddress(baddr)
 	local zc = windows[active_window].z_cursor
 	set_zword(baddr, zc.y)
@@ -573,8 +573,8 @@ function _print_char(n)
 end
 
 function _new_line()
-	-- log('new_line')
-	_print_char(10)
+	log('new_line')
+	output('\n')
 end
 
 function _print(string)
@@ -631,12 +631,12 @@ end
 --8.11 Miscellaneous screen output
 
 function _erase_line(val)
-	--log('erase_line: '..val)
+	log('erase_line: '..val)
 	if (val == 1) screen("\^i"..current_color_string()..blank_line)
 end
 
 function _erase_window(win)
-	--log('erase_window: '..win)
+	log('erase_window: '..win)
 	if win >= 0 then
 		local a,b,c,d = unpack(windows[win].screen_rect)
 		rectfill(a,b,c,d,current_bg)
