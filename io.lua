@@ -109,19 +109,9 @@ function memory(str)
 	-- log('  memory asked to record '..#str..' zscii chars')
 	local table_len = get_zword(table_addr)
 	-- log('  current table len '..table_len)
-	local zscii = p8scii_to_zscii(str)
-	set_zbytes(table_addr + 0x.0002 + (table_len>>>16), zscii)
-	set_zword(table_addr, table_len + #zscii)
-end
-
-function p8scii_to_zscii(str)
-	local zscii = {}
-	for i = 1, #str do
-		local o = ord(str,i)
-		-- if (o == 13) o = 10
-		add(zscii, o)
-	end
-	return zscii
+	local p8bytes = pack(ord(str,1,#str))
+	set_zbytes(table_addr + 0x.0002 + (table_len>>>16), p8bytes)
+	set_zword(table_addr, table_len + #p8bytes)
 end
 
 function output(str, flush_now)

@@ -517,13 +517,12 @@ function get_zstring(zaddress)
 	return zscii_to_p8scii(zchars)
 end
 
---the u(pper) and l(ower) are reversed for p8scii
+--the upper and lower are reversed for p8scii
 --set them to the same if you don't like mixed case
-local l_zchars = '     abcdefghijklmnopqrstuvwxyz'
-local u_zchars = '     ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-local p_zchars = '      \n0123456789'..punc
-local zchar_tables = {l_zchars, u_zchars, p_zchars}
-
+local zchar_tables = {
+	'     abcdefghijklmnopqrstuvwxyz', 
+	'     ABCDEFGHIJKLMNOPQRSTUVWXYZ', 
+	'      \n0123456789'..punc}
 local zscii, zscii_decode, abbr_code = nil, false, nil
 
 function zscii_to_p8scii(zchars)
