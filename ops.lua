@@ -52,7 +52,10 @@ function addr_offset(baddr, n, amt)
 	local offset = (abs(n)>>>amt)
 	if (n < 0) offset = -offset
 	local temp = addr + offset
-	if (temp < 0) temp = addr - offset
+	--Dynamic memory can be read or written to
+	--...using loadb, loadw, storeb and storew
+	--so if we exceed those boundaries, reverse the offset
+	if (temp < 0 or temp > 0x.ffff) temp = addr - offset
 	return temp
 end
 

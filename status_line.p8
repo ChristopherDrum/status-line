@@ -79,7 +79,7 @@ function tohex(value, full)
 end
 
 function log(str)
-	printh(str, 'status_line_log_30')
+	-- printh(str, 'status_line_log_30')
 end
 
 function wait_for_any_key()

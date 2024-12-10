@@ -273,7 +273,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 	local parse_buffer = zword_to_zaddress(baddr2)
 
 	local addr = text_buffer + 0x.0001
-	local num_bytes = nil
+	local num_bytes = 256
 	if _zm_version >= 5 then
 		num_bytes = get_zbyte(addr)
 		addr += 0x.0001
