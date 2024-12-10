@@ -608,7 +608,9 @@ function _print_obj(obj)
 	output(name)
 end
 
-function _print_table(baddr, x, y, n)
+function _print_table(baddr, x, _y, _n)
+	local n = _n or 0
+	local y = _y or 1
 	local za = zword_to_zaddress(baddr)
 	for i = 1, y do
 		for j = 0, x+n-1 do
