@@ -558,7 +558,7 @@ function _read(baddr1, baddr2, time, raddr)
 
 	else
 		z_text_buffer, z_parse_buffer, _interrupt = nil, nil, nil
-		if (_zm_version > 4) _result(13) --'\r' in zscii
+		if (_zm_version > 4) _result(baddr1) --receives 13 (or something else?) from _read
 	end
 end
 

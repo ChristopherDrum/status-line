@@ -69,10 +69,8 @@ function flush_volatile_state()
 	_program_counter = 0x0
 	_interrupt = nil
 	_current_state = ''
-	active_table = 1
 	max_input_length = 0
-	separators = {}
-	_main_dict = {}
+	separators, _main_dict = {}, {}
 	story_loaded = false
 end
 
@@ -513,7 +511,6 @@ function get_zstring(zaddress)
 		if (zaddress) zaddress += 0x.0002
 		end_found = ((zword & 0x8000) == 0x8000)
 	end
-	active_table = 1
 	return zscii_to_p8scii(zchars)
 end
 
@@ -526,7 +523,7 @@ local zchar_tables = {
 local zscii, zscii_decode, abbr_code = nil, false, nil
 
 function zscii_to_p8scii(zchars)
-	local zstring = ''
+	local zstring, active_table = '', 1
 	for i = 1, #zchars do
 		local zchar = zchars[i]
 		if zscii_decode == true then

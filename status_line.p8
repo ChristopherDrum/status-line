@@ -302,7 +302,7 @@ function process_header()
 		_zm_dictionary_word_size = 9
 
 		set_zbyte(_interpreter_number_header_addr, 6) --ibm pc
-		set_zbyte(_interpreter_version_header_addr, ord('P'))		
+		set_zbyte(_interpreter_version_header_addr, 112) --"P"		
 		set_zbyte(_screen_height_header_addr, _zm_screen_height)
 		set_zbyte(_screen_width_header_addr, 32)
 		
@@ -326,7 +326,6 @@ function process_header()
 	set_zword(_standard_revision_num_addr, 0x0100) --1.0 spec adherance
 
 	_program_counter 		= zaddress_at_zaddress(_program_counter_header_addr)
-	-- _paged_memory_mem_addr 	= zaddress_at_zaddress(_paged_memory_header_addr)
 	_dictionary_mem_addr 	= zaddress_at_zaddress(_dictionary_header_addr)
 	_object_table_mem_addr 	= zaddress_at_zaddress(_object_table_header_addr)
 	_global_var_table_mem_addr = zaddress_at_zaddress(_global_var_table_header_addr)
@@ -334,11 +333,11 @@ function process_header()
 	_static_memory_mem_addr = zaddress_at_zaddress(_static_memory_header_addr)
 
 	checksum = get_zword(_file_checksum_header_addr)
-end
 
-function patch()
+	--patches for specific games; just saving tokens by putting it here :/
 	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
 	if (checksum == 0x4860 or checksum == 0xfc65) set_zbyte(_screen_width_header_addr, 40) --amfv, bur
+
 end
 
 function initialize_game()
@@ -350,8 +349,6 @@ function initialize_game()
 	process_header()
 	fetch_parser_separators()
 	_main_dict = build_dictionary(_dictionary_mem_addr)
-
-	patch()
 
 	call_stack_push()
 	top_frame().pc = _program_counter

@@ -392,11 +392,7 @@ function capture_input(char)
 		current_input = strip(current_input)
 
 		--fill text buffer
-		local bytes = {}
-		for i = 1, #current_input do
-			local char = current_input[i]
-			add(bytes, ord(char))
-		end
+		local bytes = pack(ord(current_input, 1, #current_input))
 
 		local text_buffer = zword_to_zaddress(z_text_buffer)
 		local addr = text_buffer + 0x.0001
@@ -413,7 +409,7 @@ function capture_input(char)
 		if (z_parse_buffer) _tokenise(z_text_buffer, z_parse_buffer)
 
 		current_input, visible_input = '', ''
-		_read()
+		_read(13)
 
 	else
 		process_input_char(case_setter(char, lowercase), char, max_input_length)
@@ -447,10 +443,8 @@ function save_game(char)
 		_save(s)
 
 	else
-		char = case_setter(char, lowercase)
-		process_input_char(char, char, 30)
+		process_input_char(case_setter(char, lowercase), char, 30)
 	end
-
 end
 
 function restore_game()
