@@ -612,6 +612,7 @@ function load_instruction()
 	-- First 1 to 3 bytes contain opcode and operand types
 	-- Subsequent bytes are the operands
 	local pc = _program_counter
+	log('[mem]')
 	local op_definition = get_zbyte()
 	log('[mem] op_definition: '..tohex(op_definition))
 	op_form = (op_definition >>> 6)
@@ -680,7 +681,7 @@ function load_instruction()
 	for i = 1, #operands do
 		op_string ..= tohex(operands[i])..', '
 	end
-	log("[mem] "..sub(tohex(pc),6)..": "..op_table_name..(op_code+1)..'('..op_string..')')
+	log("[ops] "..sub(tohex(pc),6)..": "..op_table_name..(op_code+1)..'('..op_string..')')
 	local func = op_table[op_code+1]
 	return func, operands
 end

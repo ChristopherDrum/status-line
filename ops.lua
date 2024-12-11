@@ -50,7 +50,7 @@ function addr_offset(baddr, n, amt)
 	local addr = zword_to_zaddress(baddr)
 	log("   addr : "..tohex(addr))
 	local offset = (abs(n)>>>amt)
-	log("   offset : "..)
+	log("   offset : "..tohex(offset))
 	if (n < 0) offset = -offset
 	local temp = addr + offset
 	--"Dynamic memory can be read or written to
