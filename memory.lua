@@ -199,23 +199,23 @@ end
 --and the result may transition from 2- to 3-byte address
 function get_zbyte(zaddress)
 	if not zaddress then
-	log('_________________get_zbyte from PC: '..tohex(_program_counter))
+	-- log('_________________get_zbyte from PC: '..tohex(_program_counter))
 		zaddress = _program_counter
 		_program_counter += 0x.0001
-	log('                       now: '..tohex(_program_counter))
+	-- log('                       now: '..tohex(_program_counter))
 	end
 	local base = (zaddress & 0xffff)
 	local dword, _, _, cell  = get_dword(zaddress)
 
 	if base < 0xa then
-		log("get_zbyte at normal memory array: "..tohex(zaddress))
+		-- log("get_zbyte at normal memory array: "..tohex(zaddress))
 		if cell < 2 then
 			dword >>>= (8 - (8*cell))
 		else
 			dword <<= (2 << cell)
 		end
 	elseif base == _local_var_table_mem_addr then
-		log("get_zbyte at local var table: "..tohex(zaddress))
+		-- log("get_zbyte at local var table: "..tohex(zaddress))
 		if (zaddress & 0x.000f > 0) dword <<= 16
 	end
 

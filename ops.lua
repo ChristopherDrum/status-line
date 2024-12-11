@@ -30,7 +30,7 @@ function _branch(should_branch)
 			_ret(offset)
 		else 
 			offset >>= 16 --keep the sign!
-			_program_counter += (offset - (2>>>16))
+			_program_counter += (offset - 0x.0002)
 		end
 	end
 end
@@ -46,11 +46,9 @@ function _store(var, a)
 end
 
 function addr_offset(baddr, n, amt)
-	-- log("addr_offset: "..tohex(baddr)..", "..tohex(n)..", "..amt)
+	log("[ops] addr_offset: "..tohex(baddr)..", "..tohex(n)..", "..tostr(amt))
 	local addr = zword_to_zaddress(baddr)
-	log("   addr : "..tohex(addr))
 	local offset = (abs(n)>>>amt)
-	log("   offset : "..tohex(offset))
 	if (n < 0) offset = -offset
 	local temp = addr + offset
 	--"Dynamic memory can be read or written to
@@ -71,7 +69,6 @@ function _storew(baddr, n, zword)
 end
 
 function _loadb(baddr, n)
-	log("_loadb ")
 	baddr = addr_offset(baddr, n, 16)
 	_result(get_zbyte(baddr))
 end
@@ -316,6 +313,7 @@ function _ret_pulled()
 end
 
 function _check_arg_count(n)
+	-- log("[ops] _check_arg_count: "..tostr(n)..' vs. frame #'..#_call_stack..", "..tostr(top_frame().args))
 	_branch(top_frame().args >= n)
 end
 
