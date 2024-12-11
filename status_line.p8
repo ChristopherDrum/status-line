@@ -73,7 +73,7 @@ end
 
 function tohex(value, full)
 	if (value == nil) return '(no_value)'
-	local hex = tostr(value, true)
+	local hex = tostr(value, 3)
 	if (full == false) hex = sub(hex, 3, 6)
 	return hex
 end

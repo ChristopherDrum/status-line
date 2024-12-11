@@ -87,7 +87,7 @@ end
 
 
 function _scan_table(a, baddr, n, byte) --<result> <branch>
-	-- log('scan_table: '..tohex(a)..','..tohex(baddr)..','..n..','..tohex(byte))
+	-- log('[ops] scan_table: '..tohex(a)..','..tohex(baddr)..','..n..','..tohex(byte))
 	local base_addr = zword_to_zaddress(baddr)
 	local byte = byte or 0x82
 	local getter = ((byte & 0x80) == 0x80) and get_zword or get_zbyte
@@ -108,7 +108,7 @@ function _scan_table(a, baddr, n, byte) --<result> <branch>
 end
 
 function _copy_table(baddr1, baddr2, s)
-	-- log('_copy_table from: '..tohex(baddr1)..' to: '..tohex(baddr2)..','..s..' bytes')
+	-- log('[ops] _copy_table from: '..tohex(baddr1)..' to: '..tohex(baddr2)..','..s..' bytes')
 	local from = zword_to_zaddress(baddr1)
 	if baddr2 == 0 then
 		for i = 0, s-1 do
@@ -224,7 +224,7 @@ end
 
 function _jin(obj, n)
 	local parent = zobject_family(obj, zparent)
-	--log('jin: '..obj..' with parent '..parent..', '..n)
+	--log('[ops] jin: '..obj..' with parent '..parent..', '..n)
 	local should_branch = ((parent == n) or (n==0 and parent == nil))
 	_branch(should_branch)
 end
@@ -284,14 +284,14 @@ function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
 		top_frame().args = n
 
 		_program_counter = top_frame().pc
-		-- log("_call "..type.."(1=f,2=p) : "..tohex(raddr).." "..var_str)
-		-- log(" --> set pc to: "..tohex(_program_counter))
+		-- log("[ops] _call "..type.."(1=f,2=p) : "..tohex(raddr).." "..var_str)
+		-- log("[ops]  --> set pc to: "..tohex(_program_counter))
 	end
 end
 
 function _ret(a)
 	local call = top_frame().call
-	-- log("_ret() with frame type: "..call)
+	-- log("[ops] _ret() with frame type: "..call)
 
 	call_stack_pop() --in all cases
 	
@@ -354,7 +354,7 @@ function _get_parent(obj)
 end
 
 function _remove_obj(obj)
-	--log('remove_obj: '..zobject_name(obj)..'('..obj..')')
+	--log('[ops] remove_obj: '..zobject_name(obj)..'('..obj..')')
 	local original_parent = zobject_family(obj, zparent)
 	if original_parent != 0 then
 
@@ -379,7 +379,7 @@ function _remove_obj(obj)
 end
 
 function _insert_obj(obj1, obj2)
-	--log('insert_obj: '..zobject_name(obj1)..'('..obj1..')'..' into '..zobject_name(obj2)..'('..obj2..')')
+	--log('[ops] insert_obj: '..zobject_name(obj1)..'('..obj1..')'..' into '..zobject_name(obj2)..'('..obj2..')')
 	_remove_obj(obj1)
 	local first_child = zobject_family(obj2, zchild)
 	zobject_set_family(obj2, zchild, obj1)
@@ -412,7 +412,7 @@ function _get_prop_addr(obj, prop)
 end
 
 function _get_next_prop(obj, prop)
-	--log('get_next_prop: '..obj)
+	--log('[ops] get_next_prop: '..obj)
 	local next_prop = 0
 	local prop_list = zobject_prop_data_addr_or_prop_list(obj)
 	if prop == 0 then 
@@ -424,12 +424,12 @@ function _get_next_prop(obj, prop)
 			end
 		end
 	end
-	--log('  next prop: '..next_prop)
+	--log('[ops]   next prop: '..next_prop)
 	_result(next_prop)
 end
 
 function _get_prop_len(baddr)
-	--log('get_prop_len: '..tohex(baddr))
+	--log('[ops] get_prop_len: '..tohex(baddr))
 	if baddr == 0 then
 		_result(0)
 	else
@@ -493,7 +493,7 @@ end
 --_buffer_mode; not sure this applies to us so _nop() for now
 
 function _set_color(byte0, byte1)
-	log('[ops] _set_color: '..tohex(byte0)..', '..tohex(byte1))
+	-- log('[ops] _set_color: '..tohex(byte0)..', '..tohex(byte1))
 	if (byte0 > 1) current_fg = byte0
 	if (byte1 > 1) current_bg = byte1
 	if (byte0 == 1) current_fg = get_zbyte(_default_fg_color_addr)
@@ -504,7 +504,7 @@ end
 --_set_text_style defined in io.lua
 
 function _set_font(n)
-	log('[ops] _set_font: '..n)
+	-- log('[ops] _set_font: '..n)
 	_result(0)
 end
 
@@ -513,7 +513,7 @@ end
 --8.8 Input and output streams
 
 function _output_stream(n, baddr)
-	-- log('output_stream: '..n..', '..tohex(baddr))
+	-- log('[ops] output_stream: '..n..', '..tohex(baddr))
 	if abs(n) == 1 then
 		screen_output = (n > 0)
 
@@ -544,7 +544,7 @@ end
 
 function _read(baddr1, baddr2, time, raddr)
 	if (not _interrupt) then
-		-- log('s/read: '..tohex(baddr1)..','..tohex(baddr2)..', time: '..tohex(time)..', '..tohex(raddr))
+		-- log('[ops] _read: '..tohex(baddr1)..','..tohex(baddr2)..', time: '..tohex(time)..', '..tohex(raddr))
 		flush_line_buffer()
 		--cache addresses for capture_input()
 		z_text_buffer = baddr1
@@ -559,7 +559,7 @@ function _read(baddr1, baddr2, time, raddr)
 end
 
 function _read_char(one, time, raddr)
-	--log('read_char: '..one..','..tohex(time)..','..tohex(raddr))
+	--log('[ops] _read_char: '..one..','..tohex(time)..','..tohex(raddr))
 	flush_line_buffer()
 	local char = wait_for_any_key()
 	_result(ord(char))
@@ -660,7 +660,7 @@ end
 --8.12 Sound, mouse, and menus
 
 function _sound_effect(number)
-	log('[ops] sound_effect: '..number)
+	-- log('[ops] sound_effect: '..number)
 	if (number == 1) print("\ac3")
 	if (number == 2) print("\ac1")
 end

@@ -71,7 +71,7 @@ function current_color_string()
 end
 
 function _set_text_style(n)
-	log("[drw] _set_text_style to: "..n)
+	-- log("[drw] _set_text_style to: "..n)
 	if (n > 0) n |= current_text_style
 	local inverse, emphasis = '\^-i\^-b', '\015'
 	make_bold, make_inverse = (n&2 == 2), (n&1 == 1)
@@ -125,7 +125,7 @@ end
 function output(str, flush_now)
 	-- log('[drw] ('..active_window..') output str: '..str)
 	if #memory_output > 0 then
-		-- log('   redirected to memory')
+		-- log('[drw]    redirected to memory')
 		memory(str) 
 	else
 		if (screen_output == false) return
@@ -144,7 +144,7 @@ function output(str, flush_now)
 		for i = 1 , #str do
 			local char = case_setter(ord(str,i), flipcase)
 
-			-- log('considering char: '..char)
+			-- log('[drw] considering char: '..char)
 			if current_format_updated == true then
 				current_line ..= current_format
 				current_format_updated = false
@@ -165,8 +165,8 @@ function output(str, flush_now)
 				local next_line, next = current_format, nil
 				current_line, next = unpack(split(current_line, break_index, false))
 				if (next) next_line ..= next 
-				-- log('on split current: '..current_line)
-				-- log('on split next: '..next_line)
+				-- log('[drw] on split current: '..current_line)
+				-- log('[drw] on split next: '..next_line)
 
 				add(buffer, current_line)
 
@@ -213,7 +213,7 @@ function flush_line_buffer()
 		screen(str)
 		::skip::
 	end
-	-- log('after flushing, buffer len is: '..#windows[active_window].buffer)
+	-- log('[drw] after flushing, buffer len is: '..#windows[active_window].buffer)
 end
 
 function screen(str)
@@ -309,7 +309,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 		end
 	end
 	commit(#str+1)
-	-- log("token count: "..#tokens)
+	-- log("[prs] token count: "..#tokens)
 	local dict = _main_dict
 	if (baddr3 != nil) dict = build_dictionary(zaddress_at_zaddress(baddr3))
 
@@ -335,7 +335,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 end
 
 function _encode_text(baddr1, n, p, baddr2)
-	log("[prs] _encode_text: "..tohex(baddr1)..', '..n..', '..p)
+	-- log("[prs] _encode_text: "..tohex(baddr1)..', '..n..', '..p)
 	if (not baddr2) return --we don't use this function ourselves
 
 	local zwords, word, count = {}, 0, 1
@@ -414,7 +414,7 @@ function process_input_char(real, visible, max_length)
 	screen(windows[active_window].last_line..sub(visible_input, -30))
 end
 
---called by read; z_text_buffer must be non-zero, other might be for strict read-only
+--called by read; z_text_buffer must be non-zero; z_parse_buffer could be nil
 function capture_input(char)
 	lines_shown = 0
 	if (not char) draw_cursor() return
@@ -464,6 +464,7 @@ function dword_to_str(dword)
 	return sub(hex,3)
 end
 
+--only for v3 games; I'd like to rework this to use far fewer tokens
 function show_status()
 
 	local obj = get_zword(global_var_addr(0))
