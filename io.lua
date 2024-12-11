@@ -76,7 +76,7 @@ function _set_text_style(n)
 	local inverse, emphasis = '\^-i\^-b', '\015'
 	make_bold, make_inverse = (n&2 == 2), (n&1 == 1)
 
-	if (make_inverse == true) inverse = '\^i'
+	if (make_inverse == true) inverse = '\^i\^-b'
 	if (n > 1) emphasis = '\014'
 	if checksum == 0xfc65 then -- Bureaucracy masterpiece
 		if (active_window == 1) and (make_bold == true) then
