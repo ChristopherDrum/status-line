@@ -618,9 +618,7 @@ function load_instruction()
 	local op_table_name
 	if op_form <= 0x01 then
 		op_table_name = 'long'
-		-- The first byte of a long instruction is %0abxxxxx where
-		-- a, b == operand types of 1st and 2nd bytes
-		-- %xxxxx == can indicate a 2OP opcode
+
 		op_table = _long_ops
 		op_code = (op_definition & 0x1f)
 		operands[1] = get_zbyte()
@@ -632,11 +630,10 @@ function load_instruction()
 			operands[2] = get_var(operands[2])
 		end
 
+	-- $BE indicates an extended instruction
 	elseif op_form == 0xbe and _zm_version >= 5 then
 		op_table_name = 'ext'
-		-- $BE indicates an extended instruction
-		-- Next bytes: opcode, operand types, operands.
-		-- same format as for var ops (0x03 below)
+
 		op_table = _ext_ops
 		op_code = get_zbyte()
 		type_information = get_zbyte()
@@ -644,9 +641,7 @@ function load_instruction()
 
 	elseif op_form == 0x02 then
 		op_table_name = 'short'
-		-- The first byte of a short instruction is %10ttxxxx.
-		-- %tt is the type of the operand (or %11 if absent),
-		-- %xxxx is the 1OP (0OP if absent)
+
 		op_table = _short_ops
 		op_code = (op_definition & 0xf)
 		local op_type = (op_definition & 0x30) >>> 4
@@ -664,12 +659,6 @@ function load_instruction()
 		operands = {operands}
 
 	elseif op_form == 0x03 then
-		-- The first byte of a v3 variable instruction is %11axxxxx
-		-- (two exceptions for v4+) where %xxxxx is the VAR opcode.
-		-- %a : %0 == 2OP, %1 == VAR
-		-- Byte 2 holds operand type info by "bit pairs"
-		-- A %11 pair means ‘no operand’
-
 		op_table = (op_definition & 0x20 == 0) and _long_ops or _var_ops
 		op_code = (op_definition & 0x1f)
 		op_table_name = (op_table == _var_ops) and 'var' or '2OP'
@@ -714,8 +703,7 @@ function capture_mem_state(state)
 		-- log('[mem] saving memory up to bank: '..mem_max_bank..', index: '..mem_max_index)
 		memory_dump ..= dword_to_str(mem_max_index)
 		for i = 1, mem_max_bank do
-			local max_j = _memory_bank_size
-			if (i == mem_max_bank) max_j = mem_max_index
+			local max_j = (i == mem_max_bank) and mem_max_index or #_memory[i]
 			for j = 1, max_j do
 				memory_dump ..= dword_to_str(_memory[i][j])
 			end

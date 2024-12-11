@@ -61,8 +61,8 @@ __lua__
 
 -- size of character (width2
 -- is user for chr >= 128)
-char_width,char_height = 8,10
-char_width2 = 8
+char_width,char_height = 4,6
+char_width2 = 5
 
 -- draw offset
 char_offset_x = 0

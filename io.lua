@@ -72,6 +72,7 @@ end
 
 function _set_text_style(n)
 	-- log("[drw] _set_text_style to: "..n)
+	if (n > 0) n |= current_text_style
 	local inverse, emphasis = '\^-i\^-b', '\015'
 	make_bold, make_inverse = (n&2 == 2), (n&1 == 1)
 
@@ -84,6 +85,7 @@ function _set_text_style(n)
 		end
 	end
 	current_format = inverse..emphasis..current_color_string()
+	-- log("[drw] current_format is: "..current_format)
 	current_format_updated = true
 	current_text_style = n
 end
