@@ -443,7 +443,7 @@ end
 --8.7 Windows
 
 function _split_screen(lines)
-	log('split_window called: '..lines)
+	log('[ops] _split_screen: '..lines)
 	flush_line_buffer(0)
 	local win0, win1 = windows[0], windows[1]
 	local cur_y_offset = max(0, win0.h - win0.z_cursor.y)
@@ -465,7 +465,7 @@ function _split_screen(lines)
 end
 
 function _set_window(win)
-	log('set_window: '..win)
+	log('[ops] _set_window: '..win)
 	flush_line_buffer()
 	active_window = win
 	if (win == 1) _set_cursor(1,1)
@@ -474,7 +474,7 @@ end
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
 --autosplitting on z4 Nord & Bert revealed a status line bug in the game (!)
 function _set_cursor(lin, col)
-	log('_set_zcursor to line '..lin..', col '..col)
+	log('[ops] _set_zcursor: line '..lin..', col '..col)
 	flush_line_buffer()
 	if ((_zm_version > 4) and (lin > windows[1].h)) _split_screen(lin)
 	windows[1].z_cursor = {x=col, y=lin}
@@ -482,7 +482,7 @@ function _set_cursor(lin, col)
 end
 
 function _get_cursor(baddr)
-	log('_get_cursor called')
+	log('[ops] _get_cursor: '..tohex(baddr))
 	baddr = zword_to_zaddress(baddr)
 	local zc = windows[active_window].z_cursor
 	set_zword(baddr, zc.y)
@@ -492,7 +492,7 @@ end
 --_buffer_mode; not sure this applies to us so _nop() for now
 
 function _set_color(byte0, byte1)
-	-- log('_set_color: '..tohex(byte0)..', '..tohex(byte1))
+	log('[ops] _set_color: '..tohex(byte0)..', '..tohex(byte1))
 	if (byte0 > 1) current_fg = byte0
 	if (byte1 > 1) current_bg = byte1
 	if (byte0 == 1) current_fg = get_zbyte(_default_fg_color_addr)
@@ -503,7 +503,7 @@ end
 --_set_text_style defined in io.lua
 
 function _set_font(n)
-	log('_set_font: '..n)
+	log('[ops] _set_font: '..n)
 	_result(0)
 end
 
@@ -533,7 +533,7 @@ function _output_stream(n, baddr)
 end
 
 function _input_stream(n)
-	output('_input_stream '..n..'requested?!')
+	output('[ops] _input_stream '..n..'?!?!')
 end
 
 
@@ -569,19 +569,19 @@ end
 --8.10 Character based output
 
 function _print_char(n)
-	log('_print_char '..n..': '..chr(n))
+	log('[ops] _print_char '..n)
 	if (n == 10) n = 13	
 	if (n != 0) output(chr(n))
 end
 
 function _new_line()
-	log('new_line')
+	log('[ops] new_line')
 	output('\n')
 end
 
 function _print(string)
 	local zstring = get_zstring(string)
-	log('_print: '..zstring)
+	log('[ops] _print: '..zstring)
 	output(zstring)
 end
 
@@ -596,7 +596,7 @@ function _print_addr(baddr, is_packed)
 	local is_packed = is_packed or false
 	local zaddress = zword_to_zaddress(baddr, is_packed)
 	local zstring = get_zstring(zaddress)
-	log('print_addr: '..zstring)
+	log('[ops] print_addr: '..zstring)
 	output(zstring)
 end
 
@@ -605,13 +605,13 @@ function _print_paddr(saddr)
 end
 
 function _print_num(s)
-	log('_print_num: '..s)
+	log('[ops] _print_num: '..s)
 	output(tostr(s))
 end
 
 function _print_obj(obj)
 	local name, _ = zobject_name(obj)
-	log('print_obj with name: '..name)
+	log('[ops] print_obj: '..name)
 	output(name)
 end
 
@@ -633,12 +633,12 @@ end
 --8.11 Miscellaneous screen output
 
 function _erase_line(val)
-	log('erase_line: '..val)
+	log('[ops] erase_line: '..val)
 	if (val == 1) screen("\^i"..current_color_string()..blank_line)
 end
 
 function _erase_window(win)
-	log('erase_window: '..win)
+	log('[ops] erase_window: '..win)
 	if win >= 0 then
 		local a,b,c,d = unpack(windows[win].screen_rect)
 		rectfill(a,b,c,d,current_bg)
@@ -659,7 +659,7 @@ end
 --8.12 Sound, mouse, and menus
 
 function _sound_effect(number)
-	--log('sound_effect: '..number)
+	log('[ops] sound_effect: '..number)
 	if (number == 1) print("\ac3")
 	if (number == 2) print("\ac1")
 end

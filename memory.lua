@@ -146,7 +146,7 @@ end
 function zword_to_zaddress(zaddress, is_packed)
 	zaddress >>>= 16
 	if (is_packed) zaddress <<= _zm_packed_shift
-	log("zword_to_zaddress returning: "..tohex(zaddress))
+	-- log("[mem] zword_to_zaddress returning: "..tohex(zaddress))
 	return zaddress
 end
 
