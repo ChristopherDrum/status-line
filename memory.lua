@@ -144,9 +144,10 @@ function decode_var_address(var_byte)
 end
 
 function zword_to_zaddress(zaddress, is_packed)
-	local shift = 16
-	if (is_packed) shift -= _zm_packed_shift
-	return (zaddress >>> shift)
+	zaddress >>>= 16
+	if (is_packed) zaddress <<= _zm_packed_shift
+	-- log("[mem] zword_to_zaddress returning: "..tohex(zaddress))
+	return zaddress
 end
 
 function zaddress_at_zaddress(zaddress, is_packed)
@@ -589,7 +590,7 @@ function load_instruction()
 
 	local op_table, op_code, operands = nil, 0, {}
 	local function extract_operands(info, _count)
-		log(' extract_operands: '..tohex(info)..', '.._count)
+		log('[mem] extract_operands: '..tohex(info)..', '.._count)
 		for i = _count-1, 0, -1 do
 			local op_type = (info >>> (i*2)) & 0x03
 			-- log('  byte '..i..', op type: '..op_type)
@@ -612,7 +613,7 @@ function load_instruction()
 	-- Subsequent bytes are the operands
 	local pc = _program_counter
 	local op_definition = get_zbyte()
-	log(' op_definition: '..tohex(op_definition))
+	log('[mem] op_definition: '..tohex(op_definition))
 	op_form = (op_definition >>> 6)
 	if (op_definition == 0xbe) op_form = 0xbe
 	op_form &= 0xff
@@ -620,9 +621,7 @@ function load_instruction()
 	local op_table_name
 	if op_form <= 0x01 then
 		op_table_name = 'long'
-		-- The first byte of a long instruction is %0abxxxxx where
-		-- a, b == operand types of 1st and 2nd bytes
-		-- %xxxxx == can indicate a 2OP opcode
+
 		op_table = _long_ops
 		op_code = (op_definition & 0x1f)
 		operands[1] = get_zbyte()
@@ -634,11 +633,10 @@ function load_instruction()
 			operands[2] = get_var(operands[2])
 		end
 
+	-- $BE indicates an extended instruction
 	elseif op_form == 0xbe and _zm_version >= 5 then
 		op_table_name = 'ext'
-		-- $BE indicates an extended instruction
-		-- Next bytes: opcode, operand types, operands.
-		-- same format as for var ops (0x03 below)
+
 		op_table = _ext_ops
 		op_code = get_zbyte()
 		type_information = get_zbyte()
@@ -646,9 +644,7 @@ function load_instruction()
 
 	elseif op_form == 0x02 then
 		op_table_name = 'short'
-		-- The first byte of a short instruction is %10ttxxxx.
-		-- %tt is the type of the operand (or %11 if absent),
-		-- %xxxx is the 1OP (0OP if absent)
+
 		op_table = _short_ops
 		op_code = (op_definition & 0xf)
 		local op_type = (op_definition & 0x30) >>> 4
@@ -666,12 +662,6 @@ function load_instruction()
 		operands = {operands}
 
 	elseif op_form == 0x03 then
-		-- The first byte of a v3 variable instruction is %11axxxxx
-		-- (two exceptions for v4+) where %xxxxx is the VAR opcode.
-		-- %a : %0 == 2OP, %1 == VAR
-		-- Byte 2 holds operand type info by "bit pairs"
-		-- A %11 pair means ‘no operand’
-
 		op_table = (op_definition & 0x20 == 0) and _long_ops or _var_ops
 		op_code = (op_definition & 0x1f)
 		op_table_name = (op_table == _var_ops) and 'var' or '2OP'
@@ -690,12 +680,12 @@ function load_instruction()
 	for i = 1, #operands do
 		op_string ..= tohex(operands[i])..', '
 	end
-	log(sub(tohex(pc),8)..": "..op_table_name..(op_code+1)..'('..op_string..')')
+	log("[mem] "..sub(tohex(pc),6)..": "..op_table_name..(op_code+1)..'('..op_string..')')
 	local func = op_table[op_code+1]
 	return func, operands
 end
 
-function capture_state(state)
+function capture_mem_state(state)
 
 	local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
 
@@ -703,52 +693,47 @@ function capture_state(state)
 		-- log('capture _memory_start_state')
 		_memory_start_state = {}
 		for i = 1, mem_max_bank do
-			if i < mem_max_bank then
-				_memory_start_state[i] = {unpack(_memory[i])}
-			else
-				add(_memory_start_state, {})
-				for j = 1, mem_max_index do
-					_memory_start_state[i][j] = _memory[i][j]
-				end			
-			end
+			_memory_start_state[i] = {unpack(_memory[i])}
 		end
-		-- log("after memory_start_state with bank "..mem_max_bank..": "..stat(0))
+		while #_memory_start_state[#_memory_start_state] > mem_max_index do
+			deli(_memory_start_state[#_memory_start_state])
+		end
+		-- log("[mem] after memory_start_state with bank "..mem_max_bank..": "..stat(0))
 	else
 
 		local memory_dump = dword_to_str(tonum(_engine_version))
 
-		-- log('saving memory up to bank: '..mem_max_bank..', index: '..mem_max_index)
+		-- log('[mem] saving memory up to bank: '..mem_max_bank..', index: '..mem_max_index)
 		memory_dump ..= dword_to_str(mem_max_index)
 		for i = 1, mem_max_bank do
-			local max_j = _memory_bank_size
-			if (i == mem_max_bank) max_j = mem_max_index
+			local max_j = (i == mem_max_bank) and mem_max_index or #_memory[i]
 			for j = 1, max_j do
 				memory_dump ..= dword_to_str(_memory[i][j])
 			end
 		end
 
-		-- log('saving call stack: '..(#_call_stack))
+		-- log('[mem] saving call stack: '..(#_call_stack))
 		memory_dump ..= dword_to_str(#_call_stack)
 		for i = 1, #_call_stack do
 			local frame = _call_stack[i]
 			memory_dump ..= dword_to_str(frame.pc)
 			memory_dump ..= dword_to_str(frame.call)
 			memory_dump ..= dword_to_str(frame.args)
-			-- log("saving frame"..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args))
+			-- log("[mem] saving frame"..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args))
 			memory_dump ..= dword_to_str(#frame.stack)
-			-- log("---frame stack---")
+			-- log("[mem] ---frame stack---")
 			for j = 1, #frame.stack do
 				memory_dump ..= dword_to_str(frame.stack[j])
-				-- log("  "..j..': '..tohex(frame.stack[j])..' -> '..dword_to_str(frame.stack[j]))
+				-- log("[mem]  "..j..': '..tohex(frame.stack[j])..' -> '..dword_to_str(frame.stack[j]))
 			end
-			-- log("---frame vars---")
+			-- log("[mem] ---frame vars---")
 			for k = 1, 16 do
 				memory_dump ..= dword_to_str(frame.vars[k])
-				-- log("  "..k..": "..tohex(frame.vars[k])..' -> '..dword_to_str(frame.vars[k]))
+				-- log("[mem]  "..k..": "..tohex(frame.vars[k])..' -> '..dword_to_str(frame.vars[k]))
 			end
 		end
 
-		-- log('saving pc: '..(tohex(_program_counter,true)))
+		-- log('[mem] saving pc: '..(tohex(_program_counter,true)))
 		memory_dump ..= dword_to_str(_program_counter)
 		memory_dump ..= dword_to_str(checksum)
 

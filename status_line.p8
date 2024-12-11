@@ -79,7 +79,8 @@ function tohex(value, full)
 end
 
 function log(str)
-	printh(str, 'status_line_log_30')
+	local prefix = sub(str,1,5)
+	if (prefix != "[mem]") printh(str, 'status_line_log_30')
 end
 
 function wait_for_any_key()
@@ -351,7 +352,7 @@ function initialize_game()
 	top_frame().pc = _program_counter
 	top_frame().args = 0
 
-	if (_memory_start_state == nil) capture_state(_memory_start_state)
+	if (_memory_start_state == nil) capture_mem_state(_memory_start_state)
 	_split_screen(0)
 	_set_text_style(0)
 	update_p_cursor()

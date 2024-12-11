@@ -71,11 +71,12 @@ function current_color_string()
 end
 
 function _set_text_style(n)
-	-- log("_set_text_style to: "..n)
+	log("[drw] _set_text_style to: "..n)
+	if (n > 0) n |= current_text_style
 	local inverse, emphasis = '\^-i\^-b', '\015'
 	make_bold, make_inverse = (n&2 == 2), (n&1 == 1)
 
-	if (make_inverse == true) inverse = '\^i'
+	if (make_inverse == true) inverse = '\^i\^-b'
 	if (n > 1) emphasis = '\014'
 	if checksum == 0xfc65 then -- Bureaucracy masterpiece
 		if (active_window == 1) and (make_bold == true) then
@@ -84,6 +85,7 @@ function _set_text_style(n)
 		end
 	end
 	current_format = inverse..emphasis..current_color_string()
+	-- log("[drw] current_format is: "..current_format)
 	current_format_updated = true
 	current_text_style = n
 end
@@ -94,7 +96,7 @@ function update_screen_rect(zwin_num)
 	local py = (win.y-1)*6 + origin_y
 	if (_zm_version > 3 and zwin_num == 1) py = 0
 	local ph = (win.h)*6
-	-- log('setting screen rect '..zwin_num..': 0, '..py..', 128,'..(origin_y+ph))
+	-- log('[drw] setting screen rect '..zwin_num..': 0, '..py..', 128,'..(origin_y+ph))
 	win.screen_rect = {0, py, 128, origin_y+ph}
 end
 
@@ -121,13 +123,13 @@ function memory(str)
 end
 
 function output(str, flush_now)
-	-- log('('..active_window..') output str: '..str)
+	-- log('[drw] ('..active_window..') output str: '..str)
 	if #memory_output > 0 then
 		-- log('   redirected to memory')
 		memory(str) 
 	else
 		if (screen_output == false) return
-		log('   output to screen '..active_window..': '..str)
+		log('[drw] output to screen '..active_window..': '..str)
 		local buffer = windows[active_window].buffer
 		local current_line = nil
 		if (#buffer > 0) current_line = deli(buffer)
@@ -157,7 +159,7 @@ function output(str, flush_now)
 			current_line ..= chr(o)
 
 			if (in_set(char, break_chars)) break_index = #current_line
-			-- log('current line: '..current_line)
+			-- log('[drw] current line: '..current_line)
 			if (visual_len > 128) or (char == '\n') then
 
 				local next_line, next = current_format, nil
@@ -184,15 +186,14 @@ end
 function flush_line_buffer()
 	local win = windows[active_window]
 	local buffer = win.buffer
-	-- log('flush_line_buffer '..active_window..', '..tostr(#buffer)..' lines')
-	-- log('  lines shown: '..lines_shown..' vs win height: '..win.h)
+	-- log('[drw] flush_line_buffer '..active_window..', '..tostr(#buffer)..' lines')
+	-- log('[drw]    lines shown: '..lines_shown..' vs win height: '..win.h)
 	if (#buffer == 0 or win.h == 0) return
-	-- log('flush window '..active_window..' with line height: '..win.h)
+	-- log('[drw]    flush window '..active_window..' with line height: '..win.h)
 	while #buffer > 0 do
 		local str = deli(buffer, 1)
 		if (str == current_format) goto skip
 		if active_window == 0 then
-			-- if sub(str, -1) != '>' then
 			if #buffer != 0 then
 				if lines_shown == (win.h - 1) then
 					screen("\^i"..current_color_string().."          - - MORE - -          ")
@@ -216,7 +217,7 @@ function flush_line_buffer()
 end
 
 function screen(str)
-	-- log('screen '..active_window..': '..str)
+	-- log('[drw] screen '..active_window..': '..str)
 	local win = windows[active_window]
 
 	clip(unpack(win.screen_rect))
@@ -257,7 +258,7 @@ function screen(str)
 end
 
 function _tokenise(baddr1, baddr2, baddr3, _bit)
-	-- log('_tokenise from: '..tohex(baddr1)..' into: '..tohex(baddr2)..' alt dict: '..tohex(baddr3)..' bit?: '..tohex(bit))
+	-- log('[prs] _tokenise from: '..tohex(baddr1)..' into: '..tohex(baddr2)..' alt dict: '..tohex(baddr3)..' bit?: '..tohex(bit))
 	local tokens, index, z_adjust = {}, 0, 0
 	local bit = _bit or 0
 	str = ''
@@ -273,7 +274,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 	local parse_buffer = zword_to_zaddress(baddr2)
 
 	local addr = text_buffer + 0x.0001
-	local num_bytes = nil
+	local num_bytes = 256
 	if _zm_version >= 5 then
 		num_bytes = get_zbyte(addr)
 		addr += 0x.0001
@@ -319,7 +320,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 	parse_buffer += 0x.0001
 	for i = 1, max_tokens do
 		local word, index, z_adjust = unpack(tokens[i])
-		-- log('  looking up substring: '..sub(word,1,_zm_dictionary_word_size-z_adjust))
+		-- log('[prs]  looking up substring: '..sub(word,1,_zm_dictionary_word_size-z_adjust))
 		local dict_addr = dict[sub(word,1,_zm_dictionary_word_size-z_adjust)] or 0x0
 		
 		if bit > 0 and dict_addr == nil then
@@ -334,7 +335,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 end
 
 function _encode_text(baddr1, n, p, baddr2)
-	log("_encode_text: "..tohex(baddr1)..', '..n..', '..p)
+	log("[prs] _encode_text: "..tohex(baddr1)..', '..n..', '..p)
 	if (not baddr2) return --we don't use this function ourselves
 
 	local zwords, word, count = {}, 0, 1
@@ -423,7 +424,7 @@ function capture_input(char)
 
 	if (max_input_length == 0) max_input_length = get_zbyte(zword_to_zaddress(z_text_buffer)) - 1
 
-	-- log('current input: '..current_input)
+	-- log('[prs] current input: '..current_input)
 	if char == '\r' then
 
 		--strip whitespace; was external function but only used here

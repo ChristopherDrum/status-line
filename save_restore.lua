@@ -11,7 +11,7 @@ function save_game(char)
 
 	--do the save
 	if char == '\r' then
-		capture_state(_current_state)
+		capture_mem_state(_current_state)
 		local filename = current_input..'_'..game_id()..'_save'
 		printh(_current_state, filename, true)
 		current_input, visible_input = '', ''
