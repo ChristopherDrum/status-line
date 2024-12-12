@@ -115,7 +115,7 @@ function local_var_addr(index)
 end
 
 function global_var_addr(index)
-	--log(' address for G'..sub(tostr(index,true),5,6)..' is: '..tohex(addr))
+	log(' address for G'..sub(tostr(index,true),5,6)..' is: '..tohex(addr))
 	return _global_var_table_mem_addr + (index >>> 15) 	-- index*0x.0002 == (index>>>15)
 end
 
@@ -131,7 +131,7 @@ end
 
 function decode_var_address(var_byte)
 	local var_byte = var_byte or get_zbyte()
-	-- log('decode_var_address: '..var_byte)
+	log('decode_var_address: '..var_byte)
 	if (var_byte == 0) return _stack_mem_addr
 	if (var_byte < 16) return local_var_addr(var_byte)
 	if (var_byte >= 16) return global_var_addr(var_byte-16) -- -16 ONLY when decoding var byte
@@ -140,7 +140,7 @@ end
 function zword_to_zaddress(zaddress, is_packed)
 	zaddress >>>= 16
 	if (is_packed) zaddress <<= _zm_packed_shift
-	-- log("[mem] zword_to_zaddress returning: "..tohex(zaddress))
+	log("zword_to_zaddress returning: "..tohex(zaddress))
 	return zaddress
 end
 
