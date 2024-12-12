@@ -42,12 +42,12 @@ function _load(var)
 end
 
 function _store(var, a)
-	log("[ops] _store: "..var.."("..tohex(var).."), "..a.."("..tohex(a)..")")
+	log("  [ops] _store: "..var.."("..tohex(var).."), "..a.."("..tohex(a)..")")
 	_result(a, var, true)
 end
 
 function addr_offset(baddr, n, amt)
-	log("[ops] addr_offset: "..tohex(baddr)..", "..tohex(n)..", "..tostr(amt))
+	log("  [ops] addr_offset: "..tohex(baddr)..", "..tohex(n)..", "..tostr(amt))
 	local addr = zword_to_zaddress(baddr)
 	local offset = (abs(n)>>>amt)
 	if (n < 0) offset = -offset
@@ -135,6 +135,7 @@ end
 --8.3 Arithmetic
 
 function _add(a, b)
+	log("  [ops] _add: "..a.."("..tohex(a)..") "..b.."("..tohex(b)..")")
 	_result(a + b)
 end
 
@@ -184,10 +185,12 @@ function _dec_jl(var, s)
 end
 
 function _or(a, b)
+	log("  [ops] _add: "..a.."("..tohex(a)..") "..b.."("..tohex(b)..")")
 	_result(a | b)
 end
 
 function _and(a, b)
+	log("  [ops] _and: "..a.."("..tohex(a)..") "..b.."("..tohex(b)..")")
 	_result(a & b)
 end
 
@@ -208,18 +211,22 @@ end
 --8.4 Comparisons and jumps
 
 function _jz(a)
+	log("  [ops] _jz: "..a.."("..tohex(a)..")")
 	_branch(a == 0)
 end
 
 function _je(a, b1, b2, b3)
+	log("  [ops] _je: "..a.."("..tohex(a)..") "..tostr(b1).."("..tohex(b1)..")"..tostr(b2).."("..tohex(b2)..")"..tostr(b3).."("..tohex(b3)..")")
 	_branch(del({b1,b2,b3},a) == a)
 end
 
 function _jl(s, t)
+	log("  [ops] _jl: "..s.."("..tohex(s)..") "..t.."("..tohex(t)..")")
 	_branch(s < t)
 end
 
 function _jg(s, t)
+	log("  [ops] _jg: "..s.."("..tohex(s)..") "..t.."("..tohex(t)..")")
 	_branch(s > t)
 end
 
@@ -285,14 +292,14 @@ function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
 		top_frame().args = n
 
 		_program_counter = top_frame().pc
-		-- log("[ops] _call "..type.."(1=f,2=p) : "..tohex(raddr).." "..var_str)
-		-- log("[ops]  --> set pc to: "..tohex(_program_counter))
+		-- log("  [ops] _call "..type.."(1=f,2=p) : "..tohex(raddr).." "..var_str)
+		-- log("  [ops]  --> set pc to: "..tohex(_program_counter))
 	end
 end
 
 function _ret(a)
 	local call = top_frame().call
-	-- log("[ops] _ret() with frame type: "..call)
+	-- log("  [ops] _ret() with frame type: "..call)
 
 	call_stack_pop() --in all cases
 	
@@ -314,7 +321,7 @@ function _ret_pulled()
 end
 
 function _check_arg_count(n)
-	-- log("[ops] _check_arg_count: "..tostr(n)..' vs. frame #'..#_call_stack..", "..tostr(top_frame().args))
+	-- log("  [ops] _check_arg_count: "..tostr(n)..' vs. frame #'..#_call_stack..", "..tostr(top_frame().args))
 	_branch(top_frame().args >= n)
 end
 
