@@ -307,8 +307,8 @@ function process_header()
 		if _zm_version >= 5 then
 			set_zword(_screen_width_units_addr, 128)
 			set_zword(_screen_height_units_addr, 128)
-			set_zbyte(_font_height_units_addr, 5)
-			set_zbyte(_font_width_units_addr, 3)
+			set_zbyte(_font_height_units_addr, 6)
+			set_zbyte(_font_width_units_addr, 4)
 			set_zbyte(_default_bg_color_addr, 0) --current palette fg
 			set_zbyte(_default_fg_color_addr, 15) --current palette bg
 		end
@@ -340,11 +340,12 @@ end
 
 function initialize_game()
 
+	process_header()
 	reset_io_state()
+	setup_palette()
 
 	setup_user_prefs()
-	setup_palette()
-	process_header()
+
 	fetch_parser_separators()
 	_main_dict = build_dictionary(_dictionary_mem_addr)
 
