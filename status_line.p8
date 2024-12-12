@@ -286,8 +286,8 @@ function process_header()
 		_zm_screen_height = 20
 		_zm_packed_shift = 1
 		_zm_object_property_count = 31
-		_zm_object_entry_size = 0x.0009
-		_zm_dictionary_word_size = 6
+		_zm_object_entry_size = 9
+		_zm_dictionary_word_length = 6
 
 		i_flag &= 0x3b --turn off some bits
 		i_flag |= 0x20 --enable upper window
@@ -296,8 +296,8 @@ function process_header()
 		_zm_screen_height = 21
 		_zm_packed_shift = (_zm_version < 8) and 2 or 3
 		_zm_object_property_count = 63
-		_zm_object_entry_size = 0x.000e
-		_zm_dictionary_word_size = 9
+		_zm_object_entry_size = 14
+		_zm_dictionary_word_length = 9
 
 		set_zbyte(_interpreter_number_header_addr, 6) --ibm pc
 		set_zbyte(_interpreter_version_header_addr, 112) --"P"		

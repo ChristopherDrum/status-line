@@ -321,8 +321,8 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 	parse_buffer += 0x.0001
 	for i = 1, #tokens do
 		local word, index, z_adjust = unpack(tokens[i])
-		log("[prs]  looking up substring: ^"..sub(word,1,_zm_dictionary_word_size-z_adjust).."^")
-		local dict_addr = dict[sub(word,1,_zm_dictionary_word_size-z_adjust)] or 0x0
+		log("[prs]  looking up substring: ^"..sub(word,1,_zm_dictionary_word_length-z_adjust).."^")
+		local dict_addr = dict[sub(word,1,_zm_dictionary_word_length-z_adjust)] or 0x0
 		
 		if bit > 0 and dict_addr == nil then
 			parse_buffer += 0x.0004

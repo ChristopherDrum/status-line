@@ -104,7 +104,7 @@ function zobject_address(index)
 	-- skip first 31/63 zwords of "default property table"
 	local address = _object_table_mem_addr + (_zm_object_property_count>>>15)
 	-- log('zobject_address old: '..tohex(old_address)..' new: '..tohex(address))
-	address += (index-1)*_zm_object_entry_size
+	address += (((index-1)*_zm_object_entry_size)>>>16)
 	return address
 end
 
@@ -115,7 +115,7 @@ function local_var_addr(index)
 end
 
 function global_var_addr(index)
-	log(' address for G'..sub(tostr(index,true),5,6)..' is: '..tohex(addr))
+	-- log(' address for G'..sub(tostr(index,true),5,6)..' is: '..tohex(addr))
 	return _global_var_table_mem_addr + (index >>> 15) 	-- index*0x.0002 == (index>>>15)
 end
 
@@ -131,7 +131,7 @@ end
 
 function decode_var_address(var_byte)
 	local var_byte = var_byte or get_zbyte()
-	log('decode_var_address: '..var_byte)
+	-- log('decode_var_address: '..var_byte)
 	if (var_byte == 0) return _stack_mem_addr
 	if (var_byte < 16) return local_var_addr(var_byte)
 	if (var_byte >= 16) return global_var_addr(var_byte-16) -- -16 ONLY when decoding var byte
@@ -140,7 +140,7 @@ end
 function zword_to_zaddress(zaddress, is_packed)
 	zaddress >>>= 16
 	if (is_packed) zaddress <<= _zm_packed_shift
-	log("zword_to_zaddress returning: "..tohex(zaddress))
+	-- log("zword_to_zaddress returning: "..tohex(zaddress))
 	return zaddress
 end
 
@@ -427,7 +427,6 @@ function zobject_prop_data_addr_or_prop_list(index, property)
 	local prop_list = {}
 
 	local text_length, prop_address = zobject_text_length(index)
-	--value * 0x.0002 == value >>> 15 (i.e. >>> 16 for *.0001, << 1 for *2)
 	prop_address += (0x.0001 + (text_length >>> 15))
 
 	local prop_num, prop_len, offset = zobject_prop_num_len(prop_address)
@@ -445,9 +444,7 @@ function zobject_prop_data_addr_or_prop_list(index, property)
 		prop_num, prop_len, offset = zobject_prop_num_len(prop_address)
 	end
 	
-	if collect_list == true then
-		return prop_list
-	end
+	if (collect_list == true) return prop_list
 	return 0
 end
 
