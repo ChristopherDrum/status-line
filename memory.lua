@@ -313,13 +313,11 @@ function set_zwords(zaddress, words)
 end
 
 function zobject_attributes_byte_bit(index, attribute_id)
-	-- old_zobject_attributes(index)
 	local address = zobject_address(index)
-	-- local byte_count = (_zm_version == 3) and 4 or 6
 	local byte_index = flr(attribute_id>>3)
 	local attr_bit = attribute_id % 8
 	address += (byte_index>>>16)
-	-- log('  NEW zobject_attributes_byte_bit: '..get_zbyte(address)..', '..attr_bit..','..tohex(address))
+	-- log('[mem] zobject_attributes_byte_bit: index = '..tohex(byte_index)..', attr_bit == '..tohex(attr_bit))
 	return get_zbyte(address), attr_bit, address
 end
 
@@ -331,8 +329,7 @@ end
 
 function zobject_set_attribute(index, attribute_id, val)
 	-- log('[mem] zobject_set_attribute object: '..index..', set attr '..attribute_id..' to: '..val)
-	if ((index < 1) or (attribute_id > 31) or (val > 1)) return
-	-- assert(val <= 1, 'can only set binary value on attributes,'..index..','..attribute_id..','..val)
+	if ((index < 1) or (val > 1)) return
 	local attr_byte, attr_bit, address = zobject_attributes_byte_bit(index, attribute_id)
 	attr_byte &= ~(0x80>>attr_bit)
 	attr_byte |= (val<<(7-attr_bit))

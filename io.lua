@@ -266,6 +266,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 	local function commit(i)
 		if (index == 0) return
 		local s = sub(str,index,i-1)
+		-- log("commit token: ^"..s.."^")
 		add(tokens, {s,index,z_adjust})
 		index, z_adjust = 0, 0
 	end
@@ -314,13 +315,13 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 	if (baddr3 != nil) dict = build_dictionary(zaddress_at_zaddress(baddr3))
 
 	local parse_buffer_length = get_zbyte(parse_buffer)
-	local max_tokens = min(#tokens, parse_buffer_length)
+	-- local max_tokens = min(#tokens, parse_buffer_length)
 	parse_buffer += 0x.0001
-	set_zbyte(parse_buffer, max_tokens)
+	set_zbyte(parse_buffer, #tokens)
 	parse_buffer += 0x.0001
-	for i = 1, max_tokens do
+	for i = 1, #tokens do
 		local word, index, z_adjust = unpack(tokens[i])
-		-- log('[prs]  looking up substring: '..sub(word,1,_zm_dictionary_word_size-z_adjust))
+		log("[prs]  looking up substring: ^"..sub(word,1,_zm_dictionary_word_size-z_adjust).."^")
 		local dict_addr = dict[sub(word,1,_zm_dictionary_word_size-z_adjust)] or 0x0
 		
 		if bit > 0 and dict_addr == nil then
@@ -441,7 +442,7 @@ function capture_input(char)
 		local addr = text_buffer + 0x.0001
 		if _zm_version >= 5 then
 			local num_bytes = get_zbyte(addr)
-			set_zbyte(addr, #bytes)
+			set_zbyte(addr, #bytes+num_bytes)
 			addr += 0x.0001 + (num_bytes>>>16)
 		else 
 			add(bytes, 0x0)

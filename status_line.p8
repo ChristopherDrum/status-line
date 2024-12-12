@@ -305,10 +305,10 @@ function process_header()
 		set_zbyte(_screen_width_header_addr, 32)
 		
 		if _zm_version >= 5 then
-			set_zword(_screen_width_units_addr, 128)
-			set_zword(_screen_height_units_addr, 128)
-			set_zbyte(_font_height_units_addr, 6)
-			set_zbyte(_font_width_units_addr, 4)
+			set_zword(_screen_width_units_addr, 32)
+			set_zword(_screen_height_units_addr, 21)
+			set_zbyte(_font_height_units_addr, 1)
+			set_zbyte(_font_width_units_addr, 1)
 			set_zbyte(_default_bg_color_addr, 0) --current palette fg
 			set_zbyte(_default_fg_color_addr, 15) --current palette bg
 		end
