@@ -42,6 +42,7 @@ function _load(var)
 end
 
 function _store(var, a)
+	log("[ops] _store: "..var.."("..tohex(var).."), "..a.."("..tohex(a)..")")
 	_result(a, var, true)
 end
 

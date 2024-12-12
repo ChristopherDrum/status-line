@@ -95,12 +95,6 @@ function call_stack_pop()
 	_program_counter = top_frame().pc
 end
 
-function local_var_at_zindex(zaddress)
-	local index = zaddress << 16
-	local var = top_frame().vars[index]
-	return var, index
-end
-
 function abbr_address(index)
 	--abbreviation addresses are word addresses (2*addr)
 	return zword_to_zaddress(get_zword(_abbr_table_mem_addr + (index >>> 15))<<1)
@@ -116,7 +110,7 @@ end
 
 function local_var_addr(index)
 	--log(' getting address for local var: '..tohex(index))
-	-- assert(index > 0 and index < 16, 'ERR: asked to retrieve local var '..tostr(index))
+	assert(index > 0 and index < 16, 'ERR: asked to retrieve local var '..tostr(index))
 	return _local_var_table_mem_addr + (index >>> 16)
 end
 
@@ -183,7 +177,8 @@ function get_dword(zaddress, indirect)
 
 	if base == _local_var_table_mem_addr then
 		-- log("[mem] get dword at _local_var_table_mem_addr: "..tohex(zaddress))
-		local var, index = local_var_at_zindex(zaddress)
+		local index = zaddress << 16
+		local var = top_frame().vars[index]
 		return var, nil, index
 	end
 
@@ -205,7 +200,7 @@ function get_zbyte(zaddress)
 	-- log('                       now: '..tohex(_program_counter))
 	end
 	local base = (zaddress & 0xffff)
-	local dword, _, _, cell  = get_dword(zaddress)
+	local dword, _, index, cell  = get_dword(zaddress)
 
 	if base < 0xa then
 		-- log("[mem] get_zbyte at normal memory array: "..tohex(zaddress))
@@ -214,11 +209,7 @@ function get_zbyte(zaddress)
 		else
 			dword <<= (2 << cell)
 		end
-	elseif base == _local_var_table_mem_addr then
-		-- log("[mem] get_zbyte at local var table: "..tohex(zaddress))
-		if (zaddress & 0x.000f > 0) dword <<= 16
 	end
-
 	return dword & 0xff
 end
 
@@ -237,26 +228,19 @@ function set_zbyte(zaddress, _byte)
 	--log('[mem] set_zbyte at '..tohex(zaddress)..' to value: '..tohex(byte))
 	local byte = _byte & 0xff --filter off garbage
 	local base = (zaddress & 0xffff)
-
+	assert(base != _local_var_table_mem_addr, "asked to write a zbyte to local var: "..tohex(zaddress))
 	if zaddress == _stack_mem_addr then
 		-- log('[mem] setting stack: '..tohex(byte))
 		stack_push(byte)
 	else
-		local dword, bank, index, cell  = get_dword(zaddress)
 		if base < 0xa then --regular memory
+			local dword, bank, index, cell  = get_dword(zaddress)
 			local filter = ~(0xff00.0000 >>> (cell << 3))
 			dword &= filter
 			byte <<= 8
 			byte >>>= (cell << 3)
 			dword |= byte
 			_memory[bank][index] = dword
-		else --local var
-			if (zaddress & 0x.0001) == 0 then
-				dword = (dword & 0x.ffff) | byte
-			else
-				dword = (dword & 0xffff) | (byte >>> 16)
-			end
-			top_frame().vars[index] = dword
 		end
 	end
 end
@@ -286,8 +270,6 @@ function get_zword(zaddress, indirect)
 			-- log('[mem]  consecutive dword '..tohex(dwordb))
 			dword |= (dwordb >>> 8)
 		end
-	elseif base == _local_var_table_mem_addr then
-		if (zaddress & 0x.0001 == 0x.0001) dword <<= 16
 	end
 	return dword & 0xffff
 end
@@ -295,39 +277,31 @@ end
 function set_zword(zaddress, _zword, indirect)
 	-- log('[mem] setting zword at '..tohex(zaddress)..' to value: '..tohex(zword))
 	local zword = _zword & 0xffff --filter off garbage
+	local base = (zaddress & 0xffff)
 	
 	if zaddress == _stack_mem_addr then
 		-- log('[mem] setting stack: '..tohex(zword))
-		if indirect then
-			set_stack_top(zword)
-		else
-			stack_push(zword)
-		end
-	else
+		if (indirect) set_stack_top(zword) else stack_push(zword)
+
+	elseif base < 0xa then --this should also resolve global var access because those addresses are maintained by the zcode, not us
 		local dword, bank, index, cell  = get_dword(zaddress, indirect)
-		if zaddress < 0xa then
-			local filter = ~(0xffff.0000 >>> (cell << 3))
-			dword &= filter
-			if cell == 3 then
-				local next_index = index + 1
-				local next_bank = bank
-				if (next_index > #_memory[bank]) next_bank += 1 next_index = 1
-				local dwordb = _memory[next_bank][next_index]
-				dwordb &= 0x00ff.ffff
-				dwordb |= (zword << 8)
-				_memory[next_bank][next_index] = dwordb
-			end
-			zword >>>= (cell << 3)
-			dword |= zword
-			_memory[bank][index] = dword
-		else
-			if (zaddress & 0x.0001 == 0) then
-				dword = (dword & 0x.ffff) | zword
-			else
-				dword = (dword & 0xffff) | (zword >>> 16)
-			end
-			top_frame().vars[index] = dword
+		local filter = ~(0xffff.0000 >>> (cell << 3))
+		dword &= filter
+		if cell == 3 then
+			local next_index = index + 1
+			local next_bank = bank
+			if (next_index > #_memory[bank]) next_bank += 1 next_index = 1
+			local dwordb = _memory[next_bank][next_index]
+			dwordb &= 0x00ff.ffff
+			dwordb |= (zword << 8)
+			_memory[next_bank][next_index] = dwordb
 		end
+		zword >>>= (cell << 3)
+		dword |= zword
+		_memory[bank][index] = dword
+
+	elseif base == _local_var_table_mem_addr then
+		top_frame().vars[zaddress<<16] = zword
 	end
 end
 
@@ -389,11 +363,7 @@ end
 
 function zobject_set_family(index, family_member, family_index)
 	local address = zfamily_address(index, family_member)
-	if _zm_version == 3 then
-		set_zbyte(address, family_index)
-	else
-		set_zword(address, family_index)
-	end
+	if (_zm_version == 3) set_zbyte(address, family_index) else set_zword(address, family_index)
 end
 
 -- 12.3.1
@@ -625,6 +595,7 @@ function load_instruction()
 		op_code = (op_definition & 0x1f)
 		operands[1] = get_zbyte()
 		operands[2] = get_zbyte()
+
 		if (op_definition & 0x40 == 0x40) then
 			operands[1] = get_var(operands[1])
 		end
