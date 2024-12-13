@@ -120,11 +120,13 @@ function global_var_addr(index)
 end
 
 function set_var(value, var_byte, indirect)
+	log("set_var: "..tostr(value)..','..tostr(var_byte))
 	local var_address = decode_var_address(var_byte)
 	set_zword(var_address, value, indirect)
 end
 
 function get_var(var_byte, indirect)
+	log("get_var: "..tostr(var_byte))
 	local var_address = decode_var_address(var_byte)
 	return get_zword(var_address, indirect)
 end
@@ -556,7 +558,7 @@ function load_instruction()
 		log('[mem] extract_operands: '..tohex(info)..', '.._count)
 		for i = _count-1, 0, -1 do
 			local op_type = (info >>> (i*2)) & 0x03
-			-- log('  byte '..i..', op type: '..op_type)
+			log('  byte '..i..', op type: '..op_type)
 			local operand
 			if op_type == 0 then
 				operand = get_zword()
@@ -567,7 +569,7 @@ function load_instruction()
 			elseif op_type == 3 then
 				break
 			end
-			-- log('  operand '..tohex(operand))
+			log('  operand '..tohex(operand))
 			add(operands, operand)
 		end
 	end
@@ -630,14 +632,14 @@ function load_instruction()
 		op_code = (op_definition & 0x1f)
 		op_table_name = (op_table == _var_ops) and 'var' or '2OP'
 
-		local type_information, num_bytes
+		local type_information, op_count
 		if ((_zm_version > 3) and (op_definition == 0xec or op_definition == 0xfa)) then
 			op_table_name = 'doublevar'
-			type_information, num_bytes = get_zword(), 8
+			type_information, op_count = get_zword(), 8
 		else
-			type_information, num_bytes = get_zbyte(), 4
+			type_information, op_count = get_zbyte(), 4
 		end
-		extract_operands(type_information, num_bytes)
+		extract_operands(type_information, op_count)
 		if ((op_table == _long_ops) and (#operands == 1) and (op_code > 1)) get_zbyte()
 	end
 	local op_string = ''

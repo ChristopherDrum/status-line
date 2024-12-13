@@ -60,22 +60,26 @@ function addr_offset(baddr, n, amt)
 end
 
 function _loadw(baddr, n)
+	log("_loadw: "..tohex(baddr)..', '..n)
 	baddr = addr_offset(baddr, n, 15)
 	if (baddr == mem_stream_addr) log(" ! ! asked to load from mem stream ? ?")
 	_result(get_zword(baddr))
 end
 
 function _storew(baddr, n, zword)
+	log("_storew: "..tohex(baddr)..', '..n..','..tohex(zword))
 	baddr = addr_offset(baddr, n, 15)
 	set_zword(baddr, zword)
 end
 
 function _loadb(baddr, n)
+	log("_loadb: "..tohex(baddr)..', '..n)
 	baddr = addr_offset(baddr, n, 16)
 	_result(get_zbyte(baddr))
 end
 
 function _storeb(baddr, n, zbyte)
+	log("_storeb: "..tohex(baddr)..', '..n..','..tohex(zbyte))
 	baddr = addr_offset(baddr, n, 16)
 	set_zbyte(baddr, zbyte)
 end
