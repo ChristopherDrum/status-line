@@ -637,6 +637,7 @@ function _print_obj(obj)
 end
 
 function _print_table(baddr, x, _y, _n)
+	log('[ops] _print_table: '..tohex(baddr)..','..x..','.._y)
 	local n = _n or 0
 	local y = _y or 1
 	local za = zword_to_zaddress(baddr)
