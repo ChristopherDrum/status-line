@@ -80,7 +80,7 @@ end
 
 function log(str)
 	local prefix = sub(str,1,5)
-	if (prefix != "[mem]") printh(str, 'status_line_log_30')
+	printh(str, 'status_line_log_30')
 end
 
 function wait_for_any_key()

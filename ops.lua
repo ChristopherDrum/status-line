@@ -47,7 +47,7 @@ function _store(var, a)
 end
 
 function addr_offset(baddr, n, amt)
-	log("  [ops] addr_offset: "..tohex(baddr)..", "..tohex(n)..", "..tostr(amt))
+	log("  [ops] addr_offset: "..tohex(baddr).." by: "..tohex(n))
 	local addr = zword_to_zaddress(baddr)
 	local offset = (abs(n)>>>amt)
 	if (n < 0) offset = -offset
@@ -61,6 +61,7 @@ end
 
 function _loadw(baddr, n)
 	baddr = addr_offset(baddr, n, 15)
+	if (baddr == mem_stream_addr) log(" ! ! asked to load from mem stream ? ?")
 	_result(get_zword(baddr))
 end
 
@@ -249,16 +250,17 @@ end
 
 --8.5 Call and return, throw and catch
 
-function _call_f(raddr, a1, a2, a3, a4, a5, a6, a7)
-	_call_fp(raddr, call_type.func, a1, a2, a3, a4, a5, a6, a7)
+function _call_f(...)
+	_call_fp(call_type.func, ...)
 end
 
-function _call_p(raddr, a1, a2, a3, a4, a5, a6, a7)
-	_call_fp(raddr, call_type.proc, a1, a2, a3, a4, a5, a6, a7)
+function _call_p(...)
+	_call_fp(call_type.proc, ...)
 end
 
-function _call_fp(raddr, type, a1, a2, a3, a4, a5, a6, a7)
-	-- local var_str = ""
+function _call_fp(...)
+	local type, raddr, a1, a2, a3, a4, a5, a6, a7 = ...
+
 	if (raddr == 0x0) then
 		if (type == call_type.func) _result(0)
 
@@ -520,24 +522,34 @@ end
 
 --8.8 Input and output streams
 
-function _output_stream(n, baddr)
-	-- log('[ops] output_stream: '..n..', '..tohex(baddr))
-	if abs(n) == 1 then
-		screen_output = (n > 0)
+function _output_stream(_n, baddr, w)
+	log('[ops] output_stream: '.._n..', '..tohex(baddr)..', '..tostr(w))
+	if (_n == 0) return
 
-	elseif abs(n) == 2 then
+	local n, on_off = abs(_n), (_n > 0)
+
+	if n == 1 then
+		screen_stream = on_off
+
+	elseif n == 2 then
+		trans_stream = on_off
 		local p_flag = get_zbyte(_peripherals_header_addr)
-		if (n > 0) p_flag |= 0x01 --transcription on
-		if (n < 0) p_flag &= 0xfe --off
+		if (_n > 0) p_flag |= 0x01 --transcription on
+		if (_n < 0) p_flag &= 0xfe --off
 		set_zbyte(_peripherals_header_addr, p_flag)
 
-	else
-		if n > 0 then
-			set_zword(zword_to_zaddress(baddr), 0x00)
-			add(memory_output, baddr)
+	elseif n == 3 then
+		mem_stream = on_off
+		if on_off == true then
+			local addr = zword_to_zaddress(baddr)
+			add(mem_stream_addr, addr)
+			set_zword(addr, 0x00)
 		else
-			deli(memory_output)
+			deli(mem_stream_addr)
+			mem_stream = (#mem_stream_addr > 0)
 		end
+	elseif n == 4 then
+		script_stream = on_off
 	end
 end
 

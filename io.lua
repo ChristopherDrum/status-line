@@ -30,7 +30,8 @@ function reset_io_state()
 	clock_type, cursor_type = nil, nil
 	make_bold, make_inverse = false, false
 
-	screen_output, memory_output = true, {}
+	mem_stream, screen_stream, trans_stream, script_stream = false, true, false, false
+	mem_stream_addr, memory_output = {}, {}
 
 	active_window = 0
 	windows = {
@@ -111,24 +112,19 @@ function update_p_cursor()
 end
 
 function memory(str)
-	-- log('==> memory at level: '..#memory_output)
-	if ((#memory_output == 0) or (#str == 0)) return
-	local table_addr = zword_to_zaddress(memory_output[#memory_output])
-	-- log('  memory asked to record '..#str..' zscii chars')
-	local table_len = get_zword(table_addr)
-	-- log('  current table len '..table_len)
+	log('[mem] memory asked to record '..#str..' zscii chars')
+	if (#str == 0) return
+	local addr = mem_stream_addr[#mem_stream_addr]
+	local table_len = get_zword(addr)
 	local p8bytes = pack(ord(str,1,#str))
-	set_zbytes(table_addr + 0x.0002 + (table_len>>>16), p8bytes)
-	set_zword(table_addr, table_len + #p8bytes)
+	set_zbytes(addr + 0x.0002 + (table_len>>>16), p8bytes)
+	set_zword(addr, table_len + #p8bytes)
 end
 
 function output(str, flush_now)
 	-- log('[drw] ('..active_window..') output str: '..str)
-	if #memory_output > 0 then
-		-- log('[drw]    redirected to memory')
-		memory(str) 
-	else
-		if (screen_output == false) return
+	if (mem_stream == true) memory(str) return
+	if screen_stream == true then
 		log('[drw] output to screen '..active_window..': '..str)
 		local buffer = windows[active_window].buffer
 		local current_line = nil
@@ -144,7 +140,6 @@ function output(str, flush_now)
 		for i = 1 , #str do
 			local char = case_setter(ord(str,i), flipcase)
 
-			-- log('[drw] considering char: '..char)
 			if current_format_updated == true then
 				current_line ..= current_format
 				current_format_updated = false
@@ -159,14 +154,11 @@ function output(str, flush_now)
 			current_line ..= chr(o)
 
 			if (in_set(char, break_chars)) break_index = #current_line
-			-- log('[drw] current line: '..current_line)
 			if (visual_len > 128) or (char == '\n') then
 
 				local next_line, next = current_format, nil
 				current_line, next = unpack(split(current_line, break_index, false))
 				if (next) next_line ..= next 
-				-- log('[drw] on split current: '..current_line)
-				-- log('[drw] on split next: '..next_line)
 
 				add(buffer, current_line)
 
@@ -177,7 +169,6 @@ function output(str, flush_now)
 				break_index = 0
 			end
 		end
-		-- buffer[#buffer] = current_line
 		if (current_line) add(buffer, current_line)
 	end
 	if (flush_now) flush_line_buffer()

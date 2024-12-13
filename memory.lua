@@ -256,7 +256,7 @@ function get_zword(zaddress, indirect)
 	if not zaddress then
 		zaddress = _program_counter
 		_program_counter += 0x.0002
-	end	
+	end
 	local base = (zaddress & 0xffff)
 	local dword, bank, index, cell  = get_dword(zaddress, indirect)
 	-- log('[mem]  get_zword at address: '..tohex(zaddress,true)..', fetched: '..tohex(dword))
