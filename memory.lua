@@ -115,18 +115,18 @@ function local_var_addr(index)
 end
 
 function global_var_addr(index)
-	-- log(' address for G'..sub(tostr(index,true),5,6)..' is: '..tohex(addr))
+	-- log(' address for G'..index..' requested')
 	return _global_var_table_mem_addr + (index >>> 15) 	-- index*0x.0002 == (index>>>15)
 end
 
 function set_var(value, var_byte, indirect)
-	log("set_var: "..tostr(value)..','..tostr(var_byte))
+	log("  [mem] set_var: "..tostr(value)..','..tostr(var_byte))
 	local var_address = decode_var_address(var_byte)
 	set_zword(var_address, value, indirect)
 end
 
 function get_var(var_byte, indirect)
-	log("get_var: "..tostr(var_byte))
+	log("  [mem] get_var: "..tostr(var_byte))
 	local var_address = decode_var_address(var_byte)
 	return get_zword(var_address, indirect)
 end
@@ -136,13 +136,14 @@ function decode_var_address(var_byte)
 	-- log('decode_var_address: '..var_byte)
 	if (var_byte == 0) return _stack_mem_addr
 	if (var_byte < 16) return local_var_addr(var_byte)
-	if (var_byte >= 16) return global_var_addr(var_byte-16) -- -16 ONLY when decoding var byte
+	return global_var_addr(var_byte-16) -- -16 ONLY when decoding var byte
 end
 
-function zword_to_zaddress(zaddress, is_packed)
+function zword_to_zaddress(zaddress, _is_packed)
+	local is_packed = _is_packed or false
 	zaddress >>>= 16
-	if (is_packed) zaddress <<= _zm_packed_shift
-	-- log("zword_to_zaddress returning: "..tohex(zaddress))
+	if (is_packed == true) zaddress <<= _zm_packed_shift
+	log("zword_to_zaddress("..tostr(is_packed)..") returning: "..tohex(zaddress))
 	return zaddress
 end
 
@@ -168,24 +169,24 @@ end
 -- returns value stored at zaddress, memory bank (if any), index into storage, cell
 function get_dword(zaddress, indirect)
 	local zaddress = zaddress or _program_counter
-	-- log("[mem] get_dword at address "..tohex(zaddress))
+	log("  [mem] get_dword at address "..tohex(zaddress))
 	local base = (zaddress & 0xffff)
 
 	if base < 0xa then
 		local bank, index, cell = get_memory_location(zaddress)
-		-- log("[mem]  memory banks "..bank..','..index..','..cell)
+		-- log("  [mem]  memory banks "..bank..','..index..','..cell)
 		return _memory[bank][index], bank, index, cell
 	end
 
 	if base == _local_var_table_mem_addr then
-		-- log("[mem] get dword at _local_var_table_mem_addr: "..tohex(zaddress))
+		-- log("  [mem] get dword at _local_var_table_mem_addr: "..tohex(zaddress))
 		local index = zaddress << 16
 		local var = top_frame().vars[index]
 		return var, nil, index
 	end
 
 	if zaddress == _stack_mem_addr then
-		-- log("[mem] get dword at _stack_mem_addr: "..tohex(zaddress))
+		-- log("  [mem] get dword at _stack_mem_addr: "..tohex(zaddress))
 		if (indirect) return stack_top()
 		return stack_pop()
 	end
@@ -196,22 +197,20 @@ end
 --and the result may transition from 2- to 3-byte address
 function get_zbyte(zaddress)
 	if not zaddress then
-	-- log('[mem] _________________get_zbyte from PC: '..tohex(_program_counter))
 		zaddress = _program_counter
 		_program_counter += 0x.0001
-	-- log('                       now: '..tohex(_program_counter))
 	end
 	local base = (zaddress & 0xffff)
-	local dword, _, index, cell  = get_dword(zaddress)
+	local dword, _, _, cell  = get_dword(zaddress)
 
 	if base < 0xa then
-		-- log("[mem] get_zbyte at normal memory array: "..tohex(zaddress))
 		if cell < 2 then
 			dword >>>= (8 - (8*cell))
 		else
 			dword <<= (2 << cell)
 		end
 	end
+	log('  [mem] get_zbyte from: '..tohex(zaddress).." --> "..sub(tohex(dword & 0xff),5,6))
 	return dword & 0xff
 end
 
@@ -227,12 +226,12 @@ function get_zbytes(zaddress, num_bytes)
 end
 
 function set_zbyte(zaddress, _byte)
-	--log('[mem] set_zbyte at '..tohex(zaddress)..' to value: '..tohex(byte))
+	--log('  [mem] set_zbyte at '..tohex(zaddress)..' to value: '..tohex(byte))
 	local byte = _byte & 0xff --filter off garbage
 	local base = (zaddress & 0xffff)
 	assert(base != _local_var_table_mem_addr, "asked to write a zbyte to local var: "..tohex(zaddress))
 	if zaddress == _stack_mem_addr then
-		-- log('[mem] setting stack: '..tohex(byte))
+		-- log('  [mem] setting stack: '..tohex(byte))
 		stack_push(byte)
 	else
 		if base < 0xa then --regular memory
@@ -261,7 +260,6 @@ function get_zword(zaddress, indirect)
 	end
 	local base = (zaddress & 0xffff)
 	local dword, bank, index, cell  = get_dword(zaddress, indirect)
-	-- log('[mem]  get_zword at address: '..tohex(zaddress,true)..', fetched: '..tohex(dword))
 
 	if base < 0xa then
 		dword <<= (8 * cell)
@@ -269,24 +267,25 @@ function get_zword(zaddress, indirect)
 			index += 1
 			if (index > #_memory[bank]) bank += 1 index = 1
 			local dwordb = _memory[bank][index]
-			-- log('[mem]  consecutive dword '..tohex(dwordb))
+			-- log('  [mem]  consecutive dword '..tohex(dwordb))
 			dword |= (dwordb >>> 8)
 		end
 	end
+	log('  [mem] get_zword from: '..tohex(zaddress).." --> "..sub(tohex(dword & 0xff),3,6))
 	return dword & 0xffff
 end
 
 function set_zword(zaddress, _zword, indirect)
-	-- log('[mem] setting zword at '..tohex(zaddress)..' to value: '..tohex(zword))
 	local zword = _zword & 0xffff --filter off garbage
 	local base = (zaddress & 0xffff)
+	log('  [mem] set_zword at: '..tohex(zaddress)..' to: '..sub(tohex(_zword),3,6))
 	
 	if zaddress == _stack_mem_addr then
-		-- log('[mem] setting stack: '..tohex(zword))
+		-- log('  [mem] setting stack: '..tohex(zword))
 		if (indirect) set_stack_top(zword) else stack_push(zword)
 
 	elseif base < 0xa then --this should also resolve global var access because those addresses are maintained by the zcode, not us
-		local dword, bank, index, cell  = get_dword(zaddress, indirect)
+		local dword, bank, index, cell  = get_dword(zaddress)
 		local filter = ~(0xffff.0000 >>> (cell << 3))
 		dword &= filter
 		if cell == 3 then
@@ -315,22 +314,24 @@ function set_zwords(zaddress, words)
 end
 
 function zobject_attributes_byte_bit(index, attribute_id)
+	if (index == 0) return 0
 	local address = zobject_address(index)
 	local byte_index = flr(attribute_id>>3)
 	local attr_bit = attribute_id % 8
 	address += (byte_index>>>16)
-	-- log('[mem] zobject_attributes_byte_bit: index = '..tohex(byte_index)..', attr_bit == '..tohex(attr_bit))
+	-- log('  [mem] zobject_attributes_byte_bit: index = '..tohex(byte_index)..', attr_bit == '..tohex(attr_bit))
 	return get_zbyte(address), attr_bit, address
 end
 
 function zobject_has_attribute(index, attribute_id)
+	if (index == 0) return 0
 	local attr_byte, attr_bit = zobject_attributes_byte_bit(index, attribute_id)
 	local attr_check = (0x80>>attr_bit)
 	return (attr_byte & attr_check) == attr_check
 end
 
 function zobject_set_attribute(index, attribute_id, val)
-	-- log('[mem] zobject_set_attribute object: '..index..', set attr '..attribute_id..' to: '..val)
+	-- log('  [mem] zobject_set_attribute object: '..index..', set attr '..attribute_id..' to: '..val)
 	if ((index < 1) or (val > 1)) return
 	local attr_byte, attr_bit, address = zobject_attributes_byte_bit(index, attribute_id)
 	attr_byte &= ~(0x80>>attr_bit)
@@ -355,12 +356,14 @@ function zfamily_address(index, family_member)
 end
 
 function zobject_family(index, family_member)
+	if (index == 0) return 0
 	local address = zfamily_address(index, family_member)
 	if (_zm_version == 3) return get_zbyte(address)
 	return get_zword(address)
 end
 
 function zobject_set_family(index, family_member, family_index)
+	if (index == 0) return 0
 	local address = zfamily_address(index, family_member)
 	if (_zm_version == 3) set_zbyte(address, family_index) else set_zword(address, family_index)
 end
@@ -424,7 +427,7 @@ function extract_prop_len(len_byte)
 end
 
 function zobject_prop_data_addr_or_prop_list(index, property)
-	
+	if (index == 0) return 0
 	local collect_list = (property == nil)
 	local prop_list = {}
 
@@ -451,18 +454,20 @@ function zobject_prop_data_addr_or_prop_list(index, property)
 end
 
 function zobject_get_prop(index, property)
+	if (index == 0) return 0
 	local prop_data_address = zobject_prop_data_addr_or_prop_list(index, property)
 	if (prop_data_address == 0) return zobject_default_property(property)
 
 	local len_byte = get_zbyte(prop_data_address - 0x.0001)
 	local len = extract_prop_len(len_byte)
-	-- log('[mem] zobject_get_prop '..property..' at addr: '..tohex(prop_data_address)..', len: '..len)
+	-- log('  [mem] zobject_get_prop '..property..' at addr: '..tohex(prop_data_address)..', len: '..len)
 	if (len == 1) return get_zbyte(prop_data_address)
 	if (len == 2) return get_zword(prop_data_address)
 	return 0
 end
 
 function zobject_set_prop(index, property, value)
+	if (index == 0) return 0
 	local prop_data_address = zobject_prop_data_addr_or_prop_list(index, property)
 	-- assert(prop_data_address != 0, 'ERR: property '..property..' does not exist for object '..index)
 
@@ -555,7 +560,7 @@ function load_instruction()
 
 	local op_table, op_code, operands = nil, 0, {}
 	local function extract_operands(info, _count)
-		log('[mem] extract_operands: '..tohex(info)..', '.._count)
+		log('  [mem] extract_operands: '..tohex(info)..', '.._count)
 		for i = _count-1, 0, -1 do
 			local op_type = (info >>> (i*2)) & 0x03
 			log('  byte '..i..', op type: '..op_type)
@@ -578,15 +583,13 @@ function load_instruction()
 	-- Subsequent bytes are the operands
 	local pc = _program_counter
 	local op_definition = get_zbyte()
-	log('[mem] op_definition: '..tohex(op_definition))
+	log('  [mem] op_definition: '..tohex(op_definition))
 	op_form = (op_definition >>> 6)
 	if (op_definition == 0xbe) op_form = 0xbe
 	op_form &= 0xff
 
 	local op_table_name
 	if op_form <= 0x01 then
-		op_table_name = 'long'
-
 		op_table = _long_ops
 		op_code = (op_definition & 0x1f)
 		operands[1] = get_zbyte()
@@ -601,16 +604,12 @@ function load_instruction()
 
 	-- $BE indicates an extended instruction
 	elseif op_form == 0xbe and _zm_version >= 5 then
-		op_table_name = 'ext'
-
 		op_table = _ext_ops
 		op_code = get_zbyte()
 		type_information = get_zbyte()
 		extract_operands(type_information,4)
 
 	elseif op_form == 0x02 then
-		op_table_name = 'short'
-
 		op_table = _short_ops
 		op_code = (op_definition & 0xf)
 		local op_type = (op_definition & 0x30) >>> 4
@@ -621,7 +620,6 @@ function load_instruction()
 		elseif op_type == 2 then
 			operands = get_var()
 		elseif op_type == 3 then
-			op_table_name = 'zero'
 			op_table = _zero_ops
 			operands = nil
 		end
@@ -630,11 +628,9 @@ function load_instruction()
 	elseif op_form == 0x03 then
 		op_table = (op_definition & 0x20 == 0) and _long_ops or _var_ops
 		op_code = (op_definition & 0x1f)
-		op_table_name = (op_table == _var_ops) and 'var' or '2OP'
 
 		local type_information, op_count
 		if ((_zm_version > 3) and (op_definition == 0xec or op_definition == 0xfa)) then
-			op_table_name = 'doublevar'
 			type_information, op_count = get_zword(), 8
 		else
 			type_information, op_count = get_zbyte(), 4
@@ -644,9 +640,9 @@ function load_instruction()
 	end
 	local op_string = ''
 	for i = 1, #operands do
-		op_string ..= tohex(operands[i])..', '
+		op_string ..= sub(tohex(operands[i]),3,6)..' '
 	end
-	log(sub(tohex(pc),6)..': '..op_table_name..(op_code+1)..'('..op_string..')')
+	log(sub(tohex(pc),6)..': '..op_table[#op_table][op_code+1]..'('..op_string..')')
 	local func = op_table[op_code+1]
 	return func, operands
 end
@@ -656,7 +652,7 @@ function capture_mem_state(state)
 	local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
 
 	if state == _memory_start_state then
-		-- log('[mem] capture _memory_start_state')
+		-- log('  [mem] capture _memory_start_state')
 		_memory_start_state = {}
 		for i = 1, mem_max_bank do
 			_memory_start_state[i] = {unpack(_memory[i])}
@@ -664,12 +660,12 @@ function capture_mem_state(state)
 		while #_memory_start_state[#_memory_start_state] > mem_max_index do
 			deli(_memory_start_state[#_memory_start_state])
 		end
-		-- log("[mem] after memory_start_state with bank "..mem_max_bank..": "..stat(0))
+		-- log("  [mem] after memory_start_state with bank "..mem_max_bank..": "..stat(0))
 	else
 
 		local memory_dump = dword_to_str(tonum(_engine_version))
 
-		-- log('[mem] saving memory up to bank: '..mem_max_bank..', index: '..mem_max_index)
+		-- log('  [mem] saving memory up to bank: '..mem_max_bank..', index: '..mem_max_index)
 		memory_dump ..= dword_to_str(mem_max_index)
 		for i = 1, mem_max_bank do
 			local max_j = (i == mem_max_bank) and mem_max_index or #_memory[i]
@@ -678,28 +674,28 @@ function capture_mem_state(state)
 			end
 		end
 
-		-- log('[mem] saving call stack: '..(#_call_stack))
+		-- log('  [mem] saving call stack: '..(#_call_stack))
 		memory_dump ..= dword_to_str(#_call_stack)
 		for i = 1, #_call_stack do
 			local frame = _call_stack[i]
 			memory_dump ..= dword_to_str(frame.pc)
 			memory_dump ..= dword_to_str(frame.call)
 			memory_dump ..= dword_to_str(frame.args)
-			-- log("[mem] saving frame"..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args))
+			-- log("  [mem] saving frame"..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args))
 			memory_dump ..= dword_to_str(#frame.stack)
-			-- log("[mem] ---frame stack---")
+			-- log("  [mem] ---frame stack---")
 			for j = 1, #frame.stack do
 				memory_dump ..= dword_to_str(frame.stack[j])
-				-- log("[mem]  "..j..': '..tohex(frame.stack[j])..' -> '..dword_to_str(frame.stack[j]))
+				-- log("  [mem]  "..j..': '..tohex(frame.stack[j])..' -> '..dword_to_str(frame.stack[j]))
 			end
-			-- log("[mem] ---frame vars---")
+			-- log("  [mem] ---frame vars---")
 			for k = 1, 16 do
 				memory_dump ..= dword_to_str(frame.vars[k])
-				-- log("[mem]  "..k..": "..tohex(frame.vars[k])..' -> '..dword_to_str(frame.vars[k]))
+				-- log("  [mem]  "..k..": "..tohex(frame.vars[k])..' -> '..dword_to_str(frame.vars[k]))
 			end
 		end
 
-		-- log('[mem] saving pc: '..(tohex(_program_counter,true)))
+		-- log('  [mem] saving pc: '..(tohex(_program_counter,true)))
 		memory_dump ..= dword_to_str(_program_counter)
 		memory_dump ..= dword_to_str(checksum)
 
