@@ -258,6 +258,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 		if (index == 0) return
 		local s = sub(str,index,i-1)
 		-- log("commit token: ^"..s.."^")
+		if (_zm_version > 4) index += 1
 		add(tokens, {s,index,z_adjust})
 		index, z_adjust = 0, 0
 	end
@@ -315,14 +316,15 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 		log("  [prs]  looking up substring: ^"..sub(word,1,_zm_dictionary_word_length-z_adjust).."^")
 		local dict_addr = dict[sub(word,1,_zm_dictionary_word_length-z_adjust)] or 0x0
 		
-		if bit > 0 and dict_addr == nil then
-			parse_buffer += 0x.0004
+		if (bit > 0) and (dict_addr == nil) then
+			--nothing to do here
 		else
 			set_zword(parse_buffer, dict_addr)
 			set_zbyte(parse_buffer+0x.0002, #word)
 			set_zbyte(parse_buffer+0x.0003, index)
-			parse_buffer += 0x.0004
+			log("  [prs] token values set to: "..dict_addr..','..#word..','..index)
 		end
+		parse_buffer += 0x.0004
 	end
 end
 
