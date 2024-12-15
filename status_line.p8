@@ -254,15 +254,12 @@ function build_dictionary(addr)
 	local seps, addr = get_zbytes(addr + 0x.0001, num_separators)
 	separators = zscii_to_p8scii(seps)
 
-	log("  [hdr]  separators: "..separators)
-
 	local entry_length = (get_zbyte(addr) >>> 16)
 	addr += 0x.0001
 
 	local word_count = abs(get_zword(addr))
 	addr += 0x.0002
 
-	log("  [hrd] build dictionary...")
 	for i = 1, word_count do
 		local zstring = get_zstring(addr,1)
 		local lower = ''
@@ -270,7 +267,6 @@ function build_dictionary(addr)
 			lower ..= case_setter(zstring[j], lowercase)
 		end
 		dict[lower] = (addr << 16)
-		log("    "..lower..' at '..tohex(dict[lower]))
 		addr += entry_length
 	end
 	return dict
@@ -321,7 +317,7 @@ function process_header()
 	end
 	set_zbyte(_interpreter_flags_header_addr, i_flag)
 	set_zword(_peripherals_header_addr, p_flag)
-	set_zword(_standard_revision_num_addr, 0x0100) --1.0 spec adherance
+	set_zword(_standard_revision_num_addr, 0x0101) --1.1 spec adherance
 
 	_program_counter 		= zaddress_at_zaddress(_program_counter_header_addr)
 	_dictionary_mem_addr 	= zaddress_at_zaddress(_dictionary_header_addr)

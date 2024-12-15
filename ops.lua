@@ -639,6 +639,7 @@ function _print_num(s)
 end
 
 function _print_obj(obj)
+	if (obj == 0) return
 	local name, _ = zobject_name(obj)
 	-- log('  [ops] print_obj: ')
 	output(name)
