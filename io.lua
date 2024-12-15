@@ -275,7 +275,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 		if #word > 0 then
 			local word_addr = dict[word] or 0x0
 
-			if (bit > 0) and (word_addr == nil) then
+			if (bit > 0) and (word_addr == 0x0) then
 				--nothing to do here
 			else
 				set_zword(parse_buffer, word_addr)
@@ -311,7 +311,6 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 	-- Update token count in parse buffer
 	set_zbyte(baddr2 + 0x.0001, token_count)
 end
-
 
 function _encode_text(baddr1, n, p, baddr2)
 	log("  [prs] _encode_text: "..tohex(baddr1)..', '..n..', '..p)

@@ -350,9 +350,10 @@ end
 --8.6 Objects, attributes, and properties
 
 function _get_family_member(obj, fam)
-	--log('get_family_member: '..obj..','..fam)
+	-- log('  [ops] _get_family_member: '..zobject_name(obj))
 	local member = zobject_family(obj, fam)
 	if (not member) member = 0
+	-- if (member != 0) log('  found: '..zobject_name(member)..'('..fam..')')
 	_result(member)
 	if (fam != zparent) _branch(member != 0)
 end
@@ -370,7 +371,8 @@ function _get_parent(obj)
 end
 
 function _remove_obj(obj)
-	--log('  [ops] remove_obj: '..zobject_name(obj)..'('..obj..')')
+	if (obj == 0) return
+	log('  [ops] remove_obj: '..zobject_name(obj)..'('..obj..')')
 	local original_parent = zobject_family(obj, zparent)
 	if original_parent != 0 then
 
@@ -395,7 +397,8 @@ function _remove_obj(obj)
 end
 
 function _insert_obj(obj1, obj2)
-	--log('  [ops] insert_obj: '..zobject_name(obj1)..'('..obj1..')'..' into '..zobject_name(obj2)..'('..obj2..')')
+	if (obj1 == 0 or obj2 == 0) return
+	log('  [ops] insert_obj: '..zobject_name(obj1)..'('..obj1..')'..' into '..zobject_name(obj2)..'('..obj2..')')
 	_remove_obj(obj1)
 	local first_child = zobject_family(obj2, zchild)
 	zobject_set_family(obj2, zchild, obj1)
@@ -424,7 +427,9 @@ function _get_prop(obj, prop)
 end
 
 function _get_prop_addr(obj, prop)
-	_result(zobject_prop_data_addr_or_prop_list(obj, prop) << 16)
+	local addr, len = zobject_prop_data_addr_or_prop_list(obj, prop)
+	log("  [ops] _get_prop_addr returning: "..tohex(addr)..", "..tostr(len))
+	_result(addr << 16)
 end
 
 function _get_next_prop(obj, prop)
@@ -436,8 +441,9 @@ function _get_next_prop(obj, prop)
 		if (#prop_list > 0) next_prop = prop_list[1]
 	else
 		for i = 1, #prop_list do
-			if (prop_list[i] == prop) and (i+1 <= #prop_list) then
+			if (prop_list[i] == prop) and (i < #prop_list) then
 				next_prop = prop_list[i+1]
+				break
 			end
 		end
 	end
@@ -446,14 +452,9 @@ function _get_next_prop(obj, prop)
 end
 
 function _get_prop_len(baddr)
-	--log('  [ops] get_prop_len: '..tohex(baddr))
-	if baddr == 0 then
-		_result(0)
-	else
-		local baddr = zword_to_zaddress(baddr)
-		local len_byte = get_zbyte(baddr - 0x.0001)
-		_result(extract_prop_len(len_byte))
-	end
+	local len = 0
+	if (baddr != 0) len = extract_prop_len_num(zword_to_zaddress(baddr-1))
+	_result(len)
 end
 
 

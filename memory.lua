@@ -143,7 +143,7 @@ function zword_to_zaddress(zaddress, _is_packed)
 	local is_packed = _is_packed or false
 	zaddress >>>= 16
 	if (is_packed == true) zaddress <<= _zm_packed_shift
-	log("zword_to_zaddress("..tostr(is_packed)..") returning: "..tohex(zaddress))
+	-- log("zword_to_zaddress("..tostr(is_packed)..") returning: "..tohex(zaddress))
 	return zaddress
 end
 
@@ -169,7 +169,7 @@ end
 -- returns value stored at zaddress, memory bank (if any), index into storage, cell
 function get_dword(zaddress, indirect)
 	local zaddress = zaddress or _program_counter
-	log("  [mem] get_dword at address "..tohex(zaddress))
+	-- log("  [mem] get_dword at address "..tohex(zaddress))
 	local base = (zaddress & 0xffff)
 
 	if base < 0xa then
@@ -210,7 +210,7 @@ function get_zbyte(zaddress)
 			dword <<= (2 << cell)
 		end
 	end
-	log('  [mem] get_zbyte from: '..tohex(zaddress).." --> "..sub(tohex(dword & 0xff),5,6))
+	-- log('  [mem] get_zbyte from: '..tohex(zaddress).." --> "..sub(tohex(dword & 0xff),5,6))
 	return dword & 0xff
 end
 
@@ -272,14 +272,14 @@ function get_zword(zaddress, indirect)
 			dword |= (dwordb >>> 8)
 		end
 	end
-	log('  [mem] get_zword from: '..tohex(zaddress).." --> "..sub(tohex(dword & 0xff),3,6))
+	-- log('  [mem] get_zword from: '..tohex(zaddress).." --> "..sub(tohex(dword & 0xff),3,6))
 	return dword & 0xffff
 end
 
 function set_zword(zaddress, _zword, indirect)
 	local zword = _zword & 0xffff --filter off garbage
 	local base = (zaddress & 0xffff)
-	log('  [mem] set_zword at: '..tohex(zaddress)..' to: '..sub(tohex(_zword),3,6))
+	-- log('  [mem] set_zword at: '..tohex(zaddress)..' to: '..sub(tohex(_zword),3,6))
 	
 	if zaddress == _stack_mem_addr then
 		-- log('  [mem] setting stack: '..tohex(zword))
@@ -328,15 +328,18 @@ function zobject_has_attribute(index, attribute_id)
 	if (index == 0) return 0
 	local attr_byte, attr_bit = zobject_attributes_byte_bit(index, attribute_id)
 	local attr_check = (0x80>>attr_bit)
+	-- log('  [mem] zobject_has_attribute: '..zobject_name(index)..', '..attribute_id..' '..tostr(attr_check))
 	return (attr_byte & attr_check) == attr_check
 end
 
 function zobject_set_attribute(index, attribute_id, val)
-	-- log('  [mem] zobject_set_attribute object: '..index..', set attr '..attribute_id..' to: '..val)
 	if ((index < 1) or (val > 1)) return
+	-- log('  [mem] zobject_set_attribute: '..zobject_name(index)..', set attr '..attribute_id..' to: '..val)
 	local attr_byte, attr_bit, address = zobject_attributes_byte_bit(index, attribute_id)
+	-- log('     byte was: '..tohex(attr_byte))
 	attr_byte &= ~(0x80>>attr_bit)
 	attr_byte |= (val<<(7-attr_bit))
+	-- log('     byte now: '..tohex(attr_byte))
 	set_zbyte(address, attr_byte)
 end
 
@@ -394,37 +397,43 @@ function zobject_name(index)
 end
 
 -- 12.4.1
-function zobject_prop_num_len(prop_num_len_address)
-	local raw_byte = get_zbyte(prop_num_len_address)
-	local prop_num, prop_len, offset = 0, 0, 1
-	if _zm_version == 3 then
-		prop_num = raw_byte & 0x1f
-		prop_len = extract_prop_len(raw_byte)
-	else
-		prop_num = raw_byte & 0x3f
-		if (raw_byte & 0x80) == 0x80 then
-			local next_byte = get_zbyte(prop_num_len_address + 0x.0001)
-			prop_len = extract_prop_len(next_byte)
-			if (prop_len == 0) prop_len = 64
-			offset = 2
-		else
-			prop_len = extract_prop_len(raw_byte)
-		end
-	end
-	return prop_num, prop_len, offset
-end
+function extract_prop_len_num(local_addr)
+	-- address should be passed as internal 0xf.ffff style
+	-- in other words, run zword_to_zaddress before passing here
+	local len_num_byte = get_zbyte(local_addr)
 
--- 12.4.2
-function extract_prop_len(len_byte)
-	if _zm_version == 3 then
-		return ((len_byte >>> 5) & 0x7) + 1
+	-- log off immediately surrounding bytes
+	-- local offset = -0x.0003
+	-- for i = 1, 8 do
+	-- 	log(tohex(get_zbyte(local_addr+offset)))
+	-- 	offset += 0x.0001
+	-- end
+	
+	-- offset represents how many bytes define this property
+	local len, num, offset = 0, 0, 1
+
+	if (_zm_version == 3) then
+		-- bits |7.6.5| == len; |4.3.2.1.0| == prop num
+		len = ((len_num_byte >>> 5) & 0x7)
+		num = (len_num_byte & 0x1f)
+
 	else
-		if (len_byte & 0x80) == 0 then
-			return ((len_byte >>> 6) & 0x1) + 1
+		-- bits |7.6| == len; |5.4.3.2.1.0| == prop num
+		num = (len_num_byte & 0x3f)
+
+		if (len_num_byte & 0x80 == 0) then
+			 len = ((len_num_byte >>> 6) & 0x1)
+
 		else
-			return (len_byte & 0x7f)
+			--otherwise, bits |5.4.3.2.1.0| == len, on the NEXT byte
+			len_num_byte = get_zbyte(zword_to_zaddress(local_addr + 0x.0001))
+			len = len_num_byte & 0x3f
+			if (len == 0x0) len = 0x3f -- '0' should be interpreted as 63(+1)
+			offset = 2
 		end
 	end
+	log("  [mem] extract_prop_len_num from "..tohex(local_addr)..": "..(len+1)..", "..num)
+	return len+1, num, offset
 end
 
 function zobject_prop_data_addr_or_prop_list(index, property)
@@ -432,53 +441,50 @@ function zobject_prop_data_addr_or_prop_list(index, property)
 	local collect_list = (property == nil)
 	local prop_list = {}
 
-	local text_length, prop_address = zobject_text_length(index)
-	prop_address += (0x.0001 + (text_length >>> 15))
+	-- start at the address of the first property (jumping over the text header)
+	local text_length, prop_data_addr = zobject_text_length(index)
+	prop_data_addr += (0x.0001 + (text_length >>> 15))
 
-	local prop_num, prop_len, offset = zobject_prop_num_len(prop_address)
+	local prop_len, prop_num, offset = extract_prop_len_num(prop_data_addr)
 	while prop_num > 0 do
 
 		if collect_list == true then
 			add(prop_list, prop_num)
 		else
 			if prop_num == property then
-				return (prop_address + (offset >>> 16)), prop_len
+				return (prop_data_addr + (offset >>> 16)), prop_len
 			end
 		end
 
-		prop_address += ((prop_len + offset) >>> 16)
-		prop_num, prop_len, offset = zobject_prop_num_len(prop_address)
+		prop_data_addr += ((prop_len + offset) >>> 16)
+		prop_len, prop_num, offset = extract_prop_len_num(prop_data_addr)
 	end
 	
 	if (collect_list == true) return prop_list
-	return 0
+	return 0, 0
 end
 
 function zobject_get_prop(index, property)
 	if (index == 0) return 0
-	local prop_data_address = zobject_prop_data_addr_or_prop_list(index, property)
-	if (prop_data_address == 0) return zobject_default_property(property)
+	local prop_data_addr, len = zobject_prop_data_addr_or_prop_list(index, property)
+	if (prop_data_addr == 0) return zobject_default_property(property)
 
-	local len_byte = get_zbyte(prop_data_address - 0x.0001)
-	local len = extract_prop_len(len_byte)
-	-- log('  [mem] zobject_get_prop '..property..' at addr: '..tohex(prop_data_address)..', len: '..len)
-	if (len == 1) return get_zbyte(prop_data_address)
-	if (len == 2) return get_zword(prop_data_address)
+	if len == 1 then
+		return get_zbyte(prop_data_addr)
+	else 
+		return get_zword(prop_data_addr)
+	end
 	return 0
 end
 
 function zobject_set_prop(index, property, value)
 	if (index == 0) return 0
-	local prop_data_address = zobject_prop_data_addr_or_prop_list(index, property)
-	-- assert(prop_data_address != 0, 'ERR: property '..property..' does not exist for object '..index)
-
-	local len_byte = get_zbyte(prop_data_address - 0x.0001)
-	local len = extract_prop_len(len_byte)
-
+	local prop_data_addr, len = zobject_prop_data_addr_or_prop_list(index, property)
+	
 	if len == 1 then
-		 set_zbyte(prop_data_address, value & 0xff)
+		 set_zbyte(prop_data_addr, value & 0xff)
 	else
-		 set_zword(prop_data_address, value & 0xffff)
+		 set_zword(prop_data_addr, value & 0xffff)
 	end
 end
 
