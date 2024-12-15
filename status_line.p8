@@ -285,7 +285,7 @@ function process_header()
 		_zm_object_entry_size = 9
 		_zm_dictionary_word_length = 6
 
-		i_flag &= 0x3b --turn off some bits
+		i_flag &= 0x07 --preserve the game's bottom 3 bits
 		i_flag |= 0x20 --enable upper window
 
 	else
@@ -301,15 +301,17 @@ function process_header()
 		set_zbyte(_screen_width_header_addr, 32)
 		
 		if _zm_version >= 5 then
-			set_zword(_screen_width_units_addr, 32)
-			set_zword(_screen_height_units_addr, 21)
-			set_zbyte(_font_height_units_addr, 1)
-			set_zbyte(_font_width_units_addr, 1)
+			set_zword(_screen_width_units_addr, 128)
+			set_zword(_screen_height_units_addr, 128)
+			set_zbyte(_font_height_units_addr, 6)
+			set_zbyte(_font_width_units_addr, 4)
 			set_zbyte(_default_bg_color_addr, 0) --current palette fg
 			set_zbyte(_default_fg_color_addr, 15) --current palette bg
+			i_flag = 0x1c --sound fx and timed keyboard disabled
+		else
+			i_flag = 0x30 --for z4
 		end
 
-		i_flag = 0x1c --sound fx and timed keyboard disabled
 		if full_color == true then
 			i_flag |= 0x01
 			p_flag = 0x00c2
