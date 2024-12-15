@@ -220,9 +220,10 @@ function get_zbytes(zaddress, num_bytes)
 
 	local bytes = {}
 	for i = 0, num_bytes - 1 do
-		add(bytes, get_zbyte(zaddress + (i>>>16)))
+		add(bytes, get_zbyte(zaddress))
+		zaddress += 0x.0001
 	end
-	return bytes
+	return bytes, zaddress --return the address *after* the fetched bytes
 end
 
 function set_zbyte(zaddress, _byte)

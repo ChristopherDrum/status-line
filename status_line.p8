@@ -251,7 +251,8 @@ end
 function build_dictionary(addr)
 	local dict = {}
 	local num_separators = get_zbyte(addr)
-	addr += 0x.0001 + (num_separators>>>16)
+	local seps, addr = get_zbytes(addr + 0x.0001, num_separators)
+	separators = zscii_to_p8scii(seps)
 
 	local entry_length = (get_zbyte(addr) >>> 16)
 	addr += 0x.0001
@@ -271,12 +272,6 @@ function build_dictionary(addr)
 		addr += entry_length
 	end
 	return dict
-end
-
-function fetch_parser_separators()
-	local num_separators = get_zbyte(_dictionary_mem_addr)
-	local seps = get_zbytes(_dictionary_mem_addr + 0x.0001, num_separators)
-	separators = zscii_to_p8scii(seps)
 end
 
 function process_header()
@@ -349,7 +344,6 @@ function initialize_game()
 
 	setup_user_prefs()
 
-	fetch_parser_separators()
 	_main_dict = build_dictionary(_dictionary_mem_addr)
 
 	call_stack_push()

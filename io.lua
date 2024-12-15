@@ -249,84 +249,69 @@ function screen(str)
 end
 
 function _tokenise(baddr1, baddr2, baddr3, _bit)
-	log('[prs] _tokenise from: '..tohex(baddr1)..' into: '..tohex(baddr2)..' alt dict: '..tohex(baddr3)..' bit?: '..tohex(bit))
-	local tokens, index, z_adjust = {}, 0, 0
+	-- log('[prs] _tokenise from: '..tohex(baddr1)..' into: '..tohex(baddr2)..' alt dict: '..tohex(baddr3)..' bit?: '..tohex(_bit or 0))
 	local bit = _bit or 0
-	str = ''
-
-	local function commit(i)
-		if (index == 0) return
-		local s = sub(str,index,i-1)
-		-- log("commit token: ^"..s.."^")
-		if (_zm_version > 4) index += 1
-		add(tokens, {s,index,z_adjust})
-		index, z_adjust = 0, 0
-	end
-
 	local text_buffer = zword_to_zaddress(baddr1)
 	local parse_buffer = zword_to_zaddress(baddr2)
+	baddr2 = parse_buffer --cache the start pointer
+	local dict = (baddr3 == nil) and _main_dict or build_dictionary(zaddress_at_zaddress(baddr3))
 
-	local addr = text_buffer + 0x.0001
+	-- move past the text_buffer header info
+	text_buffer += 0x.0001
 	local num_bytes = 256
 	if _zm_version >= 5 then
-		num_bytes = get_zbyte(addr)
-		addr += 0x.0001
+		num_bytes = get_zbyte(text_buffer)
+		text_buffer += 0x.0001
 	end
+	-- log("  [prs] num_bytes: "..num_bytes)
+	-- move past the parse_buffer header info: max tokens and token_count
+	parse_buffer += 0x.0002
 
-	--this is redundant work for a direct pipeline
-	local j = 1
-	while true do
-		if (j > num_bytes) break
-		local c = get_zbyte(addr)
-		if (_zm_version < 5 and c == 0) break
-		str ..= chr(c)
-		addr += 0x.0001
-		j+=1
-	end
+	-- accumulators for the found elements
+	local word, index, token_count = "", 0, 0
+	local offset = (_zm_version < 5) and 0 or 1
 
-	for i = 1, #str do
-		local char = str[i]
+	local function commit_token()
+		if #word > 0 then
+			local word_addr = dict[word] or 0x0
 
-		if (in_set(char, punc)) z_adjust += 1
-
-		if char == ' ' then
-			commit(i)
-
-		elseif in_set(char, separators) then
-			z_adjust -= 1
-			commit(i)
-			add(tokens, {char,i,0})
-
-		elseif index == 0 then
-			index = i
+			if (bit > 0) and (word_addr == nil) then
+				--nothing to do here
+			else
+				set_zword(parse_buffer, word_addr)
+				set_zbyte(parse_buffer+0x.0002, #word)
+				set_zbyte(parse_buffer+0x.0003, index+offset)
+				-- log("  [prs] token for "..word..": "..word_addr..', '..#word..', '..index+offset)
+			end
+			parse_buffer += 0x.0004
+			token_count += 1
 		end
 	end
-	commit(#str+1)
-	-- log("  [prs] token count: "..#tokens)
-	local dict = _main_dict
-	if (baddr3 != nil) dict = build_dictionary(zaddress_at_zaddress(baddr3))
 
-	local parse_buffer_length = get_zbyte(parse_buffer)
-	-- local max_tokens = min(#tokens, parse_buffer_length)
-	parse_buffer += 0x.0001
-	set_zbyte(parse_buffer, #tokens)
-	parse_buffer += 0x.0001
-	for i = 1, #tokens do
-		local word, index, z_adjust = unpack(tokens[i])
-		log("  [prs]  looking up substring: ^"..sub(word,1,_zm_dictionary_word_length-z_adjust).."^")
-		local dict_addr = dict[sub(word,1,_zm_dictionary_word_length-z_adjust)] or 0x0
+	for j = 1, num_bytes do
+		local c = get_zbyte(text_buffer)
+		text_buffer += 0x.0001
+		if (_zm_version < 5 and c == 0) then break end
+
+		local char = chr(c)
+		--do we have a token commit trigger?
+		if char == ' ' or in_set(char, separators) then
+			commit_token()
+			word = (char != ' ') and char or ""
+			index = (char != ' ') and j or 0
 		
-		if (bit > 0) and (dict_addr == nil) then
-			--nothing to do here
+		--start tracking a new token
 		else
-			set_zword(parse_buffer, dict_addr)
-			set_zbyte(parse_buffer+0x.0002, #word)
-			set_zbyte(parse_buffer+0x.0003, index)
-			log("  [prs] token values set to: "..dict_addr..','..#word..','..index)
+			if (index == 0) index = j
+			word ..= char
 		end
-		parse_buffer += 0x.0004
 	end
+	commit_token() --capture that last byte, if valid
+
+	-- Update token count in parse buffer
+	set_zbyte(baddr2 + 0x.0001, token_count)
 end
+
 
 function _encode_text(baddr1, n, p, baddr2)
 	log("  [prs] _encode_text: "..tohex(baddr1)..', '..n..', '..p)
