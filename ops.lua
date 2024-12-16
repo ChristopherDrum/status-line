@@ -274,8 +274,8 @@ function _call_fp(...)
 		--z3/4 formula is "r = r + 2 ∗ L + 1"
 		--z5 formula is "r = r + 1"
 		local r = zword_to_zaddress(raddr, true)
-		log("  _call_fp: "..tohex(raddr).." -> "..tohex(r))
 		local l = get_zbyte(r) --num local vars
+		log("  _call_fp: "..tohex(raddr).." -> "..tohex(r)..', ('..l..' locals)')
 		r += 0x.0001 -- "1"
 		call_stack_push()
 		if (_zm_version >= 5) top_frame().pc = r
@@ -718,10 +718,10 @@ function _restore()
 	if (_zm_version == 3) _branch(rg) else _result(rg)
 end
 
-function _save_undo()
+function _deny_undo()
+	log("  [ops] _deny_undo")
 	_result(-1)
 end
---we don't support undo, so we nop return_undo (won't be called)
 
 
 --8.14 Miscellaneous
