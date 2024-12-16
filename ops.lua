@@ -433,7 +433,7 @@ function _get_prop_addr(obj, prop)
 end
 
 function _get_next_prop(obj, prop)
-	--log('  [ops] get_next_prop: '..obj)
+	-- log('  [ops] get_next_prop for: '..zobject_name(obj)..'('..obj..'), prop: '..prop)
 	local next_prop = 0
 	local prop_list = zobject_prop_data_addr_or_prop_list(obj)
 	if (prop_list == 0) prop_list = {}
@@ -447,13 +447,18 @@ function _get_next_prop(obj, prop)
 			end
 		end
 	end
-	--log('  [ops]   next prop: '..next_prop)
+	-- log('      found: '..next_prop)
 	_result(next_prop)
 end
 
 function _get_prop_len(baddr)
 	local len = 0
-	if (baddr != 0) len = extract_prop_len_num(zword_to_zaddress(baddr-1))
+	if baddr != 0 then
+		local addr = zword_to_zaddress(baddr-1)
+		local byte = get_zbyte(addr)
+		if (byte & 0x80 == 0x80) addr -= 0x.0001
+		len = extract_prop_len_num(addr)
+	end
 	_result(len)
 end
 

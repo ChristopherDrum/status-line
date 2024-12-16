@@ -338,10 +338,10 @@ end
 
 function initialize_game()
 
-	process_header()
-	reset_io_state()
 	setup_palette()
 
+	process_header()
+	reset_io_state()
 	setup_user_prefs()
 
 	_main_dict = build_dictionary(_dictionary_mem_addr)

@@ -273,7 +273,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 
 	local function commit_token()
 		if #word > 0 then
-			local word_addr = dict[word] or 0x0
+			local word_addr = dict[sub(word,1,_zm_dictionary_word_length)] or 0x0
 
 			if (bit > 0) and (word_addr == 0x0) then
 				--nothing to do here
