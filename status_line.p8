@@ -23,7 +23,7 @@ function rehydrate(raw_strings, func)
 end
 
 function rehydrate_menu_vars()
-	local raw_strings = "screen_types`1`ega,7,0`b&w,6,0`green,138,131`amber,9,128`blue,12,129`oldlcd,131,129`plasma,8,130`invert,0,6/scroll_speeds`3`slow,7`medium,5`fast,4`faster,2`fastest,0/clock_types`1`24-hour,24`12-hour,12/cursor_types`1`block,▮`square,■`bar,|`under,_`dotted,\^:150a150a15000000"
+	local raw_strings = "screen_types`1`ega,0,7`b&w,6,0`green,138,131`amber,9,128`blue,12,129`oldlcd,131,129`plasma,8,130`invert,0,6/scroll_speeds`3`slow,7`medium,5`fast,4`faster,2`fastest,0/clock_types`1`24-hour,24`12-hour,12/cursor_types`1`block,▮`square,■`bar,|`under,_`dotted,\^:150a150a15000000"
 	local function hydrate(str)
 		local def = split(str, '`')
 		local menu = {}
@@ -192,9 +192,9 @@ function setup_palette()
 	local mode, fg, bg = unpack(screen_types.values[st]) 
 	full_color = mode == 'ega'
 	p = split("0,0,8,139,10,140,136,12,7,6,5,133,14,15")
-	p[0], p[15] = bg, fg
+	p[0], p[15] = fg, bg
 	pal(p,1)
-	palt(0,false)
+	-- palt(0,false)
 end
 
 function setup_user_prefs()

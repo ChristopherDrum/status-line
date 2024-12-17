@@ -20,12 +20,12 @@ zchar_map_str = [[
 zchar_map = split(zchar_map_str)
 
 function reset_io_state()
-	current_bg, current_fg, current_font = 0, 15, 1
+	current_fg, current_bg, current_font = 0, 15, 1
 	if (full_color == true) then
-		current_bg = get_zbyte(_default_bg_color_addr)
 		current_fg = get_zbyte(_default_fg_color_addr)
+		current_bg = get_zbyte(_default_bg_color_addr)
 	end
-	log("  [drw]  reset_io_state bg = "..current_bg..", fg = "..current_fg)
+	log("  [drw]  reset_io_state fg = "..current_fg..", bg = "..current_bg)
 
 	current_text_style = 0
 	current_format, current_format_updated = '', false
@@ -172,7 +172,6 @@ function output(str, flush_now)
 				break_index = 0
 			end
 		end
-		log('  [drw] output to screen '..active_window..' formatted str: '..current_line)
 		if (current_line) add(buffer, current_line)
 	end
 	if (flush_now) flush_line_buffer()
@@ -212,7 +211,7 @@ function flush_line_buffer()
 end
 
 function screen(str)
-	-- log('  [drw] screen '..active_window..': '..str)
+	log('  [drw] screen ('..active_window..'): '..str)
 	local win = windows[active_window]
 
 	clip(unpack(win.screen_rect))
