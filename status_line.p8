@@ -192,9 +192,8 @@ function setup_palette()
 	local mode, fg, bg = unpack(screen_types.values[st]) 
 	full_color = mode == 'ega'
 	p = split("0,0,8,139,10,140,136,12,7,6,5,133,14,15")
-	p[0], p[15] = fg, bg
+	p[0], p[15] = bg, fg
 	pal(p,1)
-	-- palt(0,false)
 end
 
 function setup_user_prefs()
@@ -287,7 +286,7 @@ function process_header()
 
 		i_flag &= 0x07 --preserve the game's bottom 3 bits
 		i_flag |= 0x20 --enable upper window
-
+		full_color = false
 	else
 		_zm_screen_height = 21
 		_zm_packed_shift = (_zm_version < 8) and 2 or 3

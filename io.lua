@@ -20,11 +20,12 @@ zchar_map_str = [[
 zchar_map = split(zchar_map_str)
 
 function reset_io_state()
-	current_fg, current_bg, current_font = 0, 15, 1
+	current_bg, current_fg, current_font = 0, 15, 1
 	if (full_color == true) then
 		current_fg = get_zbyte(_default_fg_color_addr)
 		current_bg = get_zbyte(_default_bg_color_addr)
 	end
+	pal(0,current_bg)
 	log("  [drw]  reset_io_state fg = "..current_fg..", bg = "..current_bg)
 
 	current_text_style = 0
@@ -79,18 +80,17 @@ end
 function _set_text_style(n)
 	log("  [drw] _set_text_style to: "..n)
 	if (n > 0) n |= current_text_style
-	local inverse, emphasis = '\^-i\^-b', '\015'
 	make_bold, make_inverse = (n&2 == 2), (n&1 == 1)
-
-	if (make_inverse == true) inverse = '\^i\^-b'
-	if (n > 1) emphasis = '\014'
+	local inverse = (make_inverse == true) and '\^i' or '\^-i'
+	local border = (active_window == 0) and '\^-b' or ''
+	local emphasis = (n > 1) and '\014' or '\015'
 	if checksum == 0xfc65 then -- Bureaucracy masterpiece
 		if (active_window == 1) and (make_bold == true) then
 			--suppress bold in window 1 because of form fields
 			inverse, emphasis, make_bold = '\^i', '\015', false
 		end
 	end
-	current_format = emphasis..inverse..current_color_string()
+	current_format = emphasis..inverse..border..current_color_string()
 	log("  [drw] current_format is: "..current_format)
 	current_format_updated = true
 	current_text_style = n

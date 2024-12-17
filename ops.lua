@@ -523,6 +523,7 @@ function _set_color(byte0, byte1)
 	if (byte1 > 1) current_bg = byte1
 	if (byte0 == 1) current_fg = get_zbyte(_default_fg_color_addr)
 	if (byte1 == 1) current_bg = get_zbyte(_default_bg_color_addr)
+	pal(0,current_bg)
 	_set_text_style(current_text_style)
 end
 
