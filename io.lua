@@ -21,7 +21,12 @@ zchar_map = split(zchar_map_str)
 
 function reset_io_state()
 	current_bg, current_fg, current_font = 0, 15, 1
-	
+	if (full_color == true) then
+		current_bg = get_zbyte(_default_bg_color_addr)
+		current_fg = get_zbyte(_default_fg_color_addr)
+	end
+	log("  [drw]  reset_io_state bg = "..current_bg..", fg = "..current_fg)
+
 	current_text_style = 0
 	current_format, current_format_updated = '', false
 	window_attributes = 0b00000000.00001010
@@ -72,7 +77,7 @@ function current_color_string()
 end
 
 function _set_text_style(n)
-	-- log("  [drw] _set_text_style to: "..n)
+	log("  [drw] _set_text_style to: "..n)
 	if (n > 0) n |= current_text_style
 	local inverse, emphasis = '\^-i\^-b', '\015'
 	make_bold, make_inverse = (n&2 == 2), (n&1 == 1)
@@ -85,8 +90,8 @@ function _set_text_style(n)
 			inverse, emphasis, make_bold = '\^i', '\015', false
 		end
 	end
-	current_format = inverse..emphasis..current_color_string()
-	-- log("  [drw] current_format is: "..current_format)
+	current_format = emphasis..inverse..current_color_string()
+	log("  [drw] current_format is: "..current_format)
 	current_format_updated = true
 	current_text_style = n
 end
@@ -96,8 +101,8 @@ function update_screen_rect(zwin_num)
 	local win = windows[zwin_num]
 	local py = (win.y-1)*6 + origin_y
 	if (_zm_version > 3 and zwin_num == 1) py = 0
-	local ph = (win.h)*6
-	-- log('  [drw] setting screen rect '..zwin_num..': 0, '..py..', 128,'..(origin_y+ph))
+	local ph = (win.h)*6+1 --not confident about this
+	log('  [drw] update_screen_rect '..zwin_num..': 0, '..py..', 128,'..(origin_y+ph))
 	win.screen_rect = {0, py, 128, origin_y+ph}
 end
 
@@ -112,7 +117,7 @@ function update_p_cursor()
 end
 
 function memory(str)
-	log('  [mem] memory asked to record '..#str..' zscii chars')
+	-- log('  [mem] memory asked to record '..#str..' zscii chars')
 	if (#str == 0) return
 	local addr = mem_stream_addr[#mem_stream_addr]
 	local table_len = get_zword(addr)
@@ -122,10 +127,9 @@ function memory(str)
 end
 
 function output(str, flush_now)
-	-- log('  [drw] ('..active_window..') output str: '..str)
+	log('  [drw] output to screen '..active_window..', raw str: '..str)
 	if (mem_stream == true) memory(str) return
 	if screen_stream == true then
-		log('  [drw] output to screen '..active_window..': '..str)
 		local buffer = windows[active_window].buffer
 		local current_line = nil
 		if (#buffer > 0) current_line = deli(buffer)
@@ -136,7 +140,6 @@ function output(str, flush_now)
 		end
 
 		local visual_len = print(current_line, 0, -20)
-
 		for i = 1 , #str do
 			local char = case_setter(ord(str,i), flipcase)
 
@@ -169,6 +172,7 @@ function output(str, flush_now)
 				break_index = 0
 			end
 		end
+		log('  [drw] output to screen '..active_window..' formatted str: '..current_line)
 		if (current_line) add(buffer, current_line)
 	end
 	if (flush_now) flush_line_buffer()

@@ -305,8 +305,6 @@ function process_header()
 			set_zword(_screen_height_units_addr, 128)
 			set_zbyte(_font_height_units_addr, 6)
 			set_zbyte(_font_width_units_addr, 4)
-			set_zbyte(_default_bg_color_addr, 0) --current palette fg
-			set_zbyte(_default_fg_color_addr, 15) --current palette bg
 			i_flag = 0x1c --sound fx and timed keyboard disabled
 		else
 			i_flag = 0x30 --for z4
@@ -315,6 +313,8 @@ function process_header()
 		if full_color == true then
 			i_flag |= 0x01
 			p_flag = 0x00c2
+			set_zbyte(_default_bg_color_addr, 9)
+			set_zbyte(_default_fg_color_addr, 2)
 		end
 	end
 	set_zbyte(_interpreter_flags_header_addr, i_flag)
@@ -356,7 +356,7 @@ function initialize_game()
 	update_p_cursor()
 	story_loaded = true
 
-	cls()
+	cls(current_bg)
 end
 __gfx__
 05555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555550

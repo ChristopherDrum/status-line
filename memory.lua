@@ -432,11 +432,11 @@ function extract_prop_len_num(local_addr)
 	end
 	-- log("  [mem] extract_prop_len_num from "..tohex(local_addr)..": "..(len+1)..", "..num)
 	-- log off immediately surrounding bytes
-	local check = -0x.0003
-	for i = 1, 8 do
-		log("    "..tohex(get_zbyte(local_addr+check)))
-		check += 0x.0001
-	end
+	-- local check = -0x.0003
+	-- for i = 1, 8 do
+	-- 	log("    "..tohex(get_zbyte(local_addr+check)))
+	-- 	check += 0x.0001
+	-- end
 	return len, num, offset
 end
 
@@ -573,10 +573,10 @@ function load_instruction()
 
 	local op_table, op_code, operands = nil, 0, {}
 	local function extract_operands(info, _count)
-		log('  [mem] extract_operands: '..tohex(info)..', '.._count)
+		-- log('  [mem] extract_operands: '..tohex(info)..', '.._count)
 		for i = _count-1, 0, -1 do
 			local op_type = (info >>> (i*2)) & 0x03
-			log('  byte '..i..', op type: '..op_type)
+			-- log('  byte '..i..', op type: '..op_type)
 			local operand
 			if op_type == 0 then
 				operand = get_zword()
@@ -587,7 +587,7 @@ function load_instruction()
 			elseif op_type == 3 then
 				break
 			end
-			log('  operand '..tohex(operand))
+			-- log('  operand '..tohex(operand))
 			add(operands, operand)
 		end
 	end
@@ -596,7 +596,7 @@ function load_instruction()
 	-- Subsequent bytes are the operands
 	local pc = _program_counter
 	local op_definition = get_zbyte()
-	log('  [mem] op_definition: '..tohex(op_definition))
+	-- log('  [mem] op_definition: '..tohex(op_definition))
 	op_form = (op_definition >>> 6)
 	if (op_definition == 0xbe) op_form = 0xbe
 	op_form &= 0xff
@@ -651,11 +651,11 @@ function load_instruction()
 		extract_operands(type_information, op_count)
 		if ((op_table == _long_ops) and (#operands == 1) and (op_code > 1)) get_zbyte()
 	end
-	local op_string = ''
-	for i = 1, #operands do
-		op_string ..= sub(tohex(operands[i]),3,6)..' '
-	end
-	log(sub(tohex(pc),6)..': '..op_table[#op_table][op_code+1]..'('..op_string..')')
+	-- local op_string = ''
+	-- for i = 1, #operands do
+	-- 	op_string ..= sub(tohex(operands[i]),3,6)..' '
+	-- end
+	-- log(sub(tohex(pc),6)..': '..op_table[#op_table][op_code+1]..'('..op_string..')')
 	local func = op_table[op_code+1]
 	return func, operands
 end

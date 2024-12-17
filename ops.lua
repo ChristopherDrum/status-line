@@ -62,25 +62,25 @@ end
 function _loadw(baddr, n)
 	baddr = addr_offset(baddr, n, 15)
 	if (baddr == mem_stream_addr) log(" ! ! asked to load from mem stream ? ?")
-	log("   with offset: "..tohex(baddr))
+	-- log("   with offset: "..tohex(baddr))
 	_result(get_zword(baddr))
 end
 
 function _storew(baddr, n, zword)
 	baddr = addr_offset(baddr, n, 15)
-	log("   with offset: "..tohex(baddr))
+	-- log("   with offset: "..tohex(baddr))
 	set_zword(baddr, zword)
 end
 
 function _loadb(baddr, n)
 	baddr = addr_offset(baddr, n, 16)
-	log("   with offset: "..tohex(baddr))
+	-- log("   with offset: "..tohex(baddr))
 	_result(get_zbyte(baddr))
 end
 
 function _storeb(baddr, n, zbyte)
 	baddr = addr_offset(baddr, n, 16)
-	log("   with offset: "..tohex(baddr))
+	-- log("   with offset: "..tohex(baddr))
 	set_zbyte(baddr, zbyte)
 end
 
@@ -275,7 +275,7 @@ function _call_fp(...)
 		--z5 formula is "r = r + 1"
 		local r = zword_to_zaddress(raddr, true)
 		local l = get_zbyte(r) --num local vars
-		log("  _call_fp: "..tohex(raddr).." -> "..tohex(r)..', ('..l..' locals)')
+		-- log("  _call_fp: "..tohex(raddr).." -> "..tohex(r)..', ('..l..' locals)')
 		r += 0x.0001 -- "1"
 		call_stack_push()
 		if (_zm_version >= 5) top_frame().pc = r
@@ -329,7 +329,7 @@ function _ret_pulled()
 end
 
 function _check_arg_count(n)
-	log("  [ops] _check_arg_count: "..tostr(n)..' vs. frame #'..#_call_stack..", "..tostr(top_frame().args))
+	-- log("  [ops] _check_arg_count: "..tostr(n)..' vs. frame #'..#_call_stack..", "..tostr(top_frame().args))
 	_branch(top_frame().args >= n)
 end
 
@@ -372,7 +372,7 @@ end
 
 function _remove_obj(obj)
 	if (obj == 0) return
-	log('  [ops] remove_obj: '..zobject_name(obj)..'('..obj..')')
+	-- log('  [ops] remove_obj: '..zobject_name(obj)..'('..obj..')')
 	local original_parent = zobject_family(obj, zparent)
 	if original_parent != 0 then
 
@@ -398,7 +398,7 @@ end
 
 function _insert_obj(obj1, obj2)
 	if (obj1 == 0 or obj2 == 0) return
-	log('  [ops] insert_obj: '..zobject_name(obj1)..'('..obj1..')'..' into '..zobject_name(obj2)..'('..obj2..')')
+	-- log('  [ops] insert_obj: '..zobject_name(obj1)..'('..obj1..')'..' into '..zobject_name(obj2)..'('..obj2..')')
 	_remove_obj(obj1)
 	local first_child = zobject_family(obj2, zchild)
 	zobject_set_family(obj2, zchild, obj1)
@@ -428,7 +428,7 @@ end
 
 function _get_prop_addr(obj, prop)
 	local addr, len = zobject_prop_data_addr_or_prop_list(obj, prop)
-	log("  [ops] _get_prop_addr returning: "..tohex(addr)..", "..tostr(len))
+	-- log("  [ops] _get_prop_addr returning: "..tohex(addr)..", "..tostr(len))
 	_result(addr << 16)
 end
 
@@ -467,7 +467,7 @@ end
 --8.7 Windows
 
 function _split_screen(lines)
-	-- log('  [ops] _split_screen: '..lines)
+	log('  [ops] _split_screen: '..lines)
 	flush_line_buffer(0)
 	local win0, win1 = windows[0], windows[1]
 	local cur_y_offset = max(0, win0.h - win0.z_cursor.y)
@@ -483,13 +483,13 @@ function _split_screen(lines)
 	if win0.z_cursor.y < 1 then
 		win0.z_cursor = {x=1,y=1}
 	end
-	update_screen_rect(1)
+	if (lines > 0) update_screen_rect(1)
 	update_screen_rect(0)
-	if (_zm_version == 3 and lines > 0) erase_window(1)
+	if (_zm_version == 3 and lines > 0) _erase_window(1)
 end
 
 function _set_window(win)
-	-- log('  [ops] _set_window: '..win)
+	log('  [ops] _set_window: '..win)
 	flush_line_buffer()
 	active_window = win
 	if (win == 1) _set_cursor(1,1)
@@ -498,15 +498,16 @@ end
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
 --autosplitting on z4 Nord & Bert revealed a status line bug in the game (!)
 function _set_cursor(lin, col)
-	-- log('  [ops] _set_zcursor: line '..lin..', col '..col)
+	log('  [ops] _set_zcursor: line '..lin..', col '..col)
+	if (active_window == 0) return
 	flush_line_buffer()
-	if ((_zm_version > 4) and (lin > windows[1].h)) _split_screen(lin)
+	-- if ((_zm_version > 4) and (lin > windows[1].h)) _split_screen(lin)
 	windows[1].z_cursor = {x=col, y=lin}
 	update_p_cursor()
 end
 
 function _get_cursor(baddr)
-	-- log('  [ops] _get_cursor: '..tohex(baddr))
+	log('  [ops] _get_cursor: '..tohex(baddr))
 	baddr = zword_to_zaddress(baddr)
 	local zc = windows[active_window].z_cursor
 	set_zword(baddr, zc.y)
@@ -516,7 +517,7 @@ end
 --_buffer_mode; not sure this applies to us so _nop() for now
 
 function _set_color(byte0, byte1)
-	-- log('  [ops] _set_color: '..tohex(byte0)..', '..tohex(byte1))
+	log('  [ops] _set_color: fg = '..byte0..', bg = '..byte1)
 	if (byte0 > 1) current_fg = byte0
 	if (byte1 > 1) current_bg = byte1
 	if (byte0 == 1) current_fg = get_zbyte(_default_fg_color_addr)
@@ -527,7 +528,7 @@ end
 --_set_text_style defined in io.lua
 
 function _set_font(n)
-	-- log('  [ops] _set_font: '..n)
+	log('  [ops] _set_font: '..n)
 	_result(0)
 end
 
@@ -547,13 +548,13 @@ function _output_stream(_n, baddr, w)
 	elseif n == 2 then
 		trans_stream = on_off
 		local p_flag = get_zbyte(_peripherals_header_addr)
-		if (_n > 0) p_flag |= 0x01 --transcription on
-		if (_n < 0) p_flag &= 0xfe --off
+		--transcription on, off
+		if (trans_stream == true) p_flag |= 0x01 else p_flag &= 0xfe
 		set_zbyte(_peripherals_header_addr, p_flag)
 
 	elseif n == 3 then
 		mem_stream = on_off
-		if on_off == true then
+		if mem_stream == true then
 			local addr = zword_to_zaddress(baddr)
 			add(mem_stream_addr, addr)
 			set_zword(addr, 0x00)
@@ -630,7 +631,7 @@ function _print_addr(baddr, is_packed)
 	local is_packed = is_packed or false
 	local zaddress = zword_to_zaddress(baddr, is_packed)
 	local zstring = get_zstring(zaddress)
-	log('  [ops] print_addr: ')
+	-- log('  [ops] print_addr: ')
 	output(zstring)
 end
 
@@ -669,19 +670,25 @@ end
 --8.11 Miscellaneous screen output
 
 function _erase_line(val)
-	-- log('  [ops] erase_line: '..val)
+	log('  [ops] erase_line: '..val)
 	if (val == 1) screen("\^i"..current_color_string()..blank_line)
 end
 
 function _erase_window(win)
-	-- log('  [ops] erase_window: '..win)
+	log('  [ops] _erase_window: '..win)
 	if win >= 0 then
 		local a,b,c,d = unpack(windows[win].screen_rect)
 		rectfill(a,b,c,d,current_bg)
-		if (_zm_version >= 5) _set_cursor(1,1)
-	else
-		cls(current_bg)
+	elseif win == -1 then
 		_split_screen(0)
+		cls(current_bg)
+		if (_zm_version >= 5) _set_cursor(1,1)
+		-- log('  [drw] cleared to bg color: '..current_bg)
+	elseif win == -2 then
+		local a,b,c,d = unpack(windows[0].screen_rect)
+		rectfill(a,b,c,d,current_bg)
+		a,b,c,d = unpack(windows[1].screen_rect)
+		rectfill(a,b,c,d,current_bg)
 	end
 
 	if win <= 0 then
