@@ -82,8 +82,8 @@ function tohex(value, full)
 end
 
 function log(str)
-	local prefix = sub(str,1,5)
-	printh(str, 'status_line_log_30')
+	local prefix = sub(str,3,7)
+	if (prefix != '[drw]' and prefix != '[ops]') printh(str, 'status_line_log_30')
 end
 
 function wait_for_any_key()
@@ -266,6 +266,7 @@ function build_dictionary(addr)
 			lower ..= case_setter(zstring[j], lowercase)
 		end
 		dict[lower] = (addr << 16)
+		log("  [dct] "..lower..": "..tohex(addr))
 		addr += entry_length
 	end
 	return dict

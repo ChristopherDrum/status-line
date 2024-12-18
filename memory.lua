@@ -651,11 +651,11 @@ function load_instruction()
 		extract_operands(type_information, op_count)
 		if ((op_table == _long_ops) and (#operands == 1) and (op_code > 1)) get_zbyte()
 	end
-	-- local op_string = ''
-	-- for i = 1, #operands do
-	-- 	op_string ..= sub(tohex(operands[i]),3,6)..' '
-	-- end
-	-- log(sub(tohex(pc),6)..': '..op_table[#op_table][op_code+1]..'('..op_string..')')
+	local op_string = ''
+	for i = 1, #operands do
+		op_string ..= sub(tohex(operands[i]),3,6)..' '
+	end
+	log(sub(tohex(pc),6)..': '..op_table[#op_table][op_code+1]..'('..op_string..')')
 	local func = op_table[op_code+1]
 	return func, operands
 end

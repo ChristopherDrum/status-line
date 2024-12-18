@@ -483,7 +483,7 @@ function _split_screen(lines)
 	if win0.z_cursor.y < 1 then
 		win0.z_cursor = {x=1,y=1}
 	end
-	if (lines > 0) update_screen_rect(1)
+	update_screen_rect(1)
 	update_screen_rect(0)
 	if (_zm_version == 3 and lines > 0) _erase_window(1)
 end
@@ -524,6 +524,8 @@ function _set_color(byte0, byte1)
 	if (byte0 == 1) current_fg = get_zbyte(_default_fg_color_addr)
 	if (byte1 == 1) current_bg = get_zbyte(_default_bg_color_addr)
 	pal(0,current_bg)
+	set_zbyte(_default_fg_color_addr,current_fg)
+	set_zbyte(_default_bg_color_addr,current_bg)
 	_set_text_style(current_text_style)
 end
 
@@ -606,24 +608,24 @@ end
 --8.10 Character based output
 
 function _print_char(n)
-	-- log('  [ops] _print_char ')
+	log('  [ops] _print_char ')
 	if (n == 10) n = 13	
 	if (n != 0) output(chr(n))
 end
 
 function _new_line()
-	-- log('  [ops] new_line')
+	log('  [ops] new_line')
 	output('\n')
 end
 
 function _print(string)
 	local zstring = get_zstring(string)
-	-- log('  [ops] _print: ')
+	log('  [ops] _print: ')
 	output(zstring)
 end
 
 function _print_rtrue(string)
-	-- log('_print_rtrue')
+	log('_print_rtrue')
 	_print(string)
 	_new_line()
 	_rtrue()
@@ -683,7 +685,8 @@ function _erase_window(win)
 		rectfill(a,b,c,d,current_bg)
 	elseif win == -1 then
 		_split_screen(0)
-		cls(current_bg)
+		rectfill(0,0,128,128,current_bg)
+		flip()
 		if (_zm_version >= 5) _set_cursor(1,1)
 		-- log('  [drw] cleared to bg color: '..current_bg)
 	elseif win == -2 then

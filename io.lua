@@ -101,7 +101,7 @@ function update_screen_rect(zwin_num)
 	local win = windows[zwin_num]
 	local py = (win.y-1)*6 + origin_y
 	if (_zm_version > 3 and zwin_num == 1) py = 0
-	local ph = (win.h)*6+1 --not confident about this
+	local ph = (win.h)*6+1
 	log('  [drw] update_screen_rect '..zwin_num..': 0, '..py..', 128,'..(origin_y+ph))
 	win.screen_rect = {0, py, 128, origin_y+ph}
 end
@@ -149,7 +149,8 @@ function output(str, flush_now)
 			end
 
 			local o = ord(char)
-			visual_len += 4
+			log("  [drw] output char: "..o)
+			if (o != 10) visual_len += 4
 			if make_bold == true then
 				if (o >= 32) o+=96
 				if (o != 10) visual_len += 1
@@ -261,7 +262,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 
 	-- move past the text_buffer header info
 	text_buffer += 0x.0001
-	local num_bytes = 256
+	local num_bytes = 255
 	if _zm_version >= 5 then
 		num_bytes = get_zbyte(text_buffer)
 		text_buffer += 0x.0001
@@ -284,7 +285,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 				set_zword(parse_buffer, word_addr)
 				set_zbyte(parse_buffer+0x.0002, #word)
 				set_zbyte(parse_buffer+0x.0003, index+offset)
-				-- log("  [prs] token for "..word..": "..word_addr..', '..#word..', '..index+offset)
+				log("  [prs] token for "..word..": "..tohex(word_addr)..', '..#word..', '..index+offset)
 			end
 			parse_buffer += 0x.0004
 			token_count += 1
