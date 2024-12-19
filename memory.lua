@@ -412,7 +412,7 @@ function extract_prop_len_num(local_addr)
 		-- bits |7.6.5| == len; |4.3.2.1.0| == prop num
 		len = ((len_num_byte >>> 5) & 0x7) + 1
 		num = (len_num_byte & 0x1f)
-
+		-- log("  [mem] z3 len: "..len..", num: "..num)
 	else
 		-- bits |7.6| == len; |5.4.3.2.1.0| == prop num
 		num = (len_num_byte & 0x3f)
@@ -504,10 +504,9 @@ function get_zstring(zaddress, _is_dict)
 		add(zchars, ((zword & 0x03e0)>>>5))
 		add(zchars, (zword & 0x001f))
 		if (zaddress) zaddress += 0x.0002
+		end_found = ((zword & 0x8000) == 0x8000)
 		if _is_dict == true then
 			end_found = #zchars == _zm_dictionary_word_length
-		else
-			end_found = ((zword & 0x8000) == 0x8000)
 		end
 	end
 	return zscii_to_p8scii(zchars)
@@ -518,9 +517,9 @@ local zchar_tables = {
 	'     abcdefghijklmnopqrstuvwxyz', 
 	'     ABCDEFGHIJKLMNOPQRSTUVWXYZ', 
 	'      \n0123456789'..punc}
-local zscii, zscii_decode, abbr_code = nil, false, nil
 
 function zscii_to_p8scii(zchars)
+	local zscii, zscii_decode, abbr_code = nil, false, nil
 	local zstring, active_table = '', 1
 	for i = 1, #zchars do
 		local zchar = zchars[i]

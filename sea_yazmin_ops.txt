@@ -1,16 +1,3 @@
-Version:                     3
-Flags 1:                     60
-BaseHighMemory:              63f4
-InitialProgramCounter:       5a69
-DictionaryLocation:          40ed
-ObjectTableLocation:         02ac
-GlobalVariableTableLocation: 2545
-BaseStaticMemory:            31b7
-Flags 2:                     00
-AbbreviationsTableLocation:  01ec
-FileLength:                  1cbea
-FileChecksum:                1db4
-
 5a69: --> d
    store: 1(1) into 35(23)
 setGlobal: 19 to 1

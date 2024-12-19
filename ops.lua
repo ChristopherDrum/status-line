@@ -428,7 +428,7 @@ end
 
 function _get_prop_addr(obj, prop)
 	local addr, len = zobject_prop_data_addr_or_prop_list(obj, prop)
-	-- log("  [ops] _get_prop_addr returning: "..tohex(addr)..", "..tostr(len))
+	log("  [prp] _get_prop_addr returning: "..tohex(addr)..", "..tostr(len))
 	_result(addr << 16)
 end
 
@@ -456,9 +456,14 @@ function _get_prop_len(baddr)
 	if baddr != 0 then
 		local addr = zword_to_zaddress(baddr-1)
 		local byte = get_zbyte(addr)
-		if (byte & 0x80 == 0x80) addr -= 0x.0001
+		if _zm_version > 3 then
+			if (byte & 0x80 == 0x80) then 
+				addr -= 0x.0001
+			end
+		end
 		len = extract_prop_len_num(addr)
 	end
+	log("  [prp]  _get_prop_len: "..tohex(baddr)..", len: "..len)
 	_result(len)
 end
 
@@ -608,24 +613,24 @@ end
 --8.10 Character based output
 
 function _print_char(n)
-	log('  [ops] _print_char ')
+	log('  [prt] _print_char: '..n)
 	if (n == 10) n = 13	
 	if (n != 0) output(chr(n))
 end
 
 function _new_line()
-	log('  [ops] new_line')
+	log('  [prt] new_line')
 	output('\n')
 end
 
 function _print(string)
 	local zstring = get_zstring(string)
-	log('  [ops] _print: ')
+	log('  [prt] _print: '..zstring)
 	output(zstring)
 end
 
 function _print_rtrue(string)
-	log('_print_rtrue')
+	log('  [prt] _print_rtrue')
 	_print(string)
 	_new_line()
 	_rtrue()
@@ -635,7 +640,7 @@ function _print_addr(baddr, is_packed)
 	local is_packed = is_packed or false
 	local zaddress = zword_to_zaddress(baddr, is_packed)
 	local zstring = get_zstring(zaddress)
-	-- log('  [ops] print_addr: ')
+	log('  [prt] print_addr: '..zstring)
 	output(zstring)
 end
 
@@ -644,14 +649,14 @@ function _print_paddr(saddr)
 end
 
 function _print_num(s)
-	-- log('  [ops] _print_num: ')
+	log('  [prt] _print_num: '..s)
 	output(tostr(s))
 end
 
 function _print_obj(obj)
 	if (obj == 0) return
-	local name, _ = zobject_name(obj)
-	-- log('  [ops] print_obj: ')
+	local name = zobject_name(obj)
+	log('  [prt] print_obj: '..name)
 	output(name)
 end
 
@@ -731,7 +736,7 @@ function _restore()
 end
 
 function _deny_undo()
-	log("  [ops] _deny_undo")
+	-- log("  [ops] _deny_undo")
 	_result(-1)
 end
 
