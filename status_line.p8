@@ -83,7 +83,7 @@ end
 
 function log(str)
 	local prefix = sub(str,3,7)
-	if (prefix != '[drw]' and prefix != '[ops]') printh(str, 'status_line_log_30')
+	if (prefix != '[drw]' and prefix != '[ops]') printh(str, '_status_line_log_30')
 end
 
 function wait_for_any_key()
@@ -248,25 +248,29 @@ function _update60()
 end
 
 function build_dictionary(addr)
-	local dict = {}
+	local dict, seps = {}
 	local num_separators = get_zbyte(addr)
-	local seps, addr = get_zbytes(addr + 0x.0001, num_separators)
+
+	addr += 0x.0001
+	local seps = get_zbytes(addr, num_separators)
 	separators = zscii_to_p8scii(seps)
 
+	addr += (num_separators >>> 16)
 	local entry_length = (get_zbyte(addr) >>> 16)
+
 	addr += 0x.0001
-
 	local word_count = abs(get_zword(addr))
-	addr += 0x.0002
 
+	addr += 0x.0002
+	log("  [dct] "..separators..", entry len: "..tohex(entry_length)..", count: "..word_count)
 	for i = 1, word_count do
-		local zstring = get_zstring(addr,1)
+		local zstring = get_zstring(addr, true)
 		local lower = ''
 		for j = 1, #zstring do
 			lower ..= case_setter(zstring[j], lowercase)
 		end
 		dict[lower] = (addr << 16)
-		log("  [dct] "..lower..": "..tohex(addr))
+		log("  ["..i.."] "..lower..": "..tohex(addr))
 		addr += entry_length
 	end
 	return dict

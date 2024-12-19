@@ -225,7 +225,7 @@ function get_zbytes(zaddress, num_bytes)
 		add(bytes, get_zbyte(zaddress))
 		zaddress += 0x.0001
 	end
-	return bytes, zaddress --return the address *after* the fetched bytes
+	return bytes
 end
 
 function set_zbyte(zaddress, _byte)
@@ -393,10 +393,9 @@ end
 function zobject_name(index)
 	local text_length, prop_address = zobject_text_length(index)
 	if text_length > 0 then
-		local str, zchars = get_zstring(prop_address + 0x.0001)
-		return str, zchars
+		return get_zstring(prop_address + 0x.0001)
 	end
-	return '', {}
+	return ''
 end
 
 -- 12.4.1
@@ -494,7 +493,8 @@ function zobject_set_prop(index, property, value)
 	end
 end
 
-function get_zstring(zaddress)
+function get_zstring(zaddress, _is_dict)
+	local is_dict = _is_dict or false
 	local end_found, zchars = false, {}
 	-- log('[str] fetching zstring starting at address: '..tostr(zaddress,true))
 
@@ -504,7 +504,11 @@ function get_zstring(zaddress)
 		add(zchars, ((zword & 0x03e0)>>>5))
 		add(zchars, (zword & 0x001f))
 		if (zaddress) zaddress += 0x.0002
-		end_found = ((zword & 0x8000) == 0x8000)
+		if _is_dict == true then
+			end_found = #zchars == _zm_dictionary_word_length
+		else
+			end_found = ((zword & 0x8000) == 0x8000)
+		end
 	end
 	return zscii_to_p8scii(zchars)
 end
