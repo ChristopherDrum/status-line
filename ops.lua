@@ -474,42 +474,44 @@ end
 function _split_screen(lines)
 	log('  [ops] _split_screen: '..lines)
 	flush_line_buffer(0)
+
+	--split at # lines
 	local win0, win1 = windows[0], windows[1]
-	local cur_y_offset = max(0, win0.h - win0.z_cursor.y)
-	if lines == 0 then --unsplit
-		win1.y, win1.h = 1, 0
-		win0.y, win0.h = 1, _zm_screen_height
-	else
-		win1.y, win1.h = 1, lines
-		win0.y = lines + 1
-		win0.h = max(0, _zm_screen_height - win1.h)
-	end
-	win0.z_cursor.y = win0.h - cur_y_offset
-	if win0.z_cursor.y < 1 then
-		win0.z_cursor = {x=1,y=1}
-	end
-	update_screen_rect(1)
-	update_screen_rect(0)
+	win1.h = min(_zm_screen_height, lines)
+	local p_height = win1.h*6 + origin_y
+	win1.screen_rect = {0, origin_y, 128, p_height}
+	win0.h = max(0, _zm_screen_height - lines)
+	win0.screen_rect = {0, p_height, 128, 128}
+
+	--adjust z_cursors to reflect the split
+	if (win1.z_cursor.y > win1.h) set_z_cursor(1, 1, 1)
+
+	win0.z_cursor.y += lines
+	if (win1.h > win0.z_cursor.y) set_z_cursor(0, 1, 1)
+
+	--z3 mandate
 	if (_zm_version == 3 and lines > 0) _erase_window(1)
 end
 
 function _set_window(win)
 	log('  [ops] _set_window: '..win)
-	flush_line_buffer()
+	-- flush_line_buffer()
 	active_window = win
-	if (win == 1) _set_cursor(1,1)
+	if _zm_version < 4 then 
+		if (win == 1) _erase_window(1)
+	else 
+		_set_cursor(1,1)
+	end
 end
 
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
 --autosplitting on z4 Nord & Bert revealed a status line bug in the game (!)
 function _set_cursor(lin, col)
 	log('  [ops] _set_cursor: line '..lin..', col '..col)
-	if (active_window == 0) return
-	if (col < 0) col = 0
+	if (_zm_version > 3 and active_window == 0) return
+	if (col < 1) col = 1
 	flush_line_buffer()
-	-- if ((_zm_version > 4) and (lin > windows[1].h)) _split_screen(lin)
-	windows[1].z_cursor = {x=col, y=lin}
-	update_p_cursor()
+	set_z_cursor(active_window,col,lin)
 end
 
 function _get_cursor(baddr)
@@ -524,14 +526,15 @@ end
 
 function _set_color(byte0, byte1)
 	log('  [ops] _set_color: fg = '..byte0..', bg = '..byte1)
-	if (byte0 > 1) current_fg = byte0
-	if (byte1 > 1) current_bg = byte1
-	if (byte0 == 1) current_fg = get_zbyte(_default_fg_color_addr)
-	if (byte1 == 1) current_bg = get_zbyte(_default_bg_color_addr)
-	pal(0,current_bg)
-	set_zbyte(_default_fg_color_addr,current_fg)
-	set_zbyte(_default_bg_color_addr,current_bg)
-	_set_text_style(current_text_style)
+	if byte0 > 0 then
+		current_fg = (byte0 > 1) and byte0 
+		or get_zbyte(_default_fg_color_addr)
+	end
+	if byte1 > 0 then
+		current_bg = (byte1 > 1) and byte1 
+		or get_zbyte(_default_bg_color_addr)
+	end
+	update_text_colors()
 end
 
 --_set_text_style defined in io.lua
@@ -680,26 +683,26 @@ end
 
 function _erase_line(val)
 	log('  [ops] erase_line: '..val)
-	if (val == 1) screen("\^i"..current_color_string()..blank_line)
+	if (val == 1) screen(text_colors..blank_line)
 end
 
 function _erase_window(win)
 	log('  [ops] _erase_window: '..win)
 	if win >= 0 then
 		local a,b,c,d = unpack(windows[win].screen_rect)
-		rectfill(a,b,c,d,current_bg)
+		clip(a,b,c,d)
+		cls(current_bg)
+		clip()
+
 	elseif win == -1 then
 		_split_screen(0)
-		rectfill(0,0,128,128,current_bg)
-		flip()
+		cls(current_bg)
 		if (_zm_version >= 5) _set_cursor(1,1)
-		-- log('  [drw] cleared to bg color: '..current_bg)
+	
 	elseif win == -2 then
-		local a,b,c,d = unpack(windows[0].screen_rect)
-		rectfill(a,b,c,d,current_bg)
-		a,b,c,d = unpack(windows[1].screen_rect)
-		rectfill(a,b,c,d,current_bg)
+		cls(current_bg)
 	end
+	flip()
 
 	if win <= 0 then
 		windows[0].buffer = {}

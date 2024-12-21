@@ -29,7 +29,7 @@ function reset_io_state()
 	log("  [drw]  reset_io_state fg = "..current_fg..", bg = "..current_bg)
 
 	current_text_style = 0
-	current_format, current_format_updated = '', false
+	text_format_updated = false
 	window_attributes = 0b00000000.00001010
 
 	emit_rate = 0 --the lower the faster
@@ -42,16 +42,14 @@ function reset_io_state()
 	active_window = 0
 	windows = {
 		[0] = {
-			y = 1, -- x is ALWAYS 1
-			h = 21, -- w is ALWAYS 32
-			z_cursor = {x=1,y=21}, --formerly cur_x, cur_y
+			h = 21,
+			z_cursor = {x=1,y=21},
 			p_cursor = {0,0}, -- unnamed vars for unpack()ing
-			screen_rect = {},
+			screen_rect = {}, -- unnamed vars for unpack()ing
 			buffer = {},
 			last_line = ''
 		},
 		{
-			y = 1,
 			h = 0,
 			z_cursor = {x=1,y=1},
 			p_cursor = {0,0},
@@ -60,8 +58,9 @@ function reset_io_state()
 		}
 	}
 
-	origin_y = nil
-	break_chars = "\n :-_;"
+	origin_y = (_zm_version == 3) and 7 or 0
+	windows[0].h = _zm_screen_height
+	break_chars = "\r\n :-_;"
 	break_index = 0
 
 	did_trim_nl, clear_last_line = false, false
@@ -73,10 +72,14 @@ function reset_io_state()
 	show_warning = true
 end
 
-function current_color_string()
-	return '\f'..tostr(current_fg,true)[6]..'\#'..tostr(current_bg,true)[6]
+text_colors = ''
+function update_text_colors()
+	log("  [drw] update_text_colors: fg = "..current_fg..", bg = "..current_bg)
+	text_colors = '\f'..tostr(current_fg,true)[6]..'\#'..tostr(current_bg,true)[6]
+	text_format_updated = true
 end
 
+text_styles = ''
 function _set_text_style(n)
 	log("  [drw] _set_text_style to: "..n)
 	if (n > 0) n |= current_text_style
@@ -90,30 +93,34 @@ function _set_text_style(n)
 			inverse, emphasis, make_bold = '\^i', '\015', false
 		end
 	end
-	current_format = emphasis..inverse..border..current_color_string()
-	log("  [drw] current_format is: "..current_format)
-	current_format_updated = true
+	text_styles = emphasis..inverse..border
+	log("  [drw] text_styles is: "..text_styles)
 	current_text_style = n
+	local font_width = 4
+	if (n > 1) font_width = 5
+	if (make_bold == true) font_width = 6
+	set_zbyte(_font_width_units_addr, font_width)
+	text_format_updated = true
 end
 
-function update_screen_rect(zwin_num)
-	if (not origin_y) origin_y = (_zm_version == 3) and 8 or 1
-	local win = windows[zwin_num]
-	local py = (win.y-1)*6 + origin_y
-	if (_zm_version > 3 and zwin_num == 1) py = 0
-	local ph = (win.h)*6+1
-	log('  [drw] update_screen_rect '..zwin_num..': 0, '..py..', 128,'..(origin_y+ph))
-	win.screen_rect = {0, py, 128, origin_y+ph}
-end
+-- function update_p_cursor(num)
+-- 	local num = num and num or active_window
+-- 	local win = windows[num]
+-- 	local px, py, w, h = unpack(win.screen_rect)
+-- 	local cx, cy = win.z_cursor.x, win.z_cursor.y
+-- 	px = ((cx - 1)<<2) + 1
+-- 	py += (cy - 1)*6 + 1
+-- 	if (_zm_version == 3) py -= 1
+-- 	win.p_cursor = {px, py}
+-- end
 
-function update_p_cursor()
-	local win = windows[active_window]
-	local px, py, w, h = unpack(win.screen_rect)
-	local cx, cy = win.z_cursor.x, win.z_cursor.y
-	px = ((cx - 1)<<2) + 1
-	py += (cy - 1)*6 + 1
+function set_z_cursor(win, _x, _y)
+	local win = windows[win]
+	local px = ((_x - 1) << 2) + 1
+	local py = ((_y - 1) * 6) + 1
 	if (_zm_version == 3) py -= 1
-	win.p_cursor = {px, py}
+	win.p_cursor = {px, py}	
+	win.z_cursor = {x=_x, y=_y}
 end
 
 function memory(str)
@@ -130,22 +137,23 @@ function output(str, flush_now)
 	log('  [drw] output to screen '..active_window..', raw str: '..str)
 	if (mem_stream == true) memory(str) return
 	if screen_stream == true then
+		local current_format = text_styles..text_colors
 		local buffer = windows[active_window].buffer
 		local current_line = nil
 		if (#buffer > 0) current_line = deli(buffer)
 
 		if not current_line then
 			current_line = current_format
-			current_format_updated = false
+			text_format_updated = false
 		end
 
 		local visual_len = print(current_line, 0, -20)
 		for i = 1 , #str do
 			local char = case_setter(ord(str,i), flipcase)
 
-			if current_format_updated == true then
+			if text_format_updated == true then
 				current_line ..= current_format
-				current_format_updated = false
+				text_format_updated = false
 			end
 
 			local o = ord(char)
@@ -168,7 +176,7 @@ function output(str, flush_now)
 
 				visual_len = print(next_line, 0, -20)
 				current_line = next_line
-				current_format_updated = false
+				text_format_updated = false
 
 				break_index = 0
 			end
@@ -187,11 +195,11 @@ function flush_line_buffer()
 	-- log('  [drw]    flush window '..active_window..' with line height: '..win.h)
 	while #buffer > 0 do
 		local str = deli(buffer, 1)
-		if (str == current_format) goto skip
+		if (str == text_styles..text_colors) goto skip
 		if active_window == 0 then
 			if #buffer != 0 then
 				if lines_shown == (win.h - 1) then
-					screen("\^i"..current_color_string().."          - - MORE - -          ")
+					screen("\^i"..text_colors.."          - - MORE - -          ")
 					reuse_last_line = true
 					wait_for_any_key()
 					lines_shown = 0
@@ -245,8 +253,7 @@ function screen(str)
 
 	end
 
-	win.z_cursor.x = cx
-	update_p_cursor()
+	set_z_cursor(active_window, cx, win.z_cursor.y)
 
 	flip()
 	clip()
@@ -480,5 +487,5 @@ function show_status()
 	for i = 1, #loc do
 		flipped ..= case_setter(ord(loc,i), flipcase)
 	end
-	print('\^i'..current_color_string()..flipped, 1, 1)
+	print('\^i'..text_colors..flipped, 1, 1)
 end

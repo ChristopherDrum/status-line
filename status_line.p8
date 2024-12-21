@@ -83,7 +83,7 @@ end
 
 function log(str)
 	local prefix = sub(str,3,7)
-	if (prefix != '[drw]' and prefix != '[ops]') printh(str, '_status_line_log_30')
+	if (prefix != '[ops]') printh(str, '_status_line_log_30')
 end
 
 function wait_for_any_key()
@@ -237,7 +237,7 @@ function _update60()
 			if _program_counter != 0x0 then
 				--let the player see end-of-game text
 				flush_line_buffer()
-				screen("\^i"..current_color_string().."       ~ END OF SESSION ~       ")
+				screen("\^i"..text_colors.."       ~ END OF SESSION ~       ")
 				wait_for_any_key()
 				clear_all_memory()
 			end
@@ -357,7 +357,7 @@ function initialize_game()
 	if (_memory_start_state == nil) capture_mem_state(_memory_start_state)
 	_split_screen(0)
 	_set_text_style(0)
-	update_p_cursor()
+	update_text_colors()
 	story_loaded = true
 
 	cls(current_bg)
