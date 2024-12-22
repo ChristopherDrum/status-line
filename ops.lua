@@ -683,7 +683,10 @@ end
 
 function _erase_line(val)
 	log('  [ops] erase_line: '..val)
-	if (val == 1) screen(text_colors..blank_line)
+	if val == 1 then
+		local px,py = unpack(windows[active_window].p_cursor)
+		rectfill(px,py,px+6,128,current_bg)
+	end
 end
 
 function _erase_window(win)

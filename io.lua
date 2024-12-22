@@ -238,8 +238,7 @@ function screen(str)
 		end
 		cursor(1,122)
 		print('\^'..emit_rate..str)
-		zx = cx + 1
-		zy = win.h
+		zx, zy = cx+1, win.h
 		lines_shown += 1
 	else
 		print(str)
