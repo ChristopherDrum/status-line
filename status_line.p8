@@ -337,7 +337,7 @@ function process_header()
 	--patches for specific games; just saving tokens by putting it here :/
 	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
 	if (checksum == 0x4860 or checksum == 0xfc65) set_zbyte(_screen_width_header_addr, 40) --amfv, bur
-
+	-- if (checksum == 0xb174) set_zbyte(0x1.c693,25) --photopia
 end
 
 function initialize_game()

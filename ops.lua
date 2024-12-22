@@ -508,7 +508,7 @@ end
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
 --autosplitting on z4 Nord & Bert revealed a status line bug in the game (!)
 function _set_cursor(lin, col)
-	log('  [ops] _set_cursor: line '..lin..', col '..col)
+	-- log('  [drw] _set_cursor: line '..lin..', col '..col)
 	if (_zm_version > 3 and active_window == 0) return
 	-- if (col < 1) col = 1
 	flush_line_buffer()
