@@ -187,17 +187,18 @@ function output(str, flush_now)
 	if (flush_now) flush_line_buffer()
 end
 
-function flush_line_buffer()
-	local win = windows[active_window]
+function flush_line_buffer(_w)
+	local w = _w and _w or active_window
+	local win = windows[w]
 	local buffer = win.buffer
-	-- log('  [drw] flush_line_buffer '..active_window..', '..tostr(#buffer)..' lines')
+	log('  [drw] flush_line_buffer '..w..', '..tostr(#buffer)..' lines')
 	-- log('  [drw]    lines shown: '..lines_shown..' vs win height: '..win.h)
 	if (#buffer == 0 or win.h == 0) return
-	-- log('  [drw]    flush window '..active_window..' with line height: '..win.h)
+	-- log('  [drw]    flush window '..w..' with line height: '..win.h)
 	while #buffer > 0 do
 		local str = deli(buffer, 1)
 		if (str == text_styles..text_colors) goto skip
-		if active_window == 0 then
+		if w == 0 then
 			if #buffer != 0 then
 				if lines_shown == (win.h - 1) then
 					screen("\^i"..text_colors.."          - - MORE - -          ")
@@ -210,14 +211,14 @@ function flush_line_buffer()
 		-- log('last char: '..ord(sub(str,-1)))
 		if str[-1] == '\n' then
 			str = sub(str,1,-2)
-			if (active_window == 0 or (active_window == 1 and _zm_version == 3)) did_trim_nl = true
+			if (w == 0 or (w == 1 and _zm_version == 3)) did_trim_nl = true
 		end
 		-- if (active_window == 0) did_trim_nl = dtn
 		win.last_line = str
 		screen(str)
 		::skip::
 	end
-	-- log('  [drw] after flushing, buffer len is: '..#windows[active_window].buffer)
+	log('  [drw] after flushing, buffer len is: '..#windows[w].buffer)
 end
 
 function screen(str)
@@ -228,16 +229,17 @@ function screen(str)
 	clip(unpack(win.screen_rect))
 	local cx = (print(str,0,-20) >>> 2)
 
-	cursor(unpack(win.p_cursor))
+	local px, py = unpack(win.p_cursor)
+	cursor(px,py)
 	if active_window == 0 then
-		if reuse_last_line == true then
-			rectfill(0,121,128,128,current_bg)
-			reuse_last_line = false
-		else
-			print('\n') --this is just "scroll the screen up by a line"
+		if reuse_last_line == false then
+			print(text_colors..'\n') --this is just "scroll the screen up by a line"
 		end
+		reuse_last_line = false
+
+		rectfill(0,121,128,128,current_bg)
 		cursor(1,122)
-		print('\^'..emit_rate..str)
+		print('\^d'..emit_rate..str)
 		zx, zy = cx+1, win.h
 		lines_shown += 1
 	else
@@ -461,16 +463,15 @@ function show_status()
 	local flag = get_zbyte(_interpreter_flags_header_addr)
 	local separator = '/'
 	if (flag & 2) == 2 then
-		local ampm = ''
+		local ampm = 'a'
+		separator = ':'
 		if clock_type == 12 then
-			ampm = 'a'
 			if scorea >= 12 then 
 				ampm = 'p'
 				scorea -= 12
 			end
 			if (scorea == 0) scorea = 12
 		end
-		separator = ':'
 		scoreb = sub('0'..scoreb, -2)..ampm
 	end
 
@@ -479,8 +480,8 @@ function show_status()
 	local loc = ' '..sub(location, 1, 30-#score-2)
 	if (#loc < #location) loc = sub(loc, 1, -2)..chr(144)
 	local spacer_len = 32 - #loc - #score
-	local spacer = sub(blank_line,-spacer_len)
-	loc ..= spacer..score
+	-- local spacer = sub(blank_line,-spacer_len)
+	loc ..= "\*"..spacer_len.." "..score
 	local flipped = ""
 	for i = 1, #loc do
 		flipped ..= case_setter(ord(loc,i), flipcase)

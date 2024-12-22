@@ -473,6 +473,7 @@ end
 
 function _split_screen(lines)
 	log('  [ops] _split_screen: '..lines)
+	flush_line_buffer(1)
 	flush_line_buffer(0)
 
 	--split at # lines
@@ -495,7 +496,7 @@ end
 
 function _set_window(win)
 	log('  [ops] _set_window: '..win)
-	-- flush_line_buffer()
+	flush_line_buffer()
 	active_window = win
 	if _zm_version < 4 then 
 		if (win == 1) _erase_window(1)
@@ -509,7 +510,7 @@ end
 function _set_cursor(lin, col)
 	log('  [ops] _set_cursor: line '..lin..', col '..col)
 	if (_zm_version > 3 and active_window == 0) return
-	if (col < 1) col = 1
+	-- if (col < 1) col = 1
 	flush_line_buffer()
 	set_z_cursor(active_window,col,lin)
 end
@@ -682,15 +683,15 @@ end
 --8.11 Miscellaneous screen output
 
 function _erase_line(val)
-	log('  [ops] erase_line: '..val)
+	log('  [drw] erase_line: '..val)
 	if val == 1 then
 		local px,py = unpack(windows[active_window].p_cursor)
-		rectfill(px,py,px+6,128,current_bg)
+		rectfill(px,py,128,py+5,current_bg)
 	end
 end
 
 function _erase_window(win)
-	log('  [ops] _erase_window: '..win)
+	log('  [drw] _erase_window: '..win)
 	if win >= 0 then
 		local a,b,c,d = unpack(windows[win].screen_rect)
 		clip(a,b,c,d)
@@ -710,6 +711,8 @@ function _erase_window(win)
 	if win <= 0 then
 		windows[0].buffer = {}
 		lines_shown = 0
+	else
+		windows[1].buffer = {}
 	end
 end
 
@@ -718,7 +721,7 @@ end
 --8.12 Sound, mouse, and menus
 
 function _sound_effect(number)
-	-- log('  [ops] sound_effect: '..number)
+	-- log('  [snd] sound_effect: '..number)
 	if (number == 1) print("\ac3")
 	if (number == 2) print("\ac1")
 end
