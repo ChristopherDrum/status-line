@@ -479,15 +479,15 @@ function _split_screen(lines)
 	local win0, win1 = windows[0], windows[1]
 	win1.h = min(_zm_screen_height, lines)
 	local p_height = win1.h*6 + origin_y
-	win1.screen_rect = {0, origin_y, 128, p_height}
+	win1.screen_rect = {0, origin_y, 128, p_height+1}
 	win0.h = max(0, _zm_screen_height - lines)
-	win0.screen_rect = {0, p_height, 128, 128}
+	win0.screen_rect = {0, p_height+1, 128, 128}
 
 	--adjust z_cursors to reflect the split
-	if (win1.z_cursor.y > win1.h) set_z_cursor(1, 1, 1)
+	if (win1.z_cursor[2] > win1.h) set_z_cursor(1, 1, 1)
 
-	win0.z_cursor.y += lines
-	if (win1.h > win0.z_cursor.y) set_z_cursor(0, 1, 1)
+	win0.z_cursor[2] += lines
+	if (win1.h > win0.z_cursor[2]) set_z_cursor(0, 1, 1)
 
 	--z3 mandate
 	if (_zm_version == 3 and lines > 0) _erase_window(1)
@@ -517,9 +517,9 @@ end
 function _get_cursor(baddr)
 	log('  [ops] _get_cursor: '..tohex(baddr))
 	baddr = zword_to_zaddress(baddr)
-	local zc = windows[active_window].z_cursor
-	set_zword(baddr, zc.y)
-	set_zword(baddr + 0x.0002, zc.x)
+	local zx,zy = unpack(windows[active_window].z_cursor)
+	set_zword(baddr, zy)
+	set_zword(baddr + 0x.0002, zx)
 end
 
 --_buffer_mode; not sure this applies to us so _nop() for now

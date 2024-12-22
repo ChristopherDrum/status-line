@@ -43,7 +43,7 @@ function reset_io_state()
 	windows = {
 		[0] = {
 			h = 21,
-			z_cursor = {x=1,y=21},
+			z_cursor = {1,21},
 			p_cursor = {0,0}, -- unnamed vars for unpack()ing
 			screen_rect = {}, -- unnamed vars for unpack()ing
 			buffer = {},
@@ -51,7 +51,7 @@ function reset_io_state()
 		},
 		{
 			h = 0,
-			z_cursor = {x=1,y=1},
+			z_cursor = {1,1},
 			p_cursor = {0,0},
 			screen_rect = {},
 			buffer = {}
@@ -114,13 +114,14 @@ end
 -- 	win.p_cursor = {px, py}
 -- end
 
-function set_z_cursor(win, _x, _y)
-	local win = windows[win]
+function set_z_cursor(_win, _x, _y)
+	local win = windows[_win]
 	local px = ((_x - 1) << 2) + 1
 	local py = ((_y - 1) * 6) + 1
-	if (_zm_version == 3) py -= 1
-	win.p_cursor = {px, py}	
-	win.z_cursor = {x=_x, y=_y}
+	if (_zm_version > 3 and _win == 0) py += 1
+	local py_offset = (_win == 0) and windows[1].h*6 or 0
+	win.p_cursor = {px, py + py_offset + origin_y}	
+	win.z_cursor = {_x, _y}
 end
 
 function memory(str)
@@ -222,10 +223,10 @@ end
 function screen(str)
 	log('  [drw] screen ('..active_window..'): '..str)
 	local win = windows[active_window]
+	local zx, zy = unpack(win.z_cursor)
 
 	clip(unpack(win.screen_rect))
-	local x = print(str,0,-20)
-	local cx = x>>>2
+	local cx = (print(str,0,-20) >>> 2)
 
 	cursor(unpack(win.p_cursor))
 	if active_window == 0 then
@@ -233,27 +234,25 @@ function screen(str)
 			rectfill(0,121,128,128,current_bg)
 			reuse_last_line = false
 		else
-			print('\n')
+			print('\n') --this is just "scroll the screen up by a line"
 		end
 		cursor(1,122)
 		print('\^'..emit_rate..str)
-		cx += 1
+		zx = cx + 1
+		zy = win.h
 		lines_shown += 1
 	else
-		if win.z_cursor.y <= win.h then
-			print(str)
-			cx += win.z_cursor.x
-			if _zm_version == 3 then
-				if did_trim_nl == true then
-					cx = 1
-					win.z_cursor.y += 1
-				end
+		print(str)
+		zx += cx
+		if _zm_version == 3 then
+			if did_trim_nl == true then
+				zx = 1
+				zy += 1
 			end
 		end
-
 	end
 
-	set_z_cursor(active_window, cx, win.z_cursor.y)
+	set_z_cursor(active_window, zx, zy)
 
 	flip()
 	clip()
