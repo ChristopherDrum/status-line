@@ -46,17 +46,13 @@ function _store(var, a)
 	_result(a, var, true)
 end
 
+--docs say "All operands are assumed to be unsigned numbers
+--, unless stated otherwise." and 'n' is not stated otherwise.
+--negative 'n' is possible, according to strict.z5
 function addr_offset(baddr, n, amt)
-	-- log("  [ops] addr_offset: "..tohex(baddr).." by: "..tohex(n))
 	local addr = zword_to_zaddress(baddr)
-	local offset = (abs(n)>>>amt)
-	if (n < 0) offset = -offset
-	local temp = addr + offset
-	--"Dynamic memory can be read or written to
-	--...using loadb, loadw, storeb and storew"
-	--so if we exceed those boundaries, reverse the offset
-	if (temp < 0 or temp > 0x.ffff) temp = addr - offset
-	return temp
+	local offset = (n>>>amt)
+	return addr + offset
 end
 
 function _loadw(baddr, n)
@@ -68,19 +64,20 @@ end
 
 function _storew(baddr, n, zword)
 	baddr = addr_offset(baddr, n, 15)
-	-- log("   with offset: "..tohex(baddr))
+	-- log2("   with offset: "..tohex(baddr))
 	set_zword(baddr, zword)
 end
 
 function _loadb(baddr, n)
+	log2("   received: "..tohex(baddr)..", "..tohex(n))
 	baddr = addr_offset(baddr, n, 16)
-	-- log("   with offset: "..tohex(baddr))
+	log2("   with offset: "..tohex(baddr))
 	_result(get_zbyte(baddr))
 end
 
 function _storeb(baddr, n, zbyte)
 	baddr = addr_offset(baddr, n, 16)
-	-- log("   with offset: "..tohex(baddr))
+	-- log2("   with offset: "..tohex(baddr))
 	set_zbyte(baddr, zbyte)
 end
 
@@ -222,7 +219,11 @@ end
 
 function _je(a, b1, b2, b3)
 	-- log("  [ops] _je: "..a.."("..tohex(a)..") "..tostr(b1).."("..tohex(b1)..")"..tostr(b2).."("..tohex(b2)..")"..tostr(b3).."("..tohex(b3)..")")
-	_branch(del({b1,b2,b3},a) == a)
+	if b1 != nil then
+		_branch(del({b1,b2,b3},a) == a)
+	else
+		_program_counter += 0x.0001
+	end
 end
 
 function _jl(s, t)
@@ -325,7 +326,7 @@ function _rfalse()
 end
 
 function _ret_pulled()
-	_ret(stack_pop())
+	_ret(stack_top())
 end
 
 function _check_arg_count(n)

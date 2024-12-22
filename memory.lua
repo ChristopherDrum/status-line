@@ -181,9 +181,9 @@ function get_dword(zaddress, indirect)
 	end
 
 	if base == _local_var_table_mem_addr then
-		-- log("  [mem] get dword at _local_var_table_mem_addr: "..tohex(zaddress))
 		local index = zaddress << 16
 		local var = top_frame().vars[index]
+		log2("  getLocal: "..index.." -> "..tohex(var))
 		return var, nil, index
 	end
 
@@ -305,6 +305,7 @@ function set_zword(zaddress, _zword, indirect)
 		_memory[bank][index] = dword
 
 	elseif base == _local_var_table_mem_addr then
+		log2("  setLocal: "..(zaddress<<16).." -> "..tohex(zword))
 		top_frame().vars[zaddress<<16] = zword
 	end
 end
@@ -658,7 +659,7 @@ function load_instruction()
 	for i = 1, #operands do
 		op_string ..= sub(tohex(operands[i]),3,6)..' '
 	end
-	log(sub(tohex(pc),6)..': '..op_table[#op_table][op_code+1]..'('..op_string..')')
+	log2(sub(tohex(pc),6)..': '..op_table[#op_table][op_code+1]..'('..op_string..')')
 	local func = op_table[op_code+1]
 	return func, operands
 end

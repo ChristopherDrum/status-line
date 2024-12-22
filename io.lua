@@ -463,9 +463,10 @@ function show_status()
 	local flag = get_zbyte(_interpreter_flags_header_addr)
 	local separator = '/'
 	if (flag & 2) == 2 then
-		local ampm = 'a'
+		local ampm = ''
 		separator = ':'
 		if clock_type == 12 then
+			ampm = 'a'
 			if scorea >= 12 then 
 				ampm = 'p'
 				scorea -= 12
@@ -480,8 +481,8 @@ function show_status()
 	local loc = ' '..sub(location, 1, 30-#score-2)
 	if (#loc < #location) loc = sub(loc, 1, -2)..chr(144)
 	local spacer_len = 32 - #loc - #score
-	-- local spacer = sub(blank_line,-spacer_len)
-	loc ..= "\*"..spacer_len.." "..score
+	local spacer = sub(blank_line,-spacer_len)
+	loc ..= spacer..score
 	local flipped = ""
 	for i = 1, #loc do
 		flipped ..= case_setter(ord(loc,i), flipcase)

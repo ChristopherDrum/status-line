@@ -82,8 +82,12 @@ function tohex(value, full)
 end
 
 function log(str)
-	local prefix = sub(str,3,7)
-	if (prefix != '[ops]') printh(str, '_status_line_log_30')
+	-- local prefix = sub(str,3,7)
+	-- if (prefix != '[ops]') printh(str, '_status_line_log_30')
+end
+
+function log2(str)
+	-- printh(str, '_status_line_log_30')
 end
 
 function wait_for_any_key()
