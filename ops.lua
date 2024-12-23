@@ -46,13 +46,14 @@ function _store(var, a)
 	_result(a, var, true)
 end
 
---docs say "All operands are assumed to be unsigned numbers
---, unless stated otherwise." and 'n' is not stated otherwise.
---negative 'n' is possible, according to strict.z5
-function addr_offset(baddr, n, amt)
+-- "All operands are assumed to be unsigned numbers unless stated otherwise."
+-- 'n' is not stated otherwise.
+-- negative 'n' is possible, according to Praxix.z5
+function addr_offset(baddr, _n, amt)
 	local addr = zword_to_zaddress(baddr)
-	local offset = (n>>>amt)
-	return addr + offset
+	local n = _n>>amt
+	if (_n < 0 and addr + n < 0) n = _n >>> amt
+	return addr + n
 end
 
 function _loadw(baddr, n)
@@ -69,9 +70,7 @@ function _storew(baddr, n, zword)
 end
 
 function _loadb(baddr, n)
-	log2("   received: "..tohex(baddr)..", "..tohex(n))
 	baddr = addr_offset(baddr, n, 16)
-	log2("   with offset: "..tohex(baddr))
 	_result(get_zbyte(baddr))
 end
 
@@ -308,7 +307,6 @@ end
 
 function _ret(a)
 	local call = top_frame().call
-	-- log("  [ops] _ret() with frame type: "..call)
 
 	call_stack_pop() --in all cases
 	
@@ -464,7 +462,7 @@ function _get_prop_len(baddr)
 		end
 		len = extract_prop_len_num(addr)
 	end
-	log("  [prp]  _get_prop_len: "..tohex(baddr)..", len: "..len)
+	-- log("  [prp]  _get_prop_len: "..tohex(baddr)..", len: "..len)
 	_result(len)
 end
 
@@ -473,7 +471,7 @@ end
 --8.7 Windows
 
 function _split_screen(lines)
-	log('  [ops] _split_screen: '..lines)
+	-- log('  [ops] _split_screen: '..lines)
 	flush_line_buffer(1)
 	flush_line_buffer(0)
 
@@ -496,7 +494,7 @@ function _split_screen(lines)
 end
 
 function _set_window(win)
-	log('  [ops] _set_window: '..win)
+	-- log('  [ops] _set_window: '..win)
 	flush_line_buffer()
 	active_window = win
 	if _zm_version < 4 then 
@@ -517,7 +515,7 @@ function _set_cursor(lin, col)
 end
 
 function _get_cursor(baddr)
-	log('  [ops] _get_cursor: '..tohex(baddr))
+	-- log('  [ops] _get_cursor: '..tohex(baddr))
 	baddr = zword_to_zaddress(baddr)
 	local zx,zy = unpack(windows[active_window].z_cursor)
 	set_zword(baddr, zy)
@@ -527,7 +525,7 @@ end
 --_buffer_mode; not sure this applies to us so _nop() for now
 
 function _set_color(byte0, byte1)
-	log('  [ops] _set_color: fg = '..byte0..', bg = '..byte1)
+	-- log('  [ops] _set_color: fg = '..byte0..', bg = '..byte1)
 	if byte0 > 0 then
 		current_fg = (byte0 > 1) and byte0 
 		or get_zbyte(_default_fg_color_addr)
@@ -542,7 +540,7 @@ end
 --_set_text_style defined in io.lua
 
 function _set_font(n)
-	log('  [ops] _set_font: '..n)
+	-- log('  [ops] _set_font: '..n)
 	_result(0)
 end
 
@@ -618,24 +616,24 @@ end
 --8.10 Character based output
 
 function _print_char(n)
-	log('  [prt] _print_char: '..n)
+	-- log('  [prt] _print_char: '..n)
 	if (n == 10) n = 13	
 	if (n != 0) output(chr(n))
 end
 
 function _new_line()
-	log('  [prt] new_line')
+	-- log('  [prt] new_line')
 	output('\n')
 end
 
 function _print(string)
 	local zstring = get_zstring(string)
-	log('  [prt] _print: '..zstring)
+	-- log('  [prt] _print: '..zstring)
 	output(zstring)
 end
 
 function _print_rtrue(string)
-	log('  [prt] _print_rtrue')
+	-- log('  [prt] _print_rtrue')
 	_print(string)
 	_new_line()
 	_rtrue()
@@ -645,7 +643,7 @@ function _print_addr(baddr, is_packed)
 	local is_packed = is_packed or false
 	local zaddress = zword_to_zaddress(baddr, is_packed)
 	local zstring = get_zstring(zaddress)
-	log('  [prt] print_addr: '..zstring)
+	-- log('  [prt] print_addr: '..zstring)
 	output(zstring)
 end
 
@@ -654,14 +652,14 @@ function _print_paddr(saddr)
 end
 
 function _print_num(s)
-	log('  [prt] _print_num: '..s)
+	-- log('  [prt] _print_num: '..s)
 	output(tostr(s))
 end
 
 function _print_obj(obj)
 	if (obj == 0) return
 	local name = zobject_name(obj)
-	log('  [prt] print_obj: '..name)
+	-- log('  [prt] print_obj: '..name)
 	output(name)
 end
 
@@ -684,7 +682,7 @@ end
 --8.11 Miscellaneous screen output
 
 function _erase_line(val)
-	log('  [drw] erase_line: '..val)
+	-- log('  [drw] erase_line: '..val)
 	if val == 1 then
 		local px,py = unpack(windows[active_window].p_cursor)
 		rectfill(px,py,128,py+5,current_bg)
@@ -692,7 +690,7 @@ function _erase_line(val)
 end
 
 function _erase_window(win)
-	log('  [drw] _erase_window: '..win)
+	-- log('  [drw] _erase_window: '..win)
 	if win >= 0 then
 		local a,b,c,d = unpack(windows[win].screen_rect)
 		clip(a,b,c,d)
