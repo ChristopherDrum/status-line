@@ -122,7 +122,7 @@ function memory(str)
 end
 
 function output(str, flush_now)
-	-- log3('  [drw] output to window '..active_window..', raw str: '..str)
+	log3('  [drw] output to window '..active_window..', raw str: '..str)
 	if (mem_stream == true) memory(str) return
 	if (screen_stream == false) return
 

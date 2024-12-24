@@ -603,24 +603,24 @@ end
 --8.10 Character based output
 
 function _print_char(n)
-	-- log('  [prt] _print_char: '..n)
+	log3('  [prt] _print_char: '..n)
 	if (n == 10) n = 13	
 	if (n != 0) output(chr(n))
 end
 
 function _new_line()
-	-- log('  [prt] new_line')
-	output('\n')
+	log3('  [prt] new_line')
+	output(chr(13))
 end
 
 function _print(string)
 	local zstring = get_zstring(string)
-	-- log('  [prt] _print: '..zstring)
+	log3('  [prt] _print: '..zstring)
 	output(zstring)
 end
 
 function _print_rtrue(string)
-	-- log('  [prt] _print_rtrue')
+	log3('  [prt] _print_rtrue')
 	_print(string)
 	_new_line()
 	_rtrue()
@@ -630,7 +630,7 @@ function _print_addr(baddr, is_packed)
 	local is_packed = is_packed or false
 	local zaddress = zword_to_zaddress(baddr, is_packed)
 	local zstring = get_zstring(zaddress)
-	-- log('  [prt] print_addr: '..zstring)
+	log3('  [prt] print_addr: '..zstring)
 	output(zstring)
 end
 
@@ -639,14 +639,14 @@ function _print_paddr(saddr)
 end
 
 function _print_num(s)
-	-- log('  [prt] _print_num: '..s)
+	log3('  [prt] _print_num: '..s)
 	output(tostr(s))
 end
 
 function _print_obj(obj)
 	if (obj == 0) return
 	local name = zobject_name(obj)
-	-- log('  [prt] print_obj: '..name)
+	log3('  [prt] print_obj: '..name)
 	output(name)
 end
 
@@ -655,12 +655,14 @@ function _print_table(baddr, x, _y, _n)
 	local n = _n or 0
 	local y = _y or 1
 	local za = zword_to_zaddress(baddr)
+	local zx, zy = unpack(windows[active_window].z_cursor)
 	for i = 1, y do
 		for j = 0, x+n-1 do
 			if (j < x) _print_char(get_zbyte(za))
 			za += 0x.0001
 		end
-		_new_line()
+		zy+=1
+		_set_cursor(zx,zy)
 	end
 end
 
