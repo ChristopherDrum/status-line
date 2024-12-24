@@ -46,45 +46,32 @@ function _store(var, a)
 	_result(a, var, true)
 end
 
--- "All operands are assumed to be unsigned numbers unless stated otherwise."
--- 'n' is not stated otherwise.
--- negative 'n' is possible, according to Praxix.z5
-function addr_offset(baddr, _n, amt)
-	local addr = zword_to_zaddress(baddr)
-	local n = _n>>amt
-	if (_n < 0 and addr + n < 0) n = _n >>> amt
-	return addr + n
-end
-
+--perform math on the raw bytes before resolving to 24-bit address space
+--this gives us proper 16-bit wraparound and handles positive AND negative 'n' properly automatically 
 function _loadw(baddr, n)
-	baddr = addr_offset(baddr, n, 15)
-	if (baddr == mem_stream_addr) log(" ! ! asked to load from mem stream ? ?")
-	-- log("   with offset: "..tohex(baddr))
-	_result(get_zword(baddr))
+	local addr = zword_to_zaddress(baddr+n*2)
+	_result(get_zword(addr))
 end
 
 function _storew(baddr, n, zword)
-	baddr = addr_offset(baddr, n, 15)
-	-- log2("   with offset: "..tohex(baddr))
-	set_zword(baddr, zword)
+	local addr = zword_to_zaddress(baddr+n*2)
+	set_zword(addr, zword)
 end
 
 function _loadb(baddr, n)
-	baddr = addr_offset(baddr, n, 16)
-	_result(get_zbyte(baddr))
+	local addr = zword_to_zaddress(baddr+n)
+	_result(get_zbyte(addr))
 end
 
 function _storeb(baddr, n, zbyte)
-	baddr = addr_offset(baddr, n, 16)
-	-- log2("   with offset: "..tohex(baddr))
-	set_zbyte(baddr, zbyte)
+	local addr = zword_to_zaddress(baddr+n)
+	set_zbyte(addr, zbyte)
 end
 
 -- _push(a) and _pop() are _stack_push and _stack_pop in memory.lua
 
 function _pull(var)
-	local a = stack_pop()
-	_result(a, var, true)
+	_result(stack_pop(), var, true)
 end
 
 
