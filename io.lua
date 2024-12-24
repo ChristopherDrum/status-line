@@ -54,7 +54,8 @@ function reset_io_state()
 			z_cursor = {1,1},
 			p_cursor = {0,0},
 			screen_rect = {},
-			buffer = {}
+			buffer = {},
+			last_line = ''
 		}
 	}
 
@@ -182,11 +183,11 @@ function flush_line_buffer(_w)
 	local win = windows[w]
 	local buffer = win.buffer
 
-	-- log3('  [drw] flush_line_buffer '..w..', '..tostr(#buffer)..' lines')
-	if #buffer == 0 or win.h == 0 then return end
+	if (#buffer == 0 or win.h == 0) return
 
 	while #buffer > 0 do
 		local str = deli(buffer, 1)
+		log3('  [drw] flush_line_buffer '..w..': `'..str..'`')
 
 		-- Skip empty style lines
 		if (str == text_styles..text_colors) goto continue 
