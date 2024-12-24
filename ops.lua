@@ -662,7 +662,7 @@ function _print_table(baddr, x, _y, _n)
 			za += 0x.0001
 		end
 		zy+=1
-		_set_cursor(zx,zy)
+		_set_cursor(zy,zx)
 	end
 end
 
