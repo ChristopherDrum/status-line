@@ -223,7 +223,7 @@ function screen(str)
 	local zx, zy = unpack(win.z_cursor)
 
 	clip(unpack(win.screen_rect))
-	local cx = (print(str,0,-20) >>> 2)
+	-- local cx = (print(str,0,-20) >>> 2)
 
 	local px, py = unpack(win.p_cursor)
 	cursor(px,py)
@@ -235,12 +235,11 @@ function screen(str)
 
 		rectfill(0,121,128,128,current_bg)
 		cursor(1,122)
-		print('\^d'..emit_rate..str)
-		zx, zy = cx+1, win.h
+		zx = (print('\^d'..emit_rate..str)>>>2) + 1
+		zy = win.h
 		lines_shown += 1
 	else
-		print(str)
-		zx += cx
+		zx += print(str)>>>2
 		if _zm_version == 3 then
 			if did_trim_nl == true then
 				zx = 1
@@ -250,7 +249,8 @@ function screen(str)
 	end
 
 	set_z_cursor(active_window, zx, zy)
-	flip() clip()
+	flip()
+	clip()
 end
 
 function _tokenise(baddr1, baddr2, baddr3, _bit)
