@@ -122,14 +122,14 @@ function memory(str)
 end
 
 function output(str, flush_now)
-	log3('  [drw] output to window '..active_window..', raw str: '..str)
+	-- log3('  [drw] output to window '..active_window..', raw str: '..str)
 	if (mem_stream == true) memory(str) return
 	if (screen_stream == false) return
 
 	local buffer = windows[active_window].buffer
 	local current_format = text_styles .. text_colors
 	local current_line = deli(buffer)
-	log3(" output current_line: "..tostr(current_line))
+	-- log3(" output current_line: "..tostr(current_line))
 
 	if current_line then
 		if text_format_updated == true then
@@ -163,7 +163,7 @@ function output(str, flush_now)
 			local this_line, next_line = unpack(split(current_line, break_index, false))
 			next_line = next_line or ''
 
-			log3(" adding to buffer: "..tostr(this_line))
+			-- log3(" adding to buffer: "..tostr(this_line))
 			add(buffer, this_line)
 
 			pixel_len = print(next_line, 0, -20)
@@ -182,7 +182,7 @@ function flush_line_buffer(_w)
 	local win = windows[w]
 	local buffer = win.buffer
 
-	log3('  [drw] flush_line_buffer '..w..', '..tostr(#buffer)..' lines')
+	-- log3('  [drw] flush_line_buffer '..w..', '..tostr(#buffer)..' lines')
 	if #buffer == 0 or win.h == 0 then return end
 
 	while #buffer > 0 do
@@ -213,46 +213,11 @@ function flush_line_buffer(_w)
 		::continue::
 	end
 
-	log('  [drw] after flushing, buffer len is: '..#win.buffer)
+	-- log('  [drw] after flushing, buffer len is: '..#win.buffer)
 end
 
-
--- function flush_line_buffer(_w)
--- 	local w = _w or active_window
--- 	local win = windows[w]
--- 	local buffer = win.buffer
--- 	log('  [drw] flush_line_buffer '..w..', '..tostr(#buffer)..' lines')
--- 	-- log('  [drw]    lines shown: '..lines_shown..' vs win height: '..win.h)
--- 	if (#buffer == 0 or win.h == 0) return
--- 	-- log('  [drw]    flush window '..w..' with line height: '..win.h)
--- 	while #buffer > 0 do
--- 		local str = deli(buffer, 1)
--- 		if (str == text_styles..text_colors) goto skip
--- 		if w == 0 then
--- 			if #buffer != 0 then
--- 				if lines_shown == (win.h - 1) then
--- 					screen("\^i"..text_colors.."          - - MORE - -          ")
--- 					reuse_last_line = true
--- 					wait_for_any_key()
--- 					lines_shown = 0
--- 				end
--- 			end
--- 		end
--- 		-- log('last char: '..ord(sub(str,-1)))
--- 		if str[-1] == '\n' then
--- 			str = sub(str,1,-2)
--- 			if (w == 0 or (w == 1 and _zm_version == 3)) did_trim_nl = true
--- 		end
--- 		-- if (active_window == 0) did_trim_nl = dtn
--- 		win.last_line = str
--- 		screen(str)
--- 		::skip::
--- 	end
--- 	log('  [drw] after flushing, buffer len is: '..#windows[w].buffer)
--- end
-
 function screen(str)
-	log('  [drw] screen ('..active_window..'): '..str)
+	-- log('  [drw] screen ('..active_window..'): '..str)
 	local win = windows[active_window]
 	local zx, zy = unpack(win.z_cursor)
 
@@ -284,9 +249,7 @@ function screen(str)
 	end
 
 	set_z_cursor(active_window, zx, zy)
-
-	flip()
-	clip()
+	flip() clip()
 end
 
 function _tokenise(baddr1, baddr2, baddr3, _bit)
