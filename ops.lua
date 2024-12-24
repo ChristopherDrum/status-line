@@ -136,10 +136,8 @@ function _mul(a, b)
 end
 
 function _div(a, b, help)
-	local op = ceil
-	if ((a&0x8000) == (b&0x8000)) op = flr
-	-- if ((a > 0 and b > 0) or (a < 0 and b < 0)) then
-	local d = op(a/b)
+	local d = a/b
+	d = (d < 0) and ceil(d) or flr(d)
 	if (help) return d else _result(d)
 end
 
@@ -206,10 +204,9 @@ end
 function _je(a, b1, b2, b3)
 	-- log("  [ops] _je: "..a.."("..tohex(a)..") "..tostr(b1).."("..tohex(b1)..")"..tostr(b2).."("..tohex(b2)..")"..tostr(b3).."("..tohex(b3)..")")
 	if b1 then
-		if (a == b1) _branch(true)
-		if (a == b2) _branch(true)
-		if (a == b3) _branch(true)
-		_branch(false)
+		local val = false
+		if (a == b1 or a == b2 or a == b3) val = true
+		_branch(val)
 	else
 		_program_counter += 0x.0001
 	end
