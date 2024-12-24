@@ -60,8 +60,6 @@ function reset_io_state()
 
 	origin_y = (_zm_version == 3) and 7 or 0
 	windows[0].h = _zm_screen_height
-	break_chars = "\r\n :-_;"
-	break_index = 0
 
 	did_trim_nl, clear_last_line = false, false
 	lines_shown = 0
@@ -103,17 +101,6 @@ function _set_text_style(n)
 	text_format_updated = true
 end
 
--- function update_p_cursor(num)
--- 	local num = num and num or active_window
--- 	local win = windows[num]
--- 	local px, py, w, h = unpack(win.screen_rect)
--- 	local cx, cy = win.z_cursor.x, win.z_cursor.y
--- 	px = ((cx - 1)<<2) + 1
--- 	py += (cy - 1)*6 + 1
--- 	if (_zm_version == 3) py -= 1
--- 	win.p_cursor = {px, py}
--- end
-
 function set_z_cursor(_win, _x, _y)
 	local win = windows[_win]
 	local px = ((_x - 1) << 2) + 1
@@ -135,91 +122,134 @@ function memory(str)
 end
 
 function output(str, flush_now)
-	log('  [drw] output to screen '..active_window..', raw str: '..str)
+	log3('  [drw] output to window '..active_window..', raw str: '..str)
 	if (mem_stream == true) memory(str) return
-	if screen_stream == true then
-		local current_format = text_styles..text_colors
-		local buffer = windows[active_window].buffer
-		local current_line = nil
-		if (#buffer > 0) current_line = deli(buffer)
+	if (screen_stream == false) return
 
-		if not current_line then
-			current_line = current_format
-			text_format_updated = false
+	local buffer = windows[active_window].buffer
+	local current_format = text_styles .. text_colors
+	local current_line = deli(buffer)
+	log3(" output current_line: "..tostr(current_line))
+
+	if current_line then
+		if text_format_updated == true then
+			current_line ..= current_format
 		end
-
-		local visual_len = print(current_line, 0, -20)
-		for i = 1 , #str do
-			local char = case_setter(ord(str,i), flipcase)
-
-			if text_format_updated == true then
-				current_line ..= current_format
-				text_format_updated = false
-			end
-
-			local o = ord(char)
-			log("  [drw] output char: "..o)
-			if (o != 10) visual_len += 4
-			if make_bold == true then
-				if (o >= 32) o+=96
-				if (o != 10) visual_len += 1
-			end 
-			current_line ..= chr(o)
-
-			if (in_set(char, break_chars)) break_index = #current_line
-			if (visual_len > 128) or (char == '\n') then
-
-				local next_line, next = current_format, nil
-				current_line, next = unpack(split(current_line, break_index, false))
-				if (next) next_line ..= next 
-
-				add(buffer, current_line)
-
-				visual_len = print(next_line, 0, -20)
-				current_line = next_line
-				text_format_updated = false
-
-				break_index = 0
-			end
-		end
-		if (current_line) add(buffer, current_line)
+	else
+		current_line = current_format
 	end
+	text_format_updated = false
+	local pixel_len = print(current_line, 0, -20)
+
+	for i = 1, #str do
+		local char = case_setter(str[i], flipcase)
+		local o = ord(char)
+		
+		-- adjust visual length; don't call print() every char to get the new length
+		if (o ~= 10) pixel_len += 4
+		if make_bold == true then
+			if (o >= 32) o += 96
+			if (o != 10) pixel_len += 1
+		end
+
+		--add the adjusted character (might have switched to bold font set)
+		current_line ..= chr(o)
+
+		-- is this a visually appealing line-break character?
+		if (in_set(char, "\n :-_;")) break_index = #current_line
+
+		-- handle wrapping or newline
+		if pixel_len > 128 or char == '\n' then
+			local this_line, next_line = unpack(split(current_line, break_index, false))
+			next_line = next_line or ''
+
+			log3(" adding to buffer: "..tostr(this_line))
+			add(buffer, this_line)
+
+			pixel_len = print(next_line, 0, -20)
+			current_line = current_format..next_line
+			break_index = 0
+		end
+	end
+
+	-- add remaining content to buffer and flush
+	if (#current_line) add(buffer, current_line)
 	if (flush_now) flush_line_buffer()
 end
 
 function flush_line_buffer(_w)
-	local w = _w and _w or active_window
+	local w = _w or active_window
 	local win = windows[w]
 	local buffer = win.buffer
-	log('  [drw] flush_line_buffer '..w..', '..tostr(#buffer)..' lines')
-	-- log('  [drw]    lines shown: '..lines_shown..' vs win height: '..win.h)
-	if (#buffer == 0 or win.h == 0) return
-	-- log('  [drw]    flush window '..w..' with line height: '..win.h)
+
+	log3('  [drw] flush_line_buffer '..w..', '..tostr(#buffer)..' lines')
+	if #buffer == 0 or win.h == 0 then return end
+
 	while #buffer > 0 do
 		local str = deli(buffer, 1)
-		if (str == text_styles..text_colors) goto skip
-		if w == 0 then
-			if #buffer != 0 then
-				if lines_shown == (win.h - 1) then
-					screen("\^i"..text_colors.."          - - MORE - -          ")
-					reuse_last_line = true
-					wait_for_any_key()
-					lines_shown = 0
-				end
+
+		-- Skip empty style lines
+		if (str == text_styles..text_colors) goto continue 
+
+		-- Handle pagination for the main window
+		if w == 0 and lines_shown == (win.h - 1) then
+			reuse_last_line, lines_shown = true, 0
+			print("\^i"..text_colors.."          - - MORE - -          ",0,122)
+			wait_for_any_key()
+		end
+
+		-- Trim newline if present
+		if str[-1] == '\n' then
+			str = sub(str, 1, -2)
+			if w == 0 or (w == 1 and _zm_version == 3) then
+				did_trim_nl = true
 			end
 		end
-		-- log('last char: '..ord(sub(str,-1)))
-		if str[-1] == '\n' then
-			str = sub(str,1,-2)
-			if (w == 0 or (w == 1 and _zm_version == 3)) did_trim_nl = true
-		end
-		-- if (active_window == 0) did_trim_nl = dtn
+
+		-- Display the line and track last line
 		win.last_line = str
 		screen(str)
-		::skip::
+
+		::continue::
 	end
-	log('  [drw] after flushing, buffer len is: '..#windows[w].buffer)
+
+	log('  [drw] after flushing, buffer len is: '..#win.buffer)
 end
+
+
+-- function flush_line_buffer(_w)
+-- 	local w = _w or active_window
+-- 	local win = windows[w]
+-- 	local buffer = win.buffer
+-- 	log('  [drw] flush_line_buffer '..w..', '..tostr(#buffer)..' lines')
+-- 	-- log('  [drw]    lines shown: '..lines_shown..' vs win height: '..win.h)
+-- 	if (#buffer == 0 or win.h == 0) return
+-- 	-- log('  [drw]    flush window '..w..' with line height: '..win.h)
+-- 	while #buffer > 0 do
+-- 		local str = deli(buffer, 1)
+-- 		if (str == text_styles..text_colors) goto skip
+-- 		if w == 0 then
+-- 			if #buffer != 0 then
+-- 				if lines_shown == (win.h - 1) then
+-- 					screen("\^i"..text_colors.."          - - MORE - -          ")
+-- 					reuse_last_line = true
+-- 					wait_for_any_key()
+-- 					lines_shown = 0
+-- 				end
+-- 			end
+-- 		end
+-- 		-- log('last char: '..ord(sub(str,-1)))
+-- 		if str[-1] == '\n' then
+-- 			str = sub(str,1,-2)
+-- 			if (w == 0 or (w == 1 and _zm_version == 3)) did_trim_nl = true
+-- 		end
+-- 		-- if (active_window == 0) did_trim_nl = dtn
+-- 		win.last_line = str
+-- 		screen(str)
+-- 		::skip::
+-- 	end
+-- 	log('  [drw] after flushing, buffer len is: '..#windows[w].buffer)
+-- end
 
 function screen(str)
 	log('  [drw] screen ('..active_window..'): '..str)
@@ -364,15 +394,21 @@ end
 
 lowercase, visual_case, flipcase = 1, 2, 3
 function case_setter(char, case)
-	local o = (case == flipcase) and char or ord(char)
+	local o = ord(char)
 
 	if case == lowercase then
-		if (in_range(o,128,153)) o -= 31
-		if (in_range(o,65,90)) o += 32
+		if in_range(o,128,153) then
+			o -= 31
+		elseif in_range(o,65,90) then
+			o += 32
+		end
 
 	elseif case == visual_case then
-		if (in_range(o,97,122)) o -= 32
-		if (in_range(o,128,153)) o -= 31
+		if in_range(o,97,122) then
+			o -= 32
+		elseif in_range(o,128,153) then 
+			o -= 31
+		end
 	
 	elseif case == flipcase then
 		if in_range(o,97,122) then
@@ -485,7 +521,7 @@ function show_status()
 	loc ..= spacer..score
 	local flipped = ""
 	for i = 1, #loc do
-		flipped ..= case_setter(ord(loc,i), flipcase)
+		flipped ..= case_setter(loc[i], flipcase)
 	end
 	print('\^i'..text_colors..flipped, 1, 1)
 end

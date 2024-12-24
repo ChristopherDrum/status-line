@@ -81,19 +81,15 @@ function tohex(value, full)
 	return hex
 end
 
-function log(str)
-	-- local prefix = sub(str,3,7)
-	-- if (prefix != '[ops]') printh(str, '_status_line_log_30')
-end
-
-function log2(str)
-	-- printh(str, '_status_line_log_30')
+function log() end
+function log2() end
+function log3(str)
+	printh(str, '_status_line_log_30')
 end
 
 function wait_for_any_key()
 	--cursor blinking suppressed; this routine is outside t() measurement
 	lines_shown = 0
-	local c = (make_inverse == false) and current_fg or current_bg
 	local keypress = ''
 	while keypress == '' do
 		if (active_window == 1) draw_cursor()
@@ -106,8 +102,8 @@ function wait_for_any_key()
 
 	local o = ord(keypress)
 	if active_window == 1 then 
-		local clear = (c+1)%2
-		draw_cursor(clear)
+		local c = (make_inverse == false) and current_fg or current_bg
+		draw_cursor(c)
 	else
 		if did_trim_nl == false then
 			reuse_last_line = true
