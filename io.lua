@@ -122,6 +122,7 @@ function memory(str)
 	set_zword(addr, table_len + #p8bytes)
 end
 
+--process word wrapping into a buffer
 function output(str, flush_now)
 	log3('  [drw] output to window '..active_window..', raw str: '..str)
 	if (mem_stream == true) memory(str) return
@@ -178,6 +179,7 @@ function output(str, flush_now)
 	if (flush_now) flush_line_buffer()
 end
 
+--buffered lines receive pagination; also handle "more"
 function flush_line_buffer(_w)
 	local w = _w or active_window
 	local win = windows[w]
@@ -213,10 +215,10 @@ function flush_line_buffer(_w)
 
 		::continue::
 	end
-
 	-- log('  [drw] after flushing, buffer len is: '..#win.buffer)
 end
 
+--actually put text onto the screen and adjust the z_cursor to reflect the new state
 function screen(str)
 	-- log('  [drw] screen ('..active_window..'): '..str)
 	local win = windows[active_window]
