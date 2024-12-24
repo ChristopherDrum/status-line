@@ -157,10 +157,10 @@ function output(str, flush_now)
 		--add the adjusted character (might have switched to bold font set)
 		current_line ..= chr(o)
 
-		-- is this a visually appealing line-break character?
+		-- have we found a visually appealing line-break character?
 		if (in_set(char, "\n :-_;")) break_index = #current_line
 
-		-- handle wrapping or newline
+		-- handle right border and newline wrap triggers
 		if pixel_len > 128 or char == '\n' then
 			local this_line, next_line = unpack(split(current_line, break_index, false))
 			next_line = next_line or ''

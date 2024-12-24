@@ -205,8 +205,11 @@ end
 
 function _je(a, b1, b2, b3)
 	-- log("  [ops] _je: "..a.."("..tohex(a)..") "..tostr(b1).."("..tohex(b1)..")"..tostr(b2).."("..tohex(b2)..")"..tostr(b3).."("..tohex(b3)..")")
-	if b1 != nil then
-		_branch(del({b1,b2,b3},a) == a)
+	if b1 then
+		if (a == b1) _branch(true)
+		if (a == b2) _branch(true)
+		if (a == b3) _branch(true)
+		_branch(false)
 	else
 		_program_counter += 0x.0001
 	end
