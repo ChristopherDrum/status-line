@@ -1,5 +1,5 @@
 _memory = {{}}
-_memory_start_state = nil
+_memory_start_state = {}
 _memory_bank_size = 16384 -- (1024*64)/4; four 64K banks
 
 
@@ -49,10 +49,7 @@ end
 --reset play session data (leave loaded game alone)
 function _restart()
 	for i = 1, #_memory_start_state do
-		local bank = _memory_start_state[i]
-		for j = 1, #bank do
-			_memory[i][j] = _memory_start_state[i][j]
-		end
+		_memory[1][i] = _memory_start_state[i]
 	end
 	flush_volatile_state()
 	initialize_game()
@@ -60,7 +57,7 @@ end
 
 function clear_all_memory()
 	_memory = {{}}
-	_memory_start_state = nil
+	_memory_start_state = {}
 	flush_volatile_state()
 end
 
@@ -157,16 +154,16 @@ end
 -- bank: which subtable in _memory
 -- index: index into the bank
 -- cell: 0-indexed byte at _memory[bank][index]
-function get_memory_location(zaddress)
-	-- log('get_memory_location for address: '..tohex(zaddress,true))
-	local bank = (zaddress & 0x000f) + 1
-	local za = ((zaddress<<16)>>>2) + 1 --contains index and cell
-	local index = za & 0xffff
-	local cell = (za & 0x.ffff) << 2
-	-- log("...we have "..#_memory.." banks, last bank holds"..#_memory[#_memory])
-	-- log("...we were asked for Bank #"..bank..", Index #"..index..", Cell #"..cell)
-	return bank, index, cell
-end
+-- function get_memory_location(zaddress)
+-- 	-- log('get_memory_location for address: '..tohex(zaddress,true))
+-- 	local bank = (zaddress & 0x000f) + 1
+-- 	local za = ((zaddress<<16)>>>2) + 1 --contains index and cell
+-- 	local index = za & 0xffff
+-- 	local cell = (za & 0x.ffff) << 2
+-- 	-- log("...we have "..#_memory.." banks, last bank holds"..#_memory[#_memory])
+-- 	-- log("...we were asked for Bank #"..bank..", Index #"..index..", Cell #"..cell)
+-- 	return bank, index, cell
+-- end
 
 -- returns value stored at zaddress, memory bank (if any), index into storage, cell
 function get_dword(zaddress, indirect)
@@ -175,7 +172,11 @@ function get_dword(zaddress, indirect)
 	-- local base = (zaddress & 0xffff)
 
 	if zaddress < 0xa then
-		local bank, index, cell = get_memory_location(zaddress)
+		local bank = (zaddress & 0x000f) + 1
+		local za = ((zaddress<<16)>>>2) + 1 --contains index and cell
+		local index = za & 0xffff
+		local cell = (za & 0x.ffff) << 2
+		-- local bank, index, cell = get_memory_location(zaddress)
 		-- log("  [mem]  memory banks "..bank..','..index..','..cell)
 		return _memory[bank][index], bank, index, cell
 	end
@@ -661,16 +662,18 @@ end
 
 function capture_mem_state(state)
 
-	local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
-
-	if state == _memory_start_state then
+	-- dynamic memory can never exceed 0xffff, so bank is always the first one
+	-- local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
+	local addr = _static_memory_mem_addr - 0x.0001
+	local mem_max_index = (((addr<<16)>>>2) + 1)&0xffff
+	-- log3("capture_mem_state until addr: "..tohex(addr)..', index: '..mem_max_index)
+	if state != nil then
 		-- log('  [mem] capture _memory_start_state')
-		_memory_start_state = {}
-		for i = 1, mem_max_bank do
-			_memory_start_state[i] = {unpack(_memory[i])}
-		end
-		while #_memory_start_state[#_memory_start_state] > mem_max_index do
-			deli(_memory_start_state[#_memory_start_state])
+		_memory_start_state = {unpack(_memory[1])}
+		-- log3(" memory[1] len: "..#_memory[1]..', copy: '..#_memory_start_state)
+
+		while #_memory_start_state > mem_max_index do
+			deli(_memory_start_state)
 		end
 		-- log("  [mem] after memory_start_state with bank "..mem_max_bank..": "..stat(0))
 	else

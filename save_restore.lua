@@ -72,7 +72,8 @@ function restore_game()
 
 	offset += 1
 	local memory_length = temp[offset]
-	local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
+	--this needs repair!
+	--local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
 	-- log('memory_length ('..mem_max_bank..','..mem_max_index..'): '..memory_length)
 	local temp_index = 1
 	for i = 1, mem_max_bank do
