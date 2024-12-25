@@ -205,7 +205,6 @@ function get_zbyte(zaddress)
 
 	local dword, _, _, cell  = get_dword(zaddress)
 	if (zaddress < 0xa) dword >>>= -((cell<<3)-8)
-
 	-- log('  [mem] get_zbyte from: '..tohex(zaddress).." --> "..sub(tohex(dword & 0xff),5,6))
 	return dword & 0xff
 end
@@ -282,21 +281,23 @@ function set_zword(zaddress, _zword, indirect)
 		if (indirect) set_stack_top(zword) else stack_push(zword)
 
 	elseif zaddress < 0xa then --this should also resolve global var access because those addresses are maintained by the zcode, not us
-		local dword, bank, index, cell  = get_dword(zaddress)
-		local filter = ~(0xffff.0000 >>> (cell << 3))
-		dword &= filter
-		if cell == 3 then
-			local next_index = index + 1
-			local next_bank = bank
-			if (next_index > #_memory[bank]) next_bank += 1 next_index = 1
-			local dwordb = _memory[next_bank][next_index]
-			dwordb &= 0x00ff.ffff
-			dwordb |= (zword << 8)
-			_memory[next_bank][next_index] = dwordb
-		end
-		zword >>>= (cell << 3)
-		dword |= zword
-		_memory[bank][index] = dword
+		set_zbyte(zaddress, zword>>>8)
+		set_zbyte(zaddress+0x.0001, zword)
+		-- local dword, bank, index, cell  = get_dword(zaddress)
+		-- local filter = ~(0xffff.0000 >>> (cell << 3))
+		-- dword &= filter
+		-- if cell == 3 then
+		-- 	local next_index = index + 1
+		-- 	local next_bank = bank
+		-- 	if (next_index > #_memory[bank]) next_bank += 1 next_index = 1
+		-- 	local dwordb = _memory[next_bank][next_index]
+		-- 	dwordb &= 0x00ff.ffff
+		-- 	dwordb |= (zword << 8)
+		-- 	_memory[next_bank][next_index] = dwordb
+		-- end
+		-- zword >>>= (cell << 3)
+		-- dword |= zword
+		-- _memory[bank][index] = dword
 
 	elseif zaddress >= _local_var_table_mem_addr then
 		-- log2("  setLocal: "..(zaddress<<16).." -> "..tohex(zword))
