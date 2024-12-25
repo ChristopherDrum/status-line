@@ -136,11 +136,11 @@ function output(str, flush_now)
 	if current_line then
 		if text_format_updated == true then
 			current_line ..= current_format
+			text_format_updated = false
 		end
 	else
 		current_line = current_format
 	end
-	text_format_updated = false
 	local pixel_len = print(current_line, 0, -20)
 
 	for i = 1, #str do
@@ -168,8 +168,8 @@ function output(str, flush_now)
 			-- log3(" adding to buffer: "..tostr(this_line))
 			add(buffer, this_line)
 
-			pixel_len = print(next_line, 0, -20)
 			current_line = current_format..next_line
+			pixel_len = print(current_line, 0, -20)
 			break_index = 0
 		end
 	end
@@ -187,17 +187,16 @@ function flush_line_buffer(_w)
 
 	if (#buffer == 0 or win.h == 0) return
 
+	clip(unpack(win.screen_rect))
 	while #buffer > 0 do
-		local str = deli(buffer, 1)
-		log3('  [drw] flush_line_buffer '..w..': `'..str..'`')
 
-		-- Skip empty style lines
+		local str = deli(buffer, 1)
 		if (str == text_styles..text_colors) goto continue 
 
-		-- Handle pagination for the main window
+		-- Pagination needed first?
 		if w == 0 and lines_shown == (win.h - 1) then
+			screen("\^i"..text_colors.."          - - MORE - -          ")
 			reuse_last_line, lines_shown = true, 0
-			print("\^i"..text_colors.."          - - MORE - -          ",0,122)
 			wait_for_any_key()
 		end
 
@@ -215,7 +214,7 @@ function flush_line_buffer(_w)
 
 		::continue::
 	end
-	-- log('  [drw] after flushing, buffer len is: '..#win.buffer)
+	clip()
 end
 
 --actually put text onto the screen and adjust the z_cursor to reflect the new state
@@ -224,20 +223,23 @@ function screen(str)
 	local win = windows[active_window]
 	local zx, zy = unpack(win.z_cursor)
 
-	clip(unpack(win.screen_rect))
-	-- local cx = (print(str,0,-20) >>> 2)
-
 	local px, py = unpack(win.p_cursor)
 	cursor(px,py)
 	if active_window == 0 then
-		if reuse_last_line == false then
-			print(text_colors..'\n') --this is just "scroll the screen up by a line"
+		if reuse_last_line == true then
+			--skip the line scroll
+			reuse_last_line = false
+		else
+			--scroll up by a line to make room for the next line
+			print(text_colors..'\n') 
 		end
-		reuse_last_line = false
 
+		--blank out the line to the current color scheme
 		rectfill(0,121,128,128,current_bg)
-		cursor(1,122)
-		zx = (print('\^d'..emit_rate..str)>>>2) + 1
+
+		--print the line to screen and update the lines_shown count 
+		--this will be caught by pagination on the next line flushed
+		zx = (print('\^d'..emit_rate..str, 1, 122)>>>2) + 1
 		zy = win.h
 		lines_shown += 1
 	else
@@ -252,7 +254,6 @@ function screen(str)
 
 	set_z_cursor(active_window, zx, zy)
 	flip()
-	clip()
 end
 
 function _tokenise(baddr1, baddr2, baddr3, _bit)
