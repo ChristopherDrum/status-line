@@ -202,16 +202,10 @@ function get_zbyte(zaddress)
 		zaddress = _program_counter
 		_program_counter += 0x.0001
 	end
-	-- local base = (zaddress & 0xffff)
-	local dword, _, _, cell  = get_dword(zaddress)
 
-	if zaddress < 0xa then
-		if cell < 2 then
-			dword >>>= (8 - (8*cell))
-		else
-			dword <<= (2 << cell)
-		end
-	end
+	local dword, _, _, cell  = get_dword(zaddress)
+	if (zaddress < 0xa) dword >>>= -((cell<<3)-8)
+
 	-- log('  [mem] get_zbyte from: '..tohex(zaddress).." --> "..sub(tohex(dword & 0xff),5,6))
 	return dword & 0xff
 end
@@ -231,21 +225,20 @@ end
 function set_zbyte(zaddress, _byte)
 	--log('  [mem] set_zbyte at '..tohex(zaddress)..' to value: '..tohex(byte))
 	local byte = _byte & 0xff --filter off garbage
-	local base = (zaddress & 0xffff)
-	assert(base != _local_var_table_mem_addr, "asked to write a zbyte to local var: "..tohex(zaddress))
+	-- local base = (zaddress & 0xffff)
+	-- assert(base != _local_var_table_mem_addr, "asked to write a zbyte to local var: "..tohex(zaddress))
 	if zaddress == _stack_mem_addr then
 		-- log('  [mem] setting stack: '..tohex(byte))
 		stack_push(byte)
-	else
-		if base < 0xa then --regular memory
-			local dword, bank, index, cell  = get_dword(zaddress)
-			local filter = ~(0xff00.0000 >>> (cell << 3))
-			dword &= filter
-			byte <<= 8
-			byte >>>= (cell << 3)
-			dword |= byte
-			_memory[bank][index] = dword
-		end
+	elseif zaddress < 0xa then --regular memory
+		local dword, bank, index, cell  = get_dword(zaddress)
+		local offset = cell<<3
+		local filter = ~(0xff00.0000 >>> offset)
+		dword &= filter
+		-- byte <<= 8
+		byte >>>= offset-8
+		dword |= byte
+		_memory[bank][index] = dword
 	end
 end
 
