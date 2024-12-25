@@ -99,12 +99,12 @@ end
 
 function zobject_address(index)
 	-- skip first 31/63 zwords of "default property table"
-	local address = _object_table_mem_addr + (_zm_object_property_count>>>15)
+	-- local address = _object_table_mem_addr + (_zm_object_property_count>>>15)
 	-- log('[NOTE]: object table starts '..tohex(_object_table_mem_addr))
 	-- log('[NOTE]: (skip default props) objects begin at '..tohex(address))
-	address += (((index-1)*_zm_object_entry_size)>>>16)
+	-- address += (((index-1)*_zm_object_entry_size)>>>16)
 	-- log('[NOTE]: object #'..index..' begins at '..tohex(address))
-	return address
+	return _zobject_address + (((index-1)*_zm_object_entry_size)>>>16)
 end
 
 function local_var_addr(index)
@@ -284,21 +284,6 @@ function set_zword(zaddress, _zword, indirect)
 	elseif zaddress < 0xa then --this should also resolve global var access because those addresses are maintained by the zcode, not us
 		set_zbyte(zaddress, zword>>>8)
 		set_zbyte(zaddress+0x.0001, zword)
-		-- local dword, bank, index, cell  = get_dword(zaddress)
-		-- local filter = ~(0xffff.0000 >>> (cell << 3))
-		-- dword &= filter
-		-- if cell == 3 then
-		-- 	local next_index = index + 1
-		-- 	local next_bank = bank
-		-- 	if (next_index > #_memory[bank]) next_bank += 1 next_index = 1
-		-- 	local dwordb = _memory[next_bank][next_index]
-		-- 	dwordb &= 0x00ff.ffff
-		-- 	dwordb |= (zword << 8)
-		-- 	_memory[next_bank][next_index] = dwordb
-		-- end
-		-- zword >>>= (cell << 3)
-		-- dword |= zword
-		-- _memory[bank][index] = dword
 
 	elseif zaddress >= _local_var_table_mem_addr then
 		-- log2("  setLocal: "..(zaddress<<16).." -> "..tohex(zword))

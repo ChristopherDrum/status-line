@@ -147,27 +147,25 @@ function _mod(a, b)
 end
 
 function _inc(var)
-	return _inc_dec(var,1)
+	local zword = get_var(var) + 1
+	_result(zword, var)
+	return zword
 end
 
 function _dec(var)
-	return _inc_dec(var,-1)
-end
-
-function _inc_dec(var, amt)
-	local zword = get_var(var) + amt
+	local zword = get_var(var) - 1 
 	_result(zword, var)
 	return zword
 end
 
 function _inc_jg(var, s)
 	local val = _inc(var)
-	_jg(val, s)
+	_branch(val > s)
 end
 
 function _dec_jl(var, s)
 	local val = _dec(var)
-	_jl(val, s)
+	_branch(val < s)
 end
 
 function _or(a, b)

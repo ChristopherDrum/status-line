@@ -158,7 +158,7 @@ function output(str, flush_now)
 		current_line ..= chr(o)
 
 		-- have we found a visually appealing line-break character?
-		if (in_set(char, "\n :-_;")) break_index = #current_line
+		if (in_set(char, " \n:-_;")) break_index = #current_line
 
 		-- handle right border and newline wrap triggers
 		if pixel_len > 128 or char == '\n' then

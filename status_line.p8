@@ -333,6 +333,7 @@ function process_header()
 	_global_var_table_mem_addr = zaddress_at_zaddress(_global_var_table_header_addr)
 	_abbr_table_mem_addr 	= zaddress_at_zaddress(_abbr_table_header_addr)
 	_static_memory_mem_addr = zaddress_at_zaddress(_static_memory_header_addr)
+	_zobject_address 		= _object_table_mem_addr + (_zm_object_property_count>>>15)
 
 	checksum = get_zword(_file_checksum_header_addr)
 
