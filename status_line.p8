@@ -66,8 +66,10 @@ end
 --useful functions
 function in_set(val, set) --set must be single chars in a string
 	if (not val or not set) return
-	set = split(set,1)
-	return del(set,val) == val
+	for i = 1, #set do
+		if (set[i] == val) return true
+	end
+	return false
 end
 
 function in_range(val,min,max)
