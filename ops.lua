@@ -249,8 +249,7 @@ end
 
 --_call_p shared opcode with _not; see bottom of this file
 
-function _call_fp(...)
-	local type, raddr, a1, a2, a3, a4, a5, a6, a7 = ...
+function _call_fp(type, raddr, a1, a2, a3, a4, a5, a6, a7)
 
 	if (raddr == 0x0) then
 		if (type == call_type.func) _result(0)

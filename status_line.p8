@@ -123,7 +123,7 @@ function draw_cursor(c)
 	local toggle = {current_bg, current_fg}
 	local c = c or toggle[(stat(85) % 2)+1]
 	local px, py = unpack(windows[active_window].p_cursor)
-	print(cursor_type, px, py, c)
+	print(cursor_type, px-1, py, c)
 end
 
 function build_menu(name, dval, table)

@@ -705,6 +705,7 @@ end
 
 function load_story_file()
 	clear_all_memory()
+	-- log3("memory at: "..stat(0)..', '..stat(1))
 	while stat(120) do
 		if (#_memory[#_memory] == _memory_bank_size) add(_memory, {})
 		local bank_num = #_memory
@@ -718,5 +719,6 @@ function load_story_file()
 			add(_memory[bank_num], dword)
 		end
 	end
+	-- log3("memory at: "..stat(0))
 	initialize_game()
 end

@@ -1,28 +1,28 @@
 From prompt to response, some 30k instructions processed in Lost_Pig.z8
 _rtrue  = 359
-_loadb  = 225
-_jz     = 3097 (nothing to be done)
+_loadb  = 225   (small memory access optimization applied)
+_jz     = 3097  (nothing to be done)
 _loadw  = 1276
-_je     = 4055 (found an optimization)
+_je     = 4055  (found an optimization)
 _store  = 2341
 _ret    = 213
 _call_p = 214
 _call_f = 885
 _tokenise = 2
-_storeb = 189
-_storew = 203
-_inc    = 2394
-_dec    = 34
+_storeb = 189   (small memory access optimization applied)
+_storew = 203   (small memory access optimization applied)
+_inc    = 2394  (handled?)
+_dec    = 34    (handled?)
 _pull   = 130
 _get_prop_addr = 782
 _get_prop_len = 540
 _get_parent = 42
 _get_sibling = 127
 _check_arg_count = 49
-_mul    = 102
-_add    = 840
-_sub    = 626
-_div    = 1511
+_mul    = 102   (fine)
+_add    = 840   (fine)
+_sub    = 626   (fine)
+_div    = 1511  (nothing to be done)
 
 1209e: _rtrue()
 120fe: _loadb(a0d9 0001 )
