@@ -225,6 +225,7 @@ function screen(str)
 
 	local px, py = unpack(win.p_cursor)
 	cursor(px,py)
+	
 	if active_window == 0 then
 		if reuse_last_line == true then
 			--skip the line scroll

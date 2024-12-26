@@ -2,7 +2,7 @@
 --<result> == _result(some value)
 --<branch> == _branch(true/false)
 --<return> == _ret(value)
---alias for for clarity in result handling
+--alias for readability in result handling
 _result = set_var
 
 function _branch(should_branch)

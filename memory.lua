@@ -557,78 +557,59 @@ end
 function load_instruction()
 
 	local op_table, op_code, operands = nil, 0, {}
-	local function extract_operands(info, _count)
-		-- log('  [mem] extract_operands: '..tohex(info)..', '.._count)
-		for i = _count-1, 0, -1 do
-			local op_type = (info >>> (i*2)) & 0x03
-			-- log('  byte '..i..', op type: '..op_type)
-			local operand
-			if op_type == 0 then
-				operand = get_zword()
-			elseif op_type == 1 then
-				operand = get_zbyte()
-			elseif op_type == 2 then
-				operand = get_var()
-			elseif op_type == 3 then
-				break
-			end
-			-- log('  operand '..tohex(operand))
+
+	-- Local helper to extract operands based on type
+	local function extract_operand_by_type(op_type)
+		if (op_type == 0) return get_zword()
+		if (op_type == 1) return get_zbyte()
+		if (op_type == 2) return get_var()
+		return nil
+	end
+
+	local function extract_operands(info, count)
+		for i = count - 1, 0, -1 do
+			local op_type = (info >>> (i * 2)) & 0x03
+			local operand = extract_operand_by_type(op_type)
+			if (operand == nil) break
 			add(operands, operand)
 		end
 	end
 	
-	-- First 1 to 3 bytes contain opcode and operand types
-	-- Subsequent bytes are the operands
 	local pc = _program_counter
 	local op_definition = get_zbyte()
-	-- log('  [mem] op_definition: '..tohex(op_definition))
-	op_form = (op_definition >>> 6)
+	local op_form = (op_definition >>> 6) & 0xff
 	if (op_definition == 0xbe) op_form = 0xbe
-	op_form &= 0xff
 
-	local op_table_name
 	if op_form <= 0x01 then
 		op_table = _long_ops
 		op_code = (op_definition & 0x1f)
-		operands[1] = get_zbyte()
-		operands[2] = get_zbyte()
+		operands = {get_zbyte(), get_zbyte()}
 
-		if (op_definition & 0x40 == 0x40) then
-			operands[1] = get_var(operands[1])
-		end
-		if (op_definition & 0x20 == 0x20) then
-			operands[2] = get_var(operands[2])
-		end
+		if (op_definition & 0x40 == 0x40) operands[1] = get_var(operands[1])
+		if (op_definition & 0x20 == 0x20) operands[2] = get_var(operands[2])
 
 	-- $BE indicates an extended instruction
-	elseif op_form == 0xbe and _zm_version >= 5 then
+	elseif (op_form == 0xbe) and (_zm_version >= 5) then
 		op_table = _ext_ops
 		op_code = get_zbyte()
-		type_information = get_zbyte()
-		extract_operands(type_information,4)
+		extract_operands(get_zbyte(), 4)
 
 	elseif op_form == 0x02 then
 		op_table = _short_ops
 		op_code = (op_definition & 0xf)
 		local op_type = (op_definition & 0x30) >>> 4
-		if op_type == 0 then
-			operands = get_zword()
-		elseif op_type == 1 then
-			operands = get_zbyte()
-		elseif op_type == 2 then
-			operands = get_var()
-		elseif op_type == 3 then
+		operands = {extract_operand_by_type(op_type)}
+		if op_type == 3 then
 			op_table = _zero_ops
-			operands = nil
+			operands = {}
 		end
-		operands = {operands}
 
 	elseif op_form == 0x03 then
 		op_table = (op_definition & 0x20 == 0) and _long_ops or _var_ops
 		op_code = (op_definition & 0x1f)
 
 		local type_information, op_count
-		if ((_zm_version > 3) and (op_definition == 0xec or op_definition == 0xfa)) then
+		if (_zm_version > 3) and (op_definition == 0xec or op_definition == 0xfa) then
 			type_information, op_count = get_zword(), 8
 		else
 			type_information, op_count = get_zbyte(), 4
@@ -636,13 +617,15 @@ function load_instruction()
 		extract_operands(type_information, op_count)
 		if ((op_table == _long_ops) and (#operands == 1) and (op_code > 1)) get_zbyte()
 	end
+
+	-- Logging
 	local op_string = ''
 	for i = 1, #operands do
-		op_string ..= sub(tohex(operands[i]),3,6)..' '
+		op_string ..= sub(tohex(operands[i]), 3, 6) .. ' '
 	end
-	log3(sub(tohex(pc),6)..': '..op_table[#op_table][op_code+1]..'('..op_string..')')
-	local func = op_table[op_code+1]
-	return func, operands
+	log3(sub(tohex(pc), 6) .. ': ' .. op_table[#op_table][op_code + 1] .. '(' .. op_string .. ')')
+
+	return op_table[op_code + 1], operands
 end
 
 function capture_mem_state(state)
