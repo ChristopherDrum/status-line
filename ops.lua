@@ -410,27 +410,14 @@ function _get_prop(obj, prop)
 end
 
 function _get_prop_addr(obj, prop)
-	local addr, len = zobject_prop_data_addr_or_prop_list(obj, prop)
-	log("  [prp] _get_prop_addr returning: "..tohex(addr)..", "..tostr(len))
+	local addr, len = zobject_search_properties(obj, prop, target_addr)
+	-- log("  [prp] _get_prop_addr returning: "..tohex(addr)..", "..tostr(len))
 	_result(addr << 16)
 end
 
 function _get_next_prop(obj, prop)
 	-- log('  [ops] get_next_prop for: '..zobject_name(obj)..'('..obj..'), prop: '..prop)
-	local next_prop = 0
-	local prop_list = zobject_prop_data_addr_or_prop_list(obj)
-	if (prop_list == 0) prop_list = {}
-	if prop == 0 then 
-		if (#prop_list > 0) next_prop = prop_list[1]
-	else
-		for i = 1, #prop_list do
-			if (prop_list[i] == prop) and (i < #prop_list) then
-				next_prop = prop_list[i+1]
-				break
-			end
-		end
-	end
-	-- log('      found: '..next_prop)
+	local next_prop = zobject_search_properties(obj, prop, target_next)
 	_result(next_prop)
 end
 

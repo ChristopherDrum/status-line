@@ -411,68 +411,57 @@ function extract_prop_len_num(local_addr)
 			offset = 2
 		end
 	end
-	-- log("  [mem] extract_prop_len_num from "..tohex(local_addr)..": "..(len+1)..", "..num)
-	-- log off immediately surrounding bytes
-	-- local check = -0x.0003
-	-- for i = 1, 8 do
-	-- 	log("    "..tohex(get_zbyte(local_addr+check)))
-	-- 	check += 0x.0001
-	-- end
+
 	return len, num, offset
 end
 
-function zobject_prop_data_addr_or_prop_list(index, property)
-	if (index == 0) return 0
-	local collect_list = (property == nil)
-	local prop_list = {}
+--the work these two ops do is functionally equivalent
+--step through props to find a specific one
+target_addr, target_next = 0, 1
+function zobject_search_properties(obj, prop, target)
+	if (obj == 0) return 0
 
-	-- start at the address of the first property (jumping over the text header)
-	local text_length, prop_data_addr = zobject_text_length(index)
+	local text_length, prop_data_addr = zobject_text_length(obj)
 	prop_data_addr += (0x.0001 + (text_length >>> 15))
-	-- log('[NOTE]: object #'..index..' prop data at '..tohex(prop_data_addr))
 
 	local prop_len, prop_num, offset = extract_prop_len_num(prop_data_addr)
-	while prop_num > 0 do
+	if prop == 0 then
+		if (target == target_next and prop_num > 0) return prop_num
+		return 0
+	end
 
-		if collect_list == true then
-			-- log("  [mem] collecting prop num: "..prop_num)
-			add(prop_list, prop_num)
-		else
-			if prop_num == property then
+	local get_next = false
+	while prop_num > 0 do
+		if prop_num == prop then
+			if target == target_addr then
 				return (prop_data_addr + (offset >>> 16)), prop_len
+			else
+				get_next = true
 			end
 		end
-
 		prop_data_addr += ((prop_len + offset) >>> 16)
 		prop_len, prop_num, offset = extract_prop_len_num(prop_data_addr)
+		if (get_next == true) return prop_num
 	end
-	
-	if (collect_list == true) return prop_list
-	return 0, 0
+	return 0
 end
 
 function zobject_get_prop(index, property)
 	if (index == 0) return 0
-	local prop_data_addr, len = zobject_prop_data_addr_or_prop_list(index, property)
+	local prop_data_addr, len = zobject_search_properties(index, property, target_addr)
 	if (prop_data_addr == 0) return zobject_default_property(property)
 
-	if len == 1 then
-		return get_zbyte(prop_data_addr)
-	else 
-		return get_zword(prop_data_addr)
-	end
+	if (len == 1) return get_zbyte(prop_data_addr)
+	if (len == 2) return get_zword(prop_data_addr)
 	return 0
 end
 
 function zobject_set_prop(index, property, value)
 	if (index == 0) return 0
-	local prop_data_addr, len = zobject_prop_data_addr_or_prop_list(index, property)
+	local prop_data_addr, len = zobject_search_properties(index, property, target_addr)
 	
-	if len == 1 then
-		 set_zbyte(prop_data_addr, value & 0xff)
-	else
-		 set_zword(prop_data_addr, value & 0xffff)
-	end
+	if (len == 1) set_zbyte(prop_data_addr, value & 0xff)
+	if (len == 2) set_zword(prop_data_addr, value & 0xffff)
 end
 
 function get_zstring(zaddress, _is_dict)
@@ -482,9 +471,9 @@ function get_zstring(zaddress, _is_dict)
 
 	while end_found == false do
 		local zword = get_zword(zaddress)
-		add(zchars, ((zword & 0x7c00)>>>10))
-		add(zchars, ((zword & 0x03e0)>>>5))
-		add(zchars, (zword & 0x001f))
+		for shift = 10, 0, -5 do
+			add(zchars, (zword >>> shift) & 0x1F)
+		end
 		if (zaddress) zaddress += 0x.0002
 		end_found = ((zword & 0x8000) == 0x8000)
 		if _is_dict == true then
