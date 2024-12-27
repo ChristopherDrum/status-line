@@ -637,7 +637,7 @@ end
 function _print_table(baddr, width, _height, _skip)
 	local skip = _skip or 0
 	local height = _height or 1
-	log3('  [ops] _print_table: '..tohex(baddr)..','..width..','..height..','..skip)
+	-- log3('  [ops] _print_table to win '..active_window..': '..tohex(baddr)..','..width..','..height..','..skip)
 	local za = zword_to_zaddress(baddr)
 	local zx, zy = unpack(windows[active_window].z_cursor)
 	for i = 1, height do
@@ -648,10 +648,10 @@ function _print_table(baddr, width, _height, _skip)
 		zy += 1
 
 		if zy > windows[active_window].h then
-			if (_active_window == 0) _print_char(13)
+			if (active_window == 0) _print_char(13)
 		else
 			_set_cursor(zy,zx)
-			log3(" z_cursor moved to: "..zx..','..zy)
+			-- log3(" z_cursor moved to: "..zx..','..zy)
 		end
 	end
 end

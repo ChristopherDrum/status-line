@@ -107,13 +107,13 @@ function wait_for_any_key()
 		local c = (make_inverse == false) and current_fg or current_bg
 		draw_cursor(c)
 	else
-		if did_trim_nl == false then
-			reuse_last_line = true
-			if #windows[0].buffer == 0 then
-				add(windows[0].buffer, windows[0].last_line)
-				windows[0].last_line = ''
-			end
-		end
+		-- if did_trim_nl == false then
+		-- 	reuse_last_line = true
+		-- 	if #windows[0].buffer == 0 then
+		-- 		add(windows[0].buffer, windows[0].last_line)
+		-- 		windows[0].last_line = ''
+		-- 	end
+		-- end
 	end
 	if (in_range(o,128,153)) o -= 63
 	return chr(o)
