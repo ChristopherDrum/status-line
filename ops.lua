@@ -648,7 +648,7 @@ function _print_table(baddr, width, _height, _skip)
 		zy += 1
 
 		if zy > windows[active_window].h then
-			if (active_window == 0) _print_char(13)
+			if (active_window == 0 and height > 1) _print_char(13)
 		else
 			_set_cursor(zy,zx)
 			-- log3(" z_cursor moved to: "..zx..','..zy)
