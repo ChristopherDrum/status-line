@@ -103,8 +103,9 @@ function _set_text_style(n)
 end
 
 function set_z_cursor(_win, _x, _y)
+	log3(" set_z_cursor: ".._win..', x: '.._x..', y: '.._y)
 	local win = windows[_win]
-	local px = ((_x - 1) << 2) + 1
+	local px = flr((_x - 1) << 2) + 1
 	local py = ((_y - 1) * 6) + 1
 	if (_zm_version > 3 and _win == 0) py += 1
 	local py_offset = (_win == 0) and windows[1].h*6 or 0
@@ -130,8 +131,14 @@ function output(str, flush_now)
 
 	local buffer = windows[active_window].buffer
 	local current_format = text_styles .. text_colors
+
+	-- if (active_window > 0) then
+	-- 	add(buffer, current_format..str)
+	-- 	flush_line_buffer(active_window)
+	-- 	return
+	-- end
+
 	local current_line = deli(buffer)
-	-- log3(" output current_line: "..tostr(current_line))
 
 	if current_line then
 		if text_format_updated == true then
@@ -141,6 +148,7 @@ function output(str, flush_now)
 	else
 		current_line = current_format
 	end
+
 	local pixel_len = print(current_line, 0, -20)
 
 	for i = 1, #str do
@@ -219,13 +227,11 @@ end
 
 --actually put text onto the screen and adjust the z_cursor to reflect the new state
 function screen(str)
-	-- log('  [drw] screen ('..active_window..'): '..str)
+	log3('  [drw] screen ('..active_window..'): '..str)
 	local win = windows[active_window]
 	local zx, zy = unpack(win.z_cursor)
+	log3(" window "..active_window.." z_cursor start at: "..zx..','..zy)
 
-	local px, py = unpack(win.p_cursor)
-	cursor(px,py)
-	
 	if active_window == 0 then
 		if reuse_last_line == true then
 			--skip the line scroll
@@ -240,11 +246,19 @@ function screen(str)
 
 		--print the line to screen and update the lines_shown count 
 		--this will be caught by pagination on the next line flushed
-		zx = (print('\^d'..emit_rate..str, 1, 122)>>>2) + 1
+		local pixel_count = print('\^d'..emit_rate..str, 1, 122) - 1
+		log3(" win0 pixel count: "..pixel_count)
+		
+		zx = flr(pixel_count>>2) + 1 -- z_cursor starts at 1,1
 		zy = win.h
 		lines_shown += 1
 	else
-		zx += print(str)>>>2
+		--  = print(str,0,-20)
+		local px, py = unpack(win.p_cursor)
+		local pixel_count = print(str, px, py)
+		log3(" win1 pixel count: "..pixel_count)
+
+		zx += flr(pixel_count>>2)
 		if _zm_version == 3 then
 			if did_trim_nl == true then
 				zx = 1
@@ -254,6 +268,7 @@ function screen(str)
 	end
 
 	set_z_cursor(active_window, zx, zy)
+	log3(" z_cursor moved to: "..zx..','..zy)
 	flip()
 end
 

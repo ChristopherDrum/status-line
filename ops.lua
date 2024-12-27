@@ -634,19 +634,25 @@ function _print_obj(obj)
 	output(name)
 end
 
-function _print_table(baddr, x, _y, _n)
-	-- log('  [ops] _print_table: '..tohex(baddr)..','..x..','.._y)
-	local n = _n or 0
-	local y = _y or 1
+function _print_table(baddr, width, _height, _skip)
+	local skip = _skip or 0
+	local height = _height or 1
+	log3('  [ops] _print_table: '..tohex(baddr)..','..width..','..height..','..skip)
 	local za = zword_to_zaddress(baddr)
 	local zx, zy = unpack(windows[active_window].z_cursor)
-	for i = 1, y do
-		for j = 0, x+n-1 do
-			if (j < x) _print_char(get_zbyte(za))
+	for i = 1, height do
+		for j = 1, width + skip do
+			if (j <= width) _print_char(get_zbyte(za))
 			za += 0x.0001
 		end
-		zy+=1
-		_set_cursor(zy,zx)
+		zy += 1
+
+		if zy > windows[active_window].h then
+			if (_active_window == 0) _print_char(13)
+		else
+			_set_cursor(zy,zx)
+			log3(" z_cursor moved to: "..zx..','..zy)
+		end
 	end
 end
 

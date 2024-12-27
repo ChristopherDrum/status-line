@@ -121,9 +121,13 @@ end
 
 function draw_cursor(c)
 	local toggle = {current_bg, current_fg}
-	local c = c or toggle[(stat(85) % 2)+1]
+	if active_window != 0 then 
+		c = (make_inverse == false) and current_fg or current_bg
+	else
+		c = c or toggle[(stat(85) % 2)+1]
+	end
 	local px, py = unpack(windows[active_window].p_cursor)
-	print(cursor_type, px-1, py, c)
+	print(cursor_type, px, py, c)
 end
 
 function build_menu(name, dval, table)
