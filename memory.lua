@@ -100,18 +100,23 @@ end
 --zobject_address(index) replaced with inline calculations
 --search for _zobject_address usage
 
+--rather than passing off to set_zword, we'll do it here directly
 function set_var(value, _var_byte, indirect)
 	-- log("  [mem] set_var: "..tostr(value)..','..tostr(var_byte))
-	local var_address
 	local var_byte = _var_byte or get_zbyte()
+
 	if (var_byte == 0) then
-		var_address = _stack_mem_addr
+		if (indirect) set_stack_top(value) else stack_push(value)
+
 	elseif (var_byte < 16) then
-		var_address = _local_var_table_mem_addr + (var_byte >>> 16)
+		local zaddr = _local_var_table_mem_addr + (var_byte >>> 16)
+		top_frame().vars[zaddr<<16] = value
+
 	else
-		var_address = _global_var_table_mem_addr + ((var_byte-16) >>> 15) 	-- index*0x.0002 == (index>>>15)
+		local zaddr = _global_var_table_mem_addr + ((var_byte-16) >>> 15) 	-- index*0x.0002 == (index>>>15)
+		set_zbyte(zaddr, value>>>8)
+		set_zbyte(zaddr+0x.0001, value)
 	end
-	set_zword(var_address, value, indirect)
 end
 
 function get_var(_var_byte, indirect)

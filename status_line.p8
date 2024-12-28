@@ -82,7 +82,7 @@ end
 function log() end
 function log2() end
 function log3(str)
-	printh(str, '_status_line_log_30')
+	-- printh(str, '_status_line_log_30')
 end
 
 function wait_for_any_key()
