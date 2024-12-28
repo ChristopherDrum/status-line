@@ -72,10 +72,6 @@ function in_set(val, set) --set must be single chars in a string
 	return false
 end
 
-function in_range(val,min,max)
-	return mid(min,val,max) == val
-end
-
 function tohex(value, full)
 	if (value == nil) return '(no_value)'
 	local hex = tostr(value, 3)
@@ -115,7 +111,7 @@ function wait_for_any_key()
 		-- 	end
 		-- end
 	end
-	if (in_range(o,128,153)) o -= 63
+	if (o >= 128 and o <= 153) o -= 63
 	return chr(o)
 end
 
@@ -224,7 +220,7 @@ function _update60()
 		else
 			--I found this method of running multiple vm instructions per frame easier to regulate
 			local _count = 0
-			local max_instruction = 150
+			local max_instruction = 160
 			while _count < max_instruction and 
 					_interrupt == nil and
 					story_loaded == true do

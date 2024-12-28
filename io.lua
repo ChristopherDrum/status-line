@@ -379,23 +379,23 @@ function case_setter(char, case)
 	local o = ord(char)
 
 	if case == lowercase then
-		if in_range(o,128,153) then
+		if (o >= 128 and o <= 153) then
 			o -= 31
-		elseif in_range(o,65,90) then
+		elseif (o >= 65 and o <= 90) then
 			o += 32
 		end
 
 	elseif case == visual_case then
-		if in_range(o,97,122) then
+		if (o >= 97 and o <= 122) then
 			o -= 32
-		elseif in_range(o,128,153) then 
+		elseif (o >= 128 and o <= 153) then 
 			o -= 31
 		end
 	
 	elseif case == flipcase then
-		if in_range(o,97,122) then
+		if (o >= 97 and o <= 122) then
 			o -= 32
-		elseif in_range(o,65,90) then
+		elseif (o >= 65 and o <= 90) then
 			o += 32
 		elseif o == 13 then
 			o = 10
