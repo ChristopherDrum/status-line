@@ -769,11 +769,10 @@ end
 
 
 -- Overloads; functions to route calls based on zm version
-
 function _pop_catch()
 	if (_zm_version < 5) stack_pop() else _catch()
 end
 
 function _not_call_p(...)
-	if (_zm_version < 5) _not(...) else _call_p(...)
+	if (_zm_version < 5) _not(...) else _call_fp(call_type.proc, ...)
 end
