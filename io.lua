@@ -146,30 +146,29 @@ function output(str, flush_now)
 
 	for i = 1, #str do
 		local char = case_setter(str[i], flipcase)
-		local o = ord(char)
 		
 		-- adjust visual length; don't call print() every char to get the new length
-		if (o ~= 10) pixel_len += 4
+		if (char != '\n') pixel_len += 4
 		if make_bold == true then
-			if (o >= 32) o += 96
-			if (o != 10) pixel_len += 1
+			if (char >= ' ') char = chr(ord(char) + 96)
+			if (char != '\n') pixel_len += 1
 		end
 
 		--add the adjusted character (might have switched to bold font set)
-		current_line ..= chr(o)
+		current_line ..= char
 
 		-- have we found a visually appealing line-break character?
 		if (in_set(char, " \n:-_;")) break_index = #current_line
 
 		-- handle right border and newline wrap triggers
 		if pixel_len > 128 or char == '\n' then
-			local this_line, next_line = unpack(split(current_line, break_index, false))
-			next_line = next_line or ''
+			local first, second = unpack(split(current_line, break_index, false))
+			add(buffer, first)
 
-			-- log3(" adding to buffer: "..tostr(this_line))
-			add(buffer, this_line)
+			second = second or ''
+			while (second[1] == ' ') second = sub(second,2)
 
-			current_line = current_format..next_line
+			current_line = current_format..second
 			pixel_len = print(current_line, 0, -20)
 			break_index = 0
 		end
@@ -180,7 +179,7 @@ function output(str, flush_now)
 	if (flush_now) flush_line_buffer()
 end
 
---buffered lines receive pagination; also handle "more"
+--buffered lines receive pagination
 function flush_line_buffer(_w)
 	local w = _w or active_window
 	local win = windows[w]
@@ -205,9 +204,9 @@ function flush_line_buffer(_w)
 		did_trim_nl = false
 		if str[-1] == '\n' then
 			str = sub(str, 1, -2)
-			if w == 0 or (w == 1 and _zm_version == 3) then
+			-- if w == 0 or (w == 1 and _zm_version == 3) then
 				did_trim_nl = true
-			end
+			-- end
 		end
 
 		-- Display the line and track last line
@@ -256,12 +255,12 @@ function screen(str)
 		log3("   win1 pixel count: "..pixel_count)
 
 		zx += flr(pixel_count>>2)
-		if _zm_version == 3 then
+		-- if _zm_version == 3 then
 			if did_trim_nl == true then
 				zx = 1
 				zy += 1
 			end
-		end
+		-- end
 	end
 
 	set_z_cursor(active_window, zx, zy)
@@ -275,7 +274,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 	local text_buffer = zword_to_zaddress(baddr1)
 	local parse_buffer = zword_to_zaddress(baddr2)
 	baddr2 = parse_buffer --cache the start pointer
-	local dict = (baddr3 == nil) and _main_dict or build_dictionary(zaddress_at_zaddress(baddr3))
+	local dict = (baddr3 == nil) and _main_dict or build_dictionary(zword_to_zaddress(baddr3))
 
 	-- move past the text_buffer header info
 	text_buffer += 0x.0001
@@ -366,9 +365,12 @@ function _encode_text(baddr1, n, p, baddr2)
 		if (#zwords >= max_words) break
 	end
 	zwords[#zwords] |= 0x8000 -- set bit flag for end of zstring
-	local out_addr = zword_to_zaddress(baddr2)
-	set_zwords(baddr2, zwords)
 	
+	local out_addr = zword_to_zaddress(baddr2)
+	for word in all(zwords) do
+		set_zword(out_addr, word)
+		out_addr += 0x.0002
+	end
 end
 
 
@@ -471,11 +473,10 @@ end
 
 --only for v3 games; I'd like to rework this to use far fewer tokens
 function show_status()
-
-	local obj = get_zword(global_var_addr(0))
+	local obj = get_zword(_global_var_table_mem_addr) --global 0
 	local location = zobject_name(obj)
-	local scorea = get_zword(global_var_addr(1))
-	local scoreb = get_zword(global_var_addr(2))
+	local scorea = get_zword(_global_var_table_mem_addr + 0x.0002) --global 1
+	local scoreb = get_zword(_global_var_table_mem_addr + 0x.0004) --global 2
 	local flag = get_zbyte(_interpreter_flags_header_addr)
 	local separator = '/'
 	if (flag & 2) == 2 then

@@ -202,9 +202,11 @@ end
 function _je(a, b1, b2, b3)
 	-- log("  [ops] _je: "..a.."("..tohex(a)..") "..tostr(b1).."("..tohex(b1)..")"..tostr(b2).."("..tohex(b2)..")"..tostr(b3).."("..tohex(b3)..")")
 	if b1 then
-		local val = false
-		if (a == b1 or a == b2 or a == b3) val = true
-		_branch(val)
+		if (a == b1 or a == b2 or a == b3) then
+			_branch(true)
+		else 
+			_branch(false)
+		end
 	else
 		_program_counter += 0x.0001
 	end
@@ -274,7 +276,7 @@ function _call_fp(type, raddr, a1, a2, a3, a4, a5, a6, a7)
 				zword = (_zm_version < 5) and get_zword(r) or 0
 			end
 			-- var_str ..= tohex(zword)..'  '
-			set_zword(local_var_addr(i), zword)
+			set_zword(_local_var_table_mem_addr + (i >>> 16), zword)
 			r += 0x.0002 --"2 * l"
 		end
 
@@ -410,7 +412,7 @@ function _get_prop(obj, prop)
 end
 
 function _get_prop_addr(obj, prop)
-	local addr, len = zobject_search_properties(obj, prop, target_addr)
+	local addr = zobject_search_properties(obj, prop, target_addr)
 	-- log("  [prp] _get_prop_addr returning: "..tohex(addr)..", "..tostr(len))
 	_result(addr << 16)
 end
@@ -598,8 +600,10 @@ function _new_line()
 end
 
 function _print(string)
+	-- log3('  [prt] _print: '..tostr(string))
+	-- log3('     simple convert: '..convert_test(string))
 	local zstring = get_zstring(string)
-	log3('  [prt] _print: '..zstring)
+	-- log3('     normal convert: '..zstring)
 	output(zstring)
 end
 

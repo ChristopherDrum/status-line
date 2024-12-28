@@ -97,45 +97,35 @@ function abbr_address(index)
 	return zword_to_zaddress(get_zword(_abbr_table_mem_addr + (index >>> 15))<<1)
 end 
 
-function zobject_address(index)
-	-- skip first 31/63 zwords of "default property table"
-	-- local address = _object_table_mem_addr + (_zm_object_property_count>>>15)
-	-- log('[NOTE]: object table starts '..tohex(_object_table_mem_addr))
-	-- log('[NOTE]: (skip default props) objects begin at '..tohex(address))
-	-- address += (((index-1)*_zm_object_entry_size)>>>16)
-	-- log('[NOTE]: object #'..index..' begins at '..tohex(address))
-	return _zobject_address + (((index-1)*_zm_object_entry_size)>>>16)
-end
+--zobject_address(index) replaced with inline calculations
+--search for _zobject_address usage
 
-function local_var_addr(index)
-	--log(' getting address for local var: '..tohex(index))
-	assert(index > 0 and index < 16, 'ERR: asked to retrieve local var '..tostr(index))
-	return _local_var_table_mem_addr + (index >>> 16)
-end
-
-function global_var_addr(index)
-	-- log(' address for G'..index..' requested')
-	return _global_var_table_mem_addr + (index >>> 15) 	-- index*0x.0002 == (index>>>15)
-end
-
-function set_var(value, var_byte, indirect)
+function set_var(value, _var_byte, indirect)
 	-- log("  [mem] set_var: "..tostr(value)..','..tostr(var_byte))
-	local var_address = decode_var_address(var_byte)
+	local var_address
+	local var_byte = _var_byte or get_zbyte()
+	if (var_byte == 0) then
+		var_address = _stack_mem_addr
+	elseif (var_byte < 16) then
+		var_address = _local_var_table_mem_addr + (var_byte >>> 16)
+	else
+		var_address = _global_var_table_mem_addr + ((var_byte-16) >>> 15) 	-- index*0x.0002 == (index>>>15)
+	end
 	set_zword(var_address, value, indirect)
 end
 
-function get_var(var_byte, indirect)
+function get_var(_var_byte, indirect)
 	-- log("  [mem] get_var: "..tostr(var_byte))
-	local var_address = decode_var_address(var_byte)
+	local var_address
+	local var_byte = _var_byte or get_zbyte()
+	if (var_byte == 0) then
+		var_address = _stack_mem_addr
+	elseif (var_byte < 16) then
+		var_address = _local_var_table_mem_addr + (var_byte >>> 16)
+	else
+		var_address = _global_var_table_mem_addr + ((var_byte-16) >>> 15) 	-- index*0x.0002 == (index>>>15)
+	end
 	return get_zword(var_address, indirect)
-end
-
-function decode_var_address(var_byte)
-	local var_byte = var_byte or get_zbyte()
-	-- log('decode_var_address: '..var_byte)
-	if (var_byte == 0) return _stack_mem_addr
-	if (var_byte < 16) return local_var_addr(var_byte)
-	return global_var_addr(var_byte-16) -- -16 ONLY when decoding var byte
 end
 
 function zword_to_zaddress(zaddress, _is_packed)
@@ -149,21 +139,6 @@ end
 function zaddress_at_zaddress(zaddress, is_packed)
 	return zword_to_zaddress(get_zword(zaddress), is_packed)
 end
-
--- "zaddress" is shifted as far right as possible to allow 3-byte addressing
--- bank: which subtable in _memory
--- index: index into the bank
--- cell: 0-indexed byte at _memory[bank][index]
--- function get_memory_location(zaddress)
--- 	-- log('get_memory_location for address: '..tohex(zaddress,true))
--- 	local bank = (zaddress & 0x000f) + 1
--- 	local za = ((zaddress<<16)>>>2) + 1 --contains index and cell
--- 	local index = za & 0xffff
--- 	local cell = (za & 0x.ffff) << 2
--- 	-- log("...we have "..#_memory.." banks, last bank holds"..#_memory[#_memory])
--- 	-- log("...we were asked for Bank #"..bank..", Index #"..index..", Cell #"..cell)
--- 	return bank, index, cell
--- end
 
 -- returns value stored at zaddress, memory bank (if any), index into storage, cell
 function get_dword(zaddress, indirect)
@@ -212,7 +187,6 @@ end
 
 function get_zbytes(zaddress, num_bytes)
 	if (not zaddress) return
-	if (not num_bytes) return get_zbyte(zaddress)
 
 	local bytes = {}
 	for i = 0, num_bytes - 1 do
@@ -291,16 +265,9 @@ function set_zword(zaddress, _zword, indirect)
 	end
 end
 
-function set_zwords(zaddress, words)
-	for word in all(words) do
-		set_zword(zaddress, word)
-		zaddress += 0x.0002
-	end
-end
-
 function zobject_attributes_byte_bit(index, attribute_id)
 	if (index == 0) return 0
-	local address = zobject_address(index)
+	local address = _zobject_address + (((index-1)*_zm_object_entry_size)>>>16) --zobject_address(index)
 	local byte_index = flr(attribute_id>>3)
 	local attr_bit = attribute_id % 8
 	address += (byte_index>>>16)
@@ -327,16 +294,9 @@ function zobject_set_attribute(index, attribute_id, val)
 	set_zbyte(address, attr_byte)
 end
 
---properties start at 1, not 0; offsets are (property - 1) * offset
-function zobject_default_property(property)
-	assert(property <= _zm_object_property_count, 'ERR: default object property '..property)
-	local address = _object_table_mem_addr + ((property - 1) >>> 15)
-	return get_zword(address)
-end
-
 zparent, zsibling, zchild = 0, 1, 2
 function zfamily_address(index, family_member)
-	local address = zobject_address(index)
+	local address = _zobject_address + (((index-1)*_zm_object_entry_size)>>>16)--zobject_address(index)
 	local attr_size, member_size = 0x.0006, 0x.0002
 	if (_zm_version == 3) attr_size, member_size = 0x.0004, 0x.0001
 	address += attr_size + (family_member * member_size)
@@ -359,23 +319,17 @@ end
 -- 12.3.1
 function zobject_prop_table_address(index)
 	local offset = (_zm_version == 3) and 0x.0007 or 0x.000c
-	local prop_table_address = zobject_address(index) + offset
+	local prop_table_address = _zobject_address + (((index-1)*_zm_object_entry_size)>>>16) + offset
 	local zword = get_zword(prop_table_address)
 	return zword_to_zaddress(zword)
 end
 
 -- 12.4
-function zobject_text_length(index)
-	--text length is the number of 2-byte words
-	local prop_address = zobject_prop_table_address(index)
-	-- log('[NOTE]: object #'..index..' prop table at '..tohex(prop_address))
-	return get_zbyte(prop_address), prop_address
-end
-
-function zobject_name(index)
-	local text_length, prop_address = zobject_text_length(index)
+function zobject_name(obj_index)
+	local prop_addr = zobject_prop_table_address(obj_index)
+	local text_length = get_zbyte(prop_addr)
 	if text_length > 0 then
-		return get_zstring(prop_address + 0x.0001)
+		return get_zstring(prop_addr + 0x.0001)
 	end
 	return ''
 end
@@ -421,10 +375,11 @@ target_addr, target_next = 0, 1
 function zobject_search_properties(obj, prop, target)
 	if (obj == 0) return 0
 
-	local text_length, prop_data_addr = zobject_text_length(obj)
-	prop_data_addr += (0x.0001 + (text_length >>> 15))
+	local prop_addr = zobject_prop_table_address(obj)
+	local text_length = get_zbyte(prop_addr)
+	prop_addr += (0x.0001 + (text_length >>> 15))
 
-	local prop_len, prop_num, offset = extract_prop_len_num(prop_data_addr)
+	local prop_len, prop_num, offset = extract_prop_len_num(prop_addr)
 	if prop == 0 then
 		if (target == target_next and prop_num > 0) return prop_num
 		return 0
@@ -434,19 +389,27 @@ function zobject_search_properties(obj, prop, target)
 	while prop_num > 0 do
 		if prop_num == prop then
 			if target == target_addr then
-				return (prop_data_addr + (offset >>> 16)), prop_len
+				return (prop_addr + (offset >>> 16)), prop_len
 			else
 				get_next = true
 			end
 		end
-		prop_data_addr += ((prop_len + offset) >>> 16)
-		prop_len, prop_num, offset = extract_prop_len_num(prop_data_addr)
+		prop_addr += ((prop_len + offset) >>> 16)
+		prop_len, prop_num, offset = extract_prop_len_num(prop_addr)
 		if (get_next == true) return prop_num
 	end
 	return 0
 end
 
 function zobject_get_prop(index, property)
+
+	--properties start at 1, not 0; offsets are (property - 1) * offset
+	local function zobject_default_property(property)
+		assert(property <= _zm_object_property_count, 'ERR: default object property '..property)
+		local address = _object_table_mem_addr + ((property - 1) >>> 15)
+		return get_zword(address)
+	end
+
 	if (index == 0) return 0
 	local prop_data_addr, len = zobject_search_properties(index, property, target_addr)
 	if (prop_data_addr == 0) return zobject_default_property(property)
@@ -506,8 +469,6 @@ function zscii_to_p8scii(zchars)
 			end
 
 		elseif abbr_code then
-			--32(abbr_code-1)+next_zchar
-			-- log('[str] abbreviation code hit!')
 			local index = ((abbr_code-1)<<5)+zchar
 			local abbr_address = abbr_address(index)
 			abbr_code = nil
@@ -547,7 +508,6 @@ function load_instruction()
 
 	local op_table, op_code, operands = nil, 0, {}
 
-	-- Local helper to extract operands based on type
 	local function extract_operand_by_type(op_type)
 		if (op_type == 0) return get_zword()
 		if (op_type == 1) return get_zbyte()

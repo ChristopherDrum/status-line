@@ -271,12 +271,13 @@ function build_dictionary(addr)
 	log("  [dct] "..separators..", entry len: "..tohex(entry_length)..", count: "..word_count)
 	for i = 1, word_count do
 		local zstring = get_zstring(addr, true)
-		local lower = ''
-		for j = 1, #zstring do
-			lower ..= case_setter(zstring[j], lowercase)
-		end
-		dict[lower] = (addr << 16)
-		log("  ["..i.."] "..lower..": "..tohex(addr))
+		-- local lower = ''
+		-- for j = 1, #zstring do
+		-- 	lower ..= case_setter(zstring[j], lowercase)
+		-- end
+		-- log3("zstring: "..zstring.." vs. lower: "..lower)
+		dict[zstring] = (addr << 16)
+		-- log("  ["..i.."] "..zstring..": "..tohex(addr))
 		addr += entry_length
 	end
 	return dict
