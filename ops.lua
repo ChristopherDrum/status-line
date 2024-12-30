@@ -639,7 +639,7 @@ end
 
 function _new_line()
 	log3('  [prt] new_line')
-	output(chr(13),true)
+	output(chr(13))
 end
 
 function _print(string)
