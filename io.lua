@@ -200,6 +200,7 @@ function flush_line_buffer(_w)
 			screen("\^i"..text_colors.."          - - MORE - -          ")
 			reuse_last_line, lines_shown = true, 0
 			wait_for_any_key()
+			lines_shown = 0
 		end
 
 		-- Trim newline if present
@@ -253,7 +254,7 @@ function screen(str)
 		lines_shown += 1
 	else
 		--  = print(str,0,-20)
-		local pixel_count = print(str, px, py)
+		local pixel_count = print(str, px, py) - px
 		log3("   win1 pixel count: "..pixel_count)
 
 		zx += flr(pixel_count>>2)
@@ -424,63 +425,69 @@ function process_input_char(real, visible, max_length)
 end
 
 --called by read; z_text_buffer must be non-zero; z_parse_buffer could be nil
+function capture_char(char)
+	capture_input(char)
+end
+
+function capture_line(char)
+	capture_input(char)
+end
+
 function capture_input(char)
 	lines_shown = 0
 
-	if char != '\n' and z_timed_routine then
+	if z_timed_routine then
 		local current_time = stat(94)*60 + stat(95)
-		-- log3("checking current time: "..tostr(current_time).." vs. "..z_current_time)
+		log3("checking current time: "..tostr(current_time).." vs. "..z_current_time)
 		if (current_time - z_current_time) >= z_timed_interval then
 			-- log3("calling timed_routine...")
 			local timed_response = _call_fp(call_type.intr, z_timed_routine)
 			log3("timed_response says: "..timed_response)
 			if timed_response == 1 then
-				current_input, visible_input = '', ''
 				_read(0) --false
 			end
 			z_current_time = current_time
 		end
 	end
-
+	
 	if (not char) draw_cursor() return
 	poke(0x5f30,1)
 
 	draw_cursor(current_bg)
 
-	if (max_input_length == 0) max_input_length = get_zbyte(zword_to_zaddress(z_text_buffer)) - 1
+	if (_interrupt == capture_char) _read_char(char)
 
-	-- log('[prs] current input: '..current_input)
-	if char == '\r' then
+	if _interrupt == capture_line then
+		if char == '\r' then
+			--strip whitespace; was external function but only used here
+			local words, stripped = split(current_input, ' ', false), ''
+			for w in all(words) do
+				if (#w > 0) stripped ..= (#stripped == 0 and '' or ' ')..w
+			end
+			current_input = stripped
 
-		--strip whitespace; was external function but only used here
-		local words, stripped = split(current_input, ' ', false), ''
-		for w in all(words) do
-			if (#w > 0) stripped ..= (#stripped == 0 and '' or ' ')..w
+			--fill text buffer
+			local bytes = pack(ord(current_input, 1, #current_input))
+
+			local text_buffer = zword_to_zaddress(z_text_buffer)
+			local addr = text_buffer + 0x.0001
+			if _zm_version >= 5 then
+				local num_bytes = get_zbyte(addr)
+				set_zbyte(addr, #bytes+num_bytes)
+				addr += 0x.0001 + (num_bytes>>>16)
+			else 
+				add(bytes, 0x0)
+			end
+			set_zbytes(addr, bytes)
+			
+			--handle the parse buffer
+			if (z_parse_buffer) _tokenise(z_text_buffer, z_parse_buffer)
+			_read(13)
+
+		else
+			if (max_input_length == 0) max_input_length = get_zbyte(zword_to_zaddress(z_text_buffer)) - 1
+			process_input_char(case_setter(char, lowercase), char, max_input_length)
 		end
-		current_input = stripped
-
-		--fill text buffer
-		local bytes = pack(ord(current_input, 1, #current_input))
-
-		local text_buffer = zword_to_zaddress(z_text_buffer)
-		local addr = text_buffer + 0x.0001
-		if _zm_version >= 5 then
-			local num_bytes = get_zbyte(addr)
-			set_zbyte(addr, #bytes+num_bytes)
-			addr += 0x.0001 + (num_bytes>>>16)
-		else 
-			add(bytes, 0x0)
-		end
-		set_zbytes(addr, bytes)
-		
-		--handle the parse buffer
-		if (z_parse_buffer) _tokenise(z_text_buffer, z_parse_buffer)
-
-		current_input, visible_input = '', ''
-		_read(13)
-
-	else
-		process_input_char(case_setter(char, lowercase), char, max_input_length)
 	end
 end
 

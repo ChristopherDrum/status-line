@@ -316,14 +316,9 @@ end
 function _ret(a)
 	local call = top_frame().call
 
-	log3("  _ret call stack depth: "..#_call_stack)
-
 	call_stack_pop() --in all cases
 
-	log3("  and after _ret call stack pop: "..#_call_stack)
-
 	if call == call_type.intr then
-		log3(" return from interrupt: "..tostr(a))
 		stack_push(a)
 
 	elseif call == call_type.func then
@@ -604,9 +599,10 @@ function _read(baddr1, baddr2, time, raddr)
 			z_current_time = stat(94)*60 + stat(95)
 		end
 		_show_status()
-		_interrupt = capture_input
+		_interrupt = capture_line
 
 	else
+		current_input, visible_input = '', ''
 		z_text_buffer, z_parse_buffer, _interrupt = nil, nil, nil
 		z_timed_interval, z_timed_routine, z_current_time = 0, nil, 0
 		if (_zm_version > 4) _result(baddr1) --receives 13 from normal read, 
@@ -614,10 +610,21 @@ function _read(baddr1, baddr2, time, raddr)
 end
 
 function _read_char(one, time, raddr)
-	--log('  [ops] _read_char: '..one..','..tohex(time)..','..tohex(raddr))
-	flush_line_buffer()
-	local char = wait_for_any_key()
-	_result(ord(char))
+	if (not _interrupt) then
+		flush_line_buffer()
+		log3("_read_char with time: "..tostr(time))
+		if raddr then
+			z_timed_interval = time\10
+			z_timed_routine = raddr
+			z_current_time = stat(94)*60 + stat(95)
+			log3("interval set to : "..tostr(z_timed_interval))
+		end
+		_interrupt = capture_char
+	else
+		_interrupt = nil
+		z_timed_interval, z_timed_routine, z_current_time = 0, nil, 0
+		_result(ord(one)) --overload 'one' for the return value
+	end
 end
 
 

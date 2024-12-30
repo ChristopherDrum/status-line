@@ -87,32 +87,15 @@ end
 
 function wait_for_any_key()
 	--cursor blinking suppressed; this routine is outside t() measurement
-	lines_shown = 0
 	local keypress = ''
 	while keypress == '' do
-		if (active_window == 1) draw_cursor()
 		if stat(30) then
 			poke(0x5f30,1)
 			keypress = stat(31)
 		end
 		flip()
 	end
-
-	local o = ord(keypress)
-	if active_window == 1 then 
-		local c = (make_inverse == false) and current_fg or current_bg
-		draw_cursor(c)
-	else
-		-- if did_trim_nl == false then
-		-- 	reuse_last_line = true
-		-- 	if #windows[0].buffer == 0 then
-		-- 		add(windows[0].buffer, windows[0].last_line)
-		-- 		windows[0].last_line = ''
-		-- 	end
-		-- end
-	end
-	if (o >= 128 and o <= 153) o -= 63
-	return chr(o)
+	return
 end
 
 function draw_cursor(c)
@@ -212,12 +195,14 @@ function _update60()
 	if (story_loaded == true) then
 		if _interrupt then
 			local key = nil
-			if stat(30) and not key then
+			if stat(30) and key == nil then
 				poke(0x5f30,1)
 				key = stat(31)
 			end
-			--check timer here?
 			_interrupt(key)
+			if (active_window == 1) draw_cursor()
+			flip()
+
 		else
 			--I found this method of running multiple vm instructions per frame easier to regulate
 			local _count = 0
@@ -268,11 +253,6 @@ function build_dictionary(addr)
 	log("  [dct] "..separators..", entry len: "..tohex(entry_length)..", count: "..word_count)
 	for i = 1, word_count do
 		local zstring = get_zstring(addr, true)
-		-- local lower = ''
-		-- for j = 1, #zstring do
-		-- 	lower ..= case_setter(zstring[j], lowercase)
-		-- end
-		-- log3("zstring: "..zstring.." vs. lower: "..lower)
 		dict[zstring] = (addr << 16)
 		-- log("  ["..i.."] "..zstring..": "..tohex(addr))
 		addr += entry_length
@@ -313,7 +293,7 @@ function process_header()
 			set_zword(_screen_height_units_addr, 128)
 			set_zbyte(_font_height_units_addr, 6)
 			set_zbyte(_font_width_units_addr, 4)
-			i_flag = 0x1c --sound fx and timed keyboard disabled
+			i_flag = 0x9c --sound fx and timed keyboard disabled
 		else
 			i_flag = 0x30 --for z4
 		end
