@@ -74,7 +74,6 @@ function _pull(var)
 	_result(stack_pop(), var, true)
 end
 
-
 function _scan_table(a, baddr, n, byte) --<result> <branch>
 	-- log('  [ops] scan_table: '..tohex(a)..','..tohex(baddr)..','..n..','..tohex(byte))
 	local base_addr = zword_to_zaddress(baddr)
@@ -252,19 +251,25 @@ end
 --_call_p shared opcode with _not; see bottom of this file
 
 function _call_fp(type, raddr, a1, a2, a3, a4, a5, a6, a7)
+		
+	if (raddr == 0x0 and type == call_type.func) then
+		_result(0)
 
-	if (raddr == 0x0) then
-		if (type == call_type.func) _result(0)
-
-	else 
+	else
 		--z3/4 formula is "r = r + 2 ∗ L + 1"
 		--z5 formula is "r = r + 1"
 		local r = zword_to_zaddress(raddr, true)
 		local l = get_zbyte(r) --num local vars
 		-- log("  _call_fp: "..tohex(raddr).." -> "..tohex(r)..', ('..l..' locals)')
 		r += 0x.0001 -- "1"
+
+		--special handling for frame pc in interrupt situation
+		local fpc, pc = top_frame().pc, _program_counter
 		call_stack_push()
+		if (type == call_type.intr) _call_stack[#_call_stack-1].pc = 0x0 --watch for this signal...
+
 		if (_zm_version >= 5) top_frame().pc = r
+		-- if (#_call_stack >= 4) log3("  b frame #4: pc at: "..tohex(_call_stack[4].pc))
 
 		--set local vars on the new frame
 		local a_vars = {a1, a2, a3, a4, a5, a6, a7}
@@ -284,20 +289,45 @@ function _call_fp(type, raddr, a1, a2, a3, a4, a5, a6, a7)
 		if (_zm_version < 5) top_frame().pc = r
 		top_frame().call = type
 		top_frame().args = n
+		-- log3("  frame #"..#_call_stack..": pc at: "..tohex(top_frame().pc))
+		-- if (#_call_stack >= 4) log3("  d frame #4: pc at: "..tohex(_call_stack[4].pc))
 
 		_program_counter = top_frame().pc
-		-- log("  [ops] _call "..type.."(1=f,2=p) : "..tohex(raddr))
-		-- log("  [ops]  --> set pc to: "..tohex(_program_counter))
+		-- if (#_call_stack >= 4) log3("  e frame #4: pc at: "..tohex(_call_stack[4].pc))
+
+		--in an interrupt, the normal instruction load loop is not run
+		--so we have to run it manually here 
+		if type == call_type.intr then
+			-- if (#_call_stack >= 4) log3("  f frame #4: pc at: "..tohex(_call_stack[4].pc))
+			while _program_counter != 0x0 do
+				log3(" --- running timed routine ---")
+				local func, operands = load_instruction()
+				func(unpack(operands))
+				-- log3("  frame #"..#_call_stack..": pc at: "..tohex(top_frame().pc))
+			end
+			top_frame().pc = fpc
+			_program_counter = pc
+			return stack_pop()
+		end
+
 	end
 end
 
 function _ret(a)
 	local call = top_frame().call
 
+	log3("  _ret call stack depth: "..#_call_stack)
+
 	call_stack_pop() --in all cases
-	
-	if call != call_type.proc then
-		if (a != nil) _result(a)
+
+	log3("  and after _ret call stack pop: "..#_call_stack)
+
+	if call == call_type.intr then
+		log3(" return from interrupt: "..tostr(a))
+		stack_push(a)
+
+	elseif call == call_type.func then
+		_result(a)
 	end
 end
 
@@ -568,12 +598,18 @@ function _read(baddr1, baddr2, time, raddr)
 		--cache addresses for capture_input()
 		z_text_buffer = baddr1
 		z_parse_buffer = baddr2 --hold this and use it in capture_input if it exists
+		if raddr then
+			z_timed_interval = time\10
+			z_timed_routine = raddr
+			z_current_time = stat(94)*60 + stat(95)
+		end
 		_show_status()
 		_interrupt = capture_input
 
 	else
 		z_text_buffer, z_parse_buffer, _interrupt = nil, nil, nil
-		if (_zm_version > 4) _result(baddr1) --receives 13 (or something else?) from _read
+		z_timed_interval, z_timed_routine, z_current_time = 0, nil, 0
+		if (_zm_version > 4) _result(baddr1) --receives 13 from normal read, 
 	end
 end
 
@@ -596,7 +632,7 @@ end
 
 function _new_line()
 	log3('  [prt] new_line')
-	output(chr(13))
+	output(chr(13),true)
 end
 
 function _print(string)

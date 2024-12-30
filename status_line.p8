@@ -82,7 +82,7 @@ end
 function log() end
 function log2() end
 function log3(str)
-	-- printh(str, '_status_line_log_30')
+	printh(str, '_status_line_log_30')
 end
 
 function wait_for_any_key()
@@ -216,6 +216,7 @@ function _update60()
 				poke(0x5f30,1)
 				key = stat(31)
 			end
+			--check timer here?
 			_interrupt(key)
 		else
 			--I found this method of running multiple vm instructions per frame easier to regulate

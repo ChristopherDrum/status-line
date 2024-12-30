@@ -66,6 +66,8 @@ function reset_io_state()
 	lines_shown = 0
 
 	z_text_buffer, z_parse_buffer = nil, nil
+	z_timed_interval, z_timed_routine = 0, nil
+	z_current_time = 0
 	current_input, visible_input = '', ''
 
 	show_warning = true
@@ -176,7 +178,7 @@ function output(str, flush_now)
 
 	-- add remaining content to buffer and flush
 	if (#current_line) add(buffer, current_line)
-	if (flush_now) flush_line_buffer()
+	if (_interrupt or flush_now) flush_line_buffer()
 end
 
 --buffered lines receive pagination
@@ -424,6 +426,22 @@ end
 --called by read; z_text_buffer must be non-zero; z_parse_buffer could be nil
 function capture_input(char)
 	lines_shown = 0
+
+	if char != '\n' and z_timed_routine then
+		local current_time = stat(94)*60 + stat(95)
+		-- log3("checking current time: "..tostr(current_time).." vs. "..z_current_time)
+		if (current_time - z_current_time) >= z_timed_interval then
+			-- log3("calling timed_routine...")
+			local timed_response = _call_fp(call_type.intr, z_timed_routine)
+			log3("timed_response says: "..timed_response)
+			if timed_response == 1 then
+				current_input, visible_input = '', ''
+				_read(0) --false
+			end
+			z_current_time = current_time
+		end
+	end
+
 	if (not char) draw_cursor() return
 	poke(0x5f30,1)
 
