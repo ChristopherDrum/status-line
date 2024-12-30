@@ -150,14 +150,14 @@ function output(str, flush_now)
 		local char = case_setter(str[i], flipcase)
 		
 		-- adjust visual length; don't call print() every char to get the new length
-		if (char != '\n') pixel_len += 4
+		local o = ord(char)
+		if (o != 10) pixel_len += 4
 		if make_bold == true then
-			if (char >= ' ') char = chr(ord(char) + 96)
-			if (char != '\n') pixel_len += 1
+			if (o >= 32) o += 96
+			if (o != 10) pixel_len += 1
 		end
-
 		--add the adjusted character (might have switched to bold font set)
-		current_line ..= char
+		current_line ..= chr(o)
 
 		-- have we found a visually appealing line-break character?
 		if (in_set(char, " \n:-_;")) break_index = #current_line
@@ -258,12 +258,12 @@ function screen(str)
 		log3("   win1 pixel count: "..pixel_count)
 
 		zx += flr(pixel_count>>2)
-		-- if _zm_version == 3 then
+		if _zm_version == 3 then
 			if did_trim_nl == true then
 				zx = 1
 				zy += 1
 			end
-		-- end
+		end
 	end
 
 	set_z_cursor(active_window, zx, zy)
