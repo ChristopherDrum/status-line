@@ -503,11 +503,10 @@ function _set_window(win)
 end
 
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
---autosplitting on z4 Nord & Bert revealed a status line bug in the game (!)
+--autosplitting Nord & Bert revealed status line bug (!)
 function _set_cursor(lin, col)
 	-- log('  [drw] _set_cursor: line '..lin..', col '..col)
 	if (_zm_version > 3 and active_window == 0) return
-	-- if (col < 1) col = 1
 	flush_line_buffer()
 	set_z_cursor(active_window,col,lin)
 end
@@ -578,13 +577,12 @@ function _output_stream(_n, baddr, w)
 end
 
 function _input_stream(n)
-	output('  [ops] _input_stream '..n..'?!?!')
+	log3('  [ops] _input_stream '..n)
 end
 
 
 
 --8.9 Input
-	--timer disabled in header flags at startup
 
 function _read(baddr1, baddr2, time, raddr)
 	if (not _interrupt) then
@@ -599,9 +597,11 @@ function _read(baddr1, baddr2, time, raddr)
 			z_current_time = stat(94)*60 + stat(95)
 		end
 		_show_status()
+		preloaded = false
 		_interrupt = capture_line
 
 	else
+		preloaded = false
 		current_input, visible_input = '', ''
 		z_text_buffer, z_parse_buffer, _interrupt = nil, nil, nil
 		z_timed_interval, z_timed_routine, z_current_time = 0, nil, 0
@@ -643,10 +643,7 @@ function _new_line()
 end
 
 function _print(string)
-	-- log3('  [prt] _print: '..tostr(string))
-	-- log3('     simple convert: '..convert_test(string))
 	local zstring = get_zstring(string)
-	-- log3('     normal convert: '..zstring)
 	output(zstring)
 end
 

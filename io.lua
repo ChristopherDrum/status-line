@@ -376,7 +376,9 @@ function _encode_text(baddr1, n, p, baddr2)
 	end
 end
 
-
+--visual_case refers to how input from the keyboard is processed
+--ASCII holds capital letters in a different range than P8SCII does
+--So 'Q' typed becomes '...', which we have to remap to P8's 'Q'
 lowercase, visual_case, flipcase = 1, 2, 3
 function case_setter(char, case)
 	local o = ord(char)
@@ -433,20 +435,44 @@ function capture_line(char)
 	capture_input(char)
 end
 
+preloaded = false
 function capture_input(char)
 	lines_shown = 0
 
 	if z_timed_routine then
 		local current_time = stat(94)*60 + stat(95)
-		log3("checking current time: "..tostr(current_time).." vs. "..z_current_time)
 		if (current_time - z_current_time) >= z_timed_interval then
-			-- log3("calling timed_routine...")
 			local timed_response = _call_fp(call_type.intr, z_timed_routine)
-			log3("timed_response says: "..timed_response)
 			if timed_response == 1 then
 				_read(0) --false
 			end
 			z_current_time = current_time
+		end
+	end
+
+	local text_buffer = zword_to_zaddress(z_text_buffer)
+
+	if (_interrupt == capture_line) then
+		if _zm_version >= 5 and preloaded == false then
+			local addr = text_buffer + 0x.0001
+			local num_bytes = get_zbyte(addr)
+			if num_bytes > 0 then
+				local pre = get_zbytes(addr+0x.0001, num_bytes)
+				local zstring = zscii_to_p8scii(pre, lowercase)
+				local flipped = zscii_to_p8scii(pre, flipcase)
+				log3("zstring: "..zstring..", flipped: "..flipped)
+				local last_line = windows[active_window].last_line
+				local left, right = unpack(split(last_line, #last_line-num_bytes))
+				log3("left: "..left..", right: "..flipped)
+				if (flipped == right) then
+					windows[active_window].last_line = left
+					current_input = zstring
+					visible_input = right
+					log3("current_input: "..current_input)
+					log3("visible_input: "..visible_input)
+				end
+			end
+			preloaded = true
 		end
 	end
 	
@@ -458,8 +484,9 @@ function capture_input(char)
 	if (_interrupt == capture_char) _read_char(char)
 
 	if _interrupt == capture_line then
+
 		if char == '\r' then
-			--strip whitespace; was external function but only used here
+			--strip whitespace
 			local words, stripped = split(current_input, ' ', false), ''
 			for w in all(words) do
 				if (#w > 0) stripped ..= (#stripped == 0 and '' or ' ')..w
@@ -469,10 +496,10 @@ function capture_input(char)
 			--fill text buffer
 			local bytes = pack(ord(current_input, 1, #current_input))
 
-			local text_buffer = zword_to_zaddress(z_text_buffer)
-			local addr = text_buffer + 0x.0001
+			local addr = text_buffer + 0x.0001, 0
 			if _zm_version >= 5 then
 				local num_bytes = get_zbyte(addr)
+				if (preloaded == true) num_bytes = 0
 				set_zbyte(addr, #bytes+num_bytes)
 				addr += 0x.0001 + (num_bytes>>>16)
 			else 

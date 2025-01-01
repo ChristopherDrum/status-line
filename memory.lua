@@ -241,11 +241,7 @@ function get_zword(zaddress, indirect)
 	if zaddress < 0xa then
 		dword <<= (cell<<3)
 		if cell == 3 then
-			-- index += 1
-			-- if (index > #_memory[bank]) bank += 1 index = 1
-			-- local dwordb = _memory[bank][index]
 			local dwordb = get_dword(zaddress + 0x.0001)
-			-- log('  [mem]  consecutive dword '..tohex(dwordb))
 			dword |= (dwordb >>> 8)
 		end
 	end
@@ -255,7 +251,6 @@ end
 
 function set_zword(zaddress, _zword, indirect)
 	local zword = _zword & 0xffff --filter off garbage
-	-- local base = (zaddress & 0xffff)
 	-- log('  [mem] set_zword at: '..tohex(zaddress)..' to: '..sub(tohex(_zword),3,6))
 	
 	if zaddress == _stack_mem_addr then
@@ -437,7 +432,6 @@ end
 function get_zstring(zaddress, _is_dict)
 	local is_dict = _is_dict or false
 	local end_found, zchars = false, {}
-	-- log('[str] fetching zstring starting at address: '..tostr(zaddress,true))
 
 	while end_found == false do
 		local zword = get_zword(zaddress)
@@ -453,13 +447,15 @@ function get_zstring(zaddress, _is_dict)
 	return zscii_to_p8scii(zchars)
 end
 
---the upper and lower are reversed for p8scii
+--upper/lower visually reversed in p8scii
 local zchar_tables = {
 	'     abcdefghijklmnopqrstuvwxyz', 
 	'     ABCDEFGHIJKLMNOPQRSTUVWXYZ', 
 	'      \n0123456789'..punc}
 
-function zscii_to_p8scii(zchars)
+function zscii_to_p8scii(zchars, _casestyle)
+	local casestyle = _casestyle or nil
+
 	local zscii, zscii_decode, abbr_code = nil, false, nil
 	local zstring, active_table = '', 1
 	for i = 1, #zchars do
@@ -469,7 +465,9 @@ function zscii_to_p8scii(zchars)
 				zscii = zchar << 5
 			else
 				zscii |= zchar
-				zstring ..= chr(zscii)
+				local c = chr(zscii)
+				if (casestyle) c = case_setter(c,casestyle)
+				zstring ..= c
 				zscii_decode = false
 				zscii = nil
 				active_table = 1
@@ -499,7 +497,9 @@ function zscii_to_p8scii(zchars)
 			zscii_decode = true
 
 		elseif zchar > 31 then
-			zstring ..= chr(zchar)
+			local c = chr(zchar)
+			if (casestyle) c = case_setter(c,casestyle)
+			zstring ..= c
 			active_table = 1
 
 		else
@@ -587,7 +587,6 @@ end
 function capture_mem_state(state)
 
 	-- dynamic memory can never exceed 0xffff, so bank is always the first one
-	-- local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
 	local addr = _static_memory_mem_addr - 0x.0001
 	local mem_max_index = (((addr<<16)>>>2) + 1)&0xffff
 	-- log3("capture_mem_state until addr: "..tohex(addr)..', index: '..mem_max_index)
@@ -644,7 +643,6 @@ end
 
 function load_story_file()
 	clear_all_memory()
-	-- log3("memory at: "..stat(0)..', '..stat(1))
 	while stat(120) do
 		if (#_memory[#_memory] == _memory_bank_size) add(_memory, {})
 		local bank_num = #_memory
@@ -658,6 +656,5 @@ function load_story_file()
 			add(_memory[bank_num], dword)
 		end
 	end
-	-- log3("memory at: "..stat(0))
 	initialize_game()
 end
