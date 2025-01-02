@@ -101,7 +101,7 @@ end
 function draw_cursor(c)
 	local toggle = {current_bg, current_fg}
 	if active_window != 0 then 
-		c = (make_inverse == false) and current_fg or current_bg
+		c = (current_text_style & 1 == 1) and current_fg or current_bg
 	else
 		c = c or toggle[(stat(85) % 2)+1]
 	end

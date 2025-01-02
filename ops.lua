@@ -47,7 +47,7 @@ function _store(var, a)
 end
 
 --perform math on the raw bytes before resolving to 24-bit address space
---this gives us proper 16-bit wraparound and handles positive AND negative 'n' properly automatically 
+--this gives 16-bit wraparound which handles +n -n properly 
 function _loadw(baddr, n)
 	local addr = zword_to_zaddress(baddr+n*2)
 	_result(get_zword(addr))
@@ -300,7 +300,7 @@ function _call_fp(type, raddr, a1, a2, a3, a4, a5, a6, a7)
 		if type == call_type.intr then
 			-- if (#_call_stack >= 4) log3("  f frame #4: pc at: "..tohex(_call_stack[4].pc))
 			while _program_counter != 0x0 do
-				log3(" --- running timed routine ---")
+				-- log3(" --- running timed routine ---")
 				local func, operands = load_instruction()
 				func(unpack(operands))
 				-- log3("  frame #"..#_call_stack..": pc at: "..tohex(top_frame().pc))

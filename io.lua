@@ -29,12 +29,14 @@ function reset_io_state()
 	log("  [drw]  reset_io_state fg = "..current_fg..", bg = "..current_bg)
 
 	current_text_style = 0
-	text_format_updated = false
+	text_style_updated = false
+	text_style, text_colors = '', ''
+	font_width = 4
+
 	window_attributes = 0b00000000.00001010
 
 	emit_rate = 0 --the lower the faster
 	clock_type, cursor_type = nil, nil
-	make_bold, make_inverse = false, false
 
 	mem_stream, screen_stream, trans_stream, script_stream = false, true, false, false
 	mem_stream_addr, memory_output = {}, {}
@@ -73,40 +75,36 @@ function reset_io_state()
 	show_warning = true
 end
 
-text_colors = ''
 function update_text_colors()
 	log("  [drw] update_text_colors: fg = "..current_fg..", bg = "..current_bg)
 	text_colors = '\f'..tostr(current_fg,true)[6]..'\#'..tostr(current_bg,true)[6]
-	text_format_updated = true
+	text_style_updated = true
 end
 
-text_styles = ''
 function _set_text_style(n)
 	log("  [drw] _set_text_style to: "..n)
 	if (n > 0) n |= current_text_style
-	make_bold, make_inverse = (n&2 == 2), (n&1 == 1)
-	local inverse = (make_inverse == true) and '\^i' or '\^-i'
-	local border = (active_window == 0) and '\^-b' or ''
-	local emphasis = (n > 1) and '\014' or '\015'
-	if checksum == 0xfc65 then -- Bureaucracy masterpiece
-		if (active_window == 1) and (make_bold == true) then
-			--suppress bold in window 1 because of form fields
-			inverse, emphasis, make_bold = '\^i', '\015', false
-		end
+
+	local inverse = (n&1 == 1) and '\^i' or '\^-i'
+	local font_shift = (n&2 == 2 or n&4 == 4) and '\014' or '\015'
+	font_width = 4
+	if (n&4 == 4) font_width = 5 --italic
+	if (n&2 == 2) font_width = 6 --bold
+
+	if checksum == 0xfc65 and active_window == 1 then -- Bureaucracy masterpiece
+		if (n&4 == 4) n	&= 0xb --suppress the bold bit; maybe not the best idea
 	end
-	text_styles = emphasis..inverse..border
-	log("  [drw] text_styles is: "..text_styles)
-	current_text_style = n
-	local font_width = 4
-	if (n > 1) font_width = 5
-	if (make_bold == true) font_width = 6
+
 	set_zbyte(_font_width_units_addr, font_width)
-	text_format_updated = true
+	text_style = font_shift..inverse
+	current_text_style = n
+	text_style_updated = true
 end
 
 function set_z_cursor(_win, _x, _y)
-	log3(" set_z_cursor: ".._win..', x: '.._x..', y: '.._y)
+	-- log3(" set_z_cursor: ".._win..', x: '.._x..', y: '.._y)	
 	local win = windows[_win]
+	_x, _y = mid(1,_x,32), mid(1,_y,win.h)
 	local px = flr((_x - 1) << 2) + 1
 	local py = ((_y - 1) * 6) + 1
 	if (_zm_version > 3 and _win == 0) py += 1
@@ -126,19 +124,20 @@ function memory(str)
 end
 
 --process word wrapping into a buffer
+local break_index = 0
 function output(str, flush_now)
 	log3('  [drw] output to window '..active_window..', raw str: '..str)
 	if (mem_stream == true) memory(str) return
 	if (screen_stream == false) return
 
 	local buffer = windows[active_window].buffer
-	local current_format = text_styles .. text_colors
+	local current_format = text_style..text_colors
 	local current_line = deli(buffer)
 
 	if current_line then
-		if text_format_updated == true then
+		if text_style_updated == true then
 			current_line ..= current_format
-			text_format_updated = false
+			text_style_updated = false
 		end
 	else
 		current_line = current_format
@@ -149,21 +148,21 @@ function output(str, flush_now)
 	for i = 1, #str do
 		local char = case_setter(str[i], flipcase)
 		
-		-- adjust visual length; don't call print() every char to get the new length
-		local o = ord(char)
-		if (o != 10) pixel_len += 4
-		if make_bold == true then
-			if (o >= 32) o += 96
-			if (o != 10) pixel_len += 1
+		-- estimate the total visual length
+		if (char != '\n') pixel_len += font_width
+		if current_text_style & 2 == 2 then --bold characters sit in shifted p8scii range
+			if (char >= ' ') char = char(ord(char) + 96)
 		end
+
 		--add the adjusted character (might have switched to bold font set)
-		current_line ..= chr(o)
+		current_line ..= char
 
 		-- have we found a visually appealing line-break character?
 		if (in_set(char, " \n:-_;")) break_index = #current_line
 
 		-- handle right border and newline wrap triggers
 		if pixel_len > 128 or char == '\n' then
+			if (break_index == 0) break_index = #current_line
 			local first, second = unpack(split(current_line, break_index, false))
 			add(buffer, first)
 
@@ -193,7 +192,7 @@ function flush_line_buffer(_w)
 	while #buffer > 0 do
 
 		local str = deli(buffer, 1)
-		if (str == text_styles..text_colors) goto continue 
+		if (str == text_style..text_colors) goto continue 
 		
 		-- Pagination needed first?
 		if w == 0 and lines_shown == (win.h - 1) then
@@ -226,19 +225,14 @@ function screen(str)
 	log3(' [drw] screen ('..active_window..'): '..str)
 	local win = windows[active_window]
 	local zx, zy = unpack(win.z_cursor)
-	log3("   window "..active_window.." z_cursor start at: "..zx..','..zy)
+	-- log3("   window "..active_window.." z_cursor start at: "..zx..','..zy)
 
 	local px, py = unpack(win.p_cursor)
 	if active_window == 0 then
 		if reuse_last_line == true then
 			--skip the line scroll
-			log3("   reusing last line")
-			reuse_last_line = false
 		else
 			if (did_trim_nl == true) print(text_colors..'\n',px,py)
-
-			--scroll up by a line to make room for the next line
-			log3("   scrolling up by a line")
 			print(text_colors..'\n')
 		end
 
@@ -247,7 +241,10 @@ function screen(str)
 		--print the line to screen and update the lines_shown count 
 		--this will be caught by pagination on the next line flushed
 		local pixel_count = print('\^d'..emit_rate..str, 1, 122) - 1
-		log3("   win0 pixel count: "..pixel_count)
+		if reuse_last_line == true then
+			reuse_last_line = false
+			if (pixel_count > 124) print('\^d'..emit_rate..str, 1-(pixel_count-124), 122)
+		end
 		
 		zx = flr(pixel_count>>2) + 1 -- z_cursor starts at 1,1
 		zy = win.h
@@ -255,7 +252,7 @@ function screen(str)
 	else
 		--  = print(str,0,-20)
 		local pixel_count = print(str, px, py) - px
-		log3("   win1 pixel count: "..pixel_count)
+		-- log3("   win1 pixel count: "..pixel_count)
 
 		zx += flr(pixel_count>>2)
 		if _zm_version == 3 then
@@ -267,7 +264,7 @@ function screen(str)
 	end
 
 	set_z_cursor(active_window, zx, zy)
-	log3("   z_cursor moved to: "..zx..','..zy)
+	-- log3("   z_cursor moved to: "..zx..','..zy)
 	flip()
 end
 
@@ -286,7 +283,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 		num_bytes = get_zbyte(text_buffer)
 		text_buffer += 0x.0001
 	end
-	-- log("  [prs] num_bytes: "..num_bytes)
+
 	-- move past the parse_buffer header info: max tokens and token_count
 	parse_buffer += 0x.0002
 
@@ -304,7 +301,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 				set_zword(parse_buffer, word_addr)
 				set_zbyte(parse_buffer+0x.0002, #word)
 				set_zbyte(parse_buffer+0x.0003, index+offset)
-				log("  [prs] token for "..word..": "..tohex(word_addr)..', '..#word..', '..index+offset)
+				-- log("  [prs] token for "..word..": "..tohex(word_addr)..', '..#word..', '..index+offset)
 			end
 			parse_buffer += 0x.0004
 			token_count += 1
@@ -336,7 +333,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 end
 
 function _encode_text(baddr1, n, p, baddr2)
-	log("  [prs] _encode_text: "..tohex(baddr1)..', '..n..', '..p)
+	-- log("  [prs] _encode_text: "..tohex(baddr1)..', '..n..', '..p)
 	if (not baddr2) return --we don't use this function ourselves
 
 	local zwords, word, count = {}, 0, 1
@@ -410,16 +407,16 @@ function case_setter(char, case)
 	return chr(o)
 end
 
-function process_input_char(real, visible, max_length)
-	if real == '\b' then
+function process_input_char(char, max_length)
+	if char == '\b' then
 		if #current_input > 0 then
 			current_input = sub(current_input, 1, -2)
 			visible_input = sub(visible_input, 1, -2)
 		end
-	elseif real != '' then
+	elseif char != '' then
 		if #current_input < max_length then
-			current_input ..= real
-			visible_input ..= case_setter(visible, visual_case)
+			current_input ..= case_setter(char, lowercase)
+			visible_input ..= case_setter(char, visual_case)
 		end
 	end
 	reuse_last_line = true
@@ -450,26 +447,21 @@ function capture_input(char)
 		end
 	end
 
-	local text_buffer = zword_to_zaddress(z_text_buffer)
 
 	if (_interrupt == capture_line) then
 		if _zm_version >= 5 and preloaded == false then
-			local addr = text_buffer + 0x.0001
-			local num_bytes = get_zbyte(addr)
+			local text_buffer = zword_to_zaddress(z_text_buffer)
+			local num_bytes = get_zbyte(text_buffer + 0x.0001)
 			if num_bytes > 0 then
-				local pre = get_zbytes(addr+0x.0001, num_bytes)
+				local pre = get_zbytes(text_buffer+0x.0002, num_bytes)
 				local zstring = zscii_to_p8scii(pre, lowercase)
 				local flipped = zscii_to_p8scii(pre, flipcase)
-				log3("zstring: "..zstring..", flipped: "..flipped)
 				local last_line = windows[active_window].last_line
 				local left, right = unpack(split(last_line, #last_line-num_bytes))
-				log3("left: "..left..", right: "..flipped)
 				if (flipped == right) then
 					windows[active_window].last_line = left
 					current_input = zstring
 					visible_input = right
-					log3("current_input: "..current_input)
-					log3("visible_input: "..visible_input)
 				end
 			end
 			preloaded = true
@@ -496,7 +488,8 @@ function capture_input(char)
 			--fill text buffer
 			local bytes = pack(ord(current_input, 1, #current_input))
 
-			local addr = text_buffer + 0x.0001, 0
+			local text_buffer = zword_to_zaddress(z_text_buffer)
+			local addr = text_buffer + 0x.0001
 			if _zm_version >= 5 then
 				local num_bytes = get_zbyte(addr)
 				if (preloaded == true) num_bytes = 0
@@ -513,7 +506,7 @@ function capture_input(char)
 
 		else
 			if (max_input_length == 0) max_input_length = get_zbyte(zword_to_zaddress(z_text_buffer)) - 1
-			process_input_char(case_setter(char, lowercase), char, max_input_length)
+			process_input_char(char, max_input_length)
 		end
 	end
 end

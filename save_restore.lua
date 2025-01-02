@@ -20,7 +20,7 @@ function save_game(char)
 		_save(s)
 
 	else
-		process_input_char(case_setter(char, lowercase), char, 30)
+		process_input_char(char, 30)
 	end
 end
 
