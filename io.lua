@@ -85,7 +85,8 @@ function _set_text_style(n)
 	log("  [drw] _set_text_style to: "..n)
 	if (n > 0) n |= current_text_style
 
-	local inverse = (n&1 == 1) and '\^i\^-b' or '\^-i\^-b'
+	local inverse = (n&1 == 1) and '\^i' or '\^-i'
+	if (active_window == 0) inverse ..= "\^-b"
 	local font_shift = (n&2 == 2 or n&4 == 4) and '\014' or '\015'
 	font_width = 4
 	if (n&4 == 4 or n&2 == 2) font_width = 5 --italic and bold
@@ -146,12 +147,10 @@ function output(str, flush_now)
 
 	for i = 1, #str do
 		local char = case_setter(str[i], flipcase)
+		local c = char
 		
 		-- estimate the total visual length
 		if (char != '\n') pixel_len += font_width
-
-		-- have we found a visually appealing line-break character?
-		if (in_set(char, " \n:-_;")) break_index = #current_line
 
 		-- switch into bold font, if needed
 		if current_text_style & 2 == 2 then --bold characters sit in shifted range
@@ -161,9 +160,14 @@ function output(str, flush_now)
 		--add the character
 		current_line ..= char
 
+		-- have we found a visually appealing line-break character?
+		-- have to check the char BEFORE it was emboldened
+		-- but we need the length of the line AFTER the char was added
+		if (in_set(c, " \n:-_;")) break_index = #current_line
+
 		-- handle right border and newline wrap triggers
 		if pixel_len > 127 or char == '\n' then
-			if (break_index == 0) break_index = #current_line
+			if (break_index == 0) break_index = #current_line-1
 			local first, second = unpack(split(current_line, break_index, false))
 			add(buffer, first)
 
