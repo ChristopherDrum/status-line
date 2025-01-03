@@ -492,7 +492,7 @@ function _split_screen(lines)
 end
 
 function _set_window(win)
-	-- log('  [ops] _set_window: '..win)
+	log3('  [ops] _set_window: '..win)
 	flush_line_buffer()
 	active_window = win
 	if _zm_version < 4 then 
@@ -505,14 +505,14 @@ end
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
 --autosplitting Nord & Bert revealed status line bug (!)
 function _set_cursor(lin, col)
-	-- log('  [drw] _set_cursor: line '..lin..', col '..col)
+	log3('  [drw] _set_cursor: line '..lin..', col '..col)
 	if (_zm_version > 3 and active_window == 0) return
 	flush_line_buffer()
 	set_z_cursor(active_window,col,lin)
 end
 
 function _get_cursor(baddr)
-	-- log('  [ops] _get_cursor: '..tohex(baddr))
+	log3('  [ops] _get_cursor: '..tohex(baddr))
 	baddr = zword_to_zaddress(baddr)
 	local zx,zy = unpack(windows[active_window].z_cursor)
 	set_zword(baddr, zy)
@@ -546,7 +546,7 @@ end
 --8.8 Input and output streams
 
 function _output_stream(_n, baddr, w)
-	-- log('  [ops] output_stream: '.._n..', '..tohex(baddr)..', '..tostr(w))
+	log3('  [ops] output_stream: '.._n..', '..tohex(baddr)..', '..tostr(w))
 	if (_n == 0) return
 
 	local n, on_off = abs(_n), (_n > 0)
@@ -612,12 +612,12 @@ end
 function _read_char(one, time, raddr)
 	if (not _interrupt) then
 		flush_line_buffer()
-		log3("_read_char with time: "..tostr(time))
+		-- log3("_read_char with time: "..tostr(time))
 		if raddr then
 			z_timed_interval = time\10
 			z_timed_routine = raddr
 			z_current_time = stat(94)*60 + stat(95)
-			log3("interval set to : "..tostr(z_timed_interval))
+			-- log3("interval set to : "..tostr(z_timed_interval))
 		end
 		_interrupt = capture_char
 	else
@@ -643,6 +643,7 @@ function _new_line()
 end
 
 function _print(string)
+	log3('  [prt] _print')
 	local zstring = get_zstring(string)
 	output(zstring)
 end
@@ -655,14 +656,14 @@ function _print_rtrue(string)
 end
 
 function _print_addr(baddr, is_packed)
-	local is_packed = is_packed or false
+	log3('  [prt] print_addr')
 	local zaddress = zword_to_zaddress(baddr, is_packed)
 	local zstring = get_zstring(zaddress)
-	log3('  [prt] print_addr: '..zstring)
 	output(zstring)
 end
 
 function _print_paddr(saddr)
+	log3('  [prt] print_paddr')
 	_print_addr(saddr, true)
 end
 
@@ -705,7 +706,7 @@ end
 --8.11 Miscellaneous screen output
 
 function _erase_line(val)
-	-- log('  [drw] erase_line: '..val)
+	log3('  [drw] erase_line: '..val)
 	if val == 1 then
 		local px,py = unpack(windows[active_window].p_cursor)
 		rectfill(px,py,128,py+5,current_bg)
@@ -713,7 +714,7 @@ function _erase_line(val)
 end
 
 function _erase_window(win)
-	-- log('  [drw] _erase_window: '..win)
+	log3('  [drw] _erase_window: '..win)
 	if win >= 0 then
 		local a,b,c,d = unpack(windows[win].screen_rect)
 		clip(a,b,c,d)

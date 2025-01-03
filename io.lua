@@ -85,11 +85,10 @@ function _set_text_style(n)
 	log("  [drw] _set_text_style to: "..n)
 	if (n > 0) n |= current_text_style
 
-	local inverse = (n&1 == 1) and '\^i' or '\^-i'
+	local inverse = (n&1 == 1) and '\^i\^-b' or '\^-i\^-b'
 	local font_shift = (n&2 == 2 or n&4 == 4) and '\014' or '\015'
 	font_width = 4
-	if (n&4 == 4) font_width = 5 --italic
-	if (n&2 == 2) font_width = 6 --bold
+	if (n&4 == 4 or n&2 == 2) font_width = 5 --italic and bold
 
 	if checksum == 0xfc65 and active_window == 1 then -- Bureaucracy masterpiece
 		if (n&4 == 4) n	&= 0xb --suppress the bold bit; maybe not the best idea
@@ -150,18 +149,20 @@ function output(str, flush_now)
 		
 		-- estimate the total visual length
 		if (char != '\n') pixel_len += font_width
-		if current_text_style & 2 == 2 then --bold characters sit in shifted p8scii range
-			if (char >= ' ') char = char(ord(char) + 96)
-		end
-
-		--add the adjusted character (might have switched to bold font set)
-		current_line ..= char
 
 		-- have we found a visually appealing line-break character?
 		if (in_set(char, " \n:-_;")) break_index = #current_line
 
+		-- switch into bold font, if needed
+		if current_text_style & 2 == 2 then --bold characters sit in shifted range
+			if (char >= ' ') char = chr(ord(char) + 96)
+		end
+
+		--add the character
+		current_line ..= char
+
 		-- handle right border and newline wrap triggers
-		if pixel_len > 128 or char == '\n' then
+		if pixel_len > 127 or char == '\n' then
 			if (break_index == 0) break_index = #current_line
 			local first, second = unpack(split(current_line, break_index, false))
 			add(buffer, first)

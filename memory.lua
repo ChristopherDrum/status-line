@@ -88,10 +88,8 @@ function call_stack_push()
 end
 
 function call_stack_pop()
-	log3("before call_stack_pop: "..tohex(top_frame().pc))
 	deli(_call_stack)
 	_program_counter = top_frame().pc
-	log3("after call_stack_pop: "..tohex(top_frame().pc))
 end
 
 function abbr_address(index)

@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 35
+version 42
 __lua__
 -- font snippet generator
 -- by zep
@@ -44,7 +44,7 @@ function _init()
 	cstore(0x2000,0x5600,0x800)
 end
 
-function italic(str)
+function bold(str)
 	local istr = "\014"
 	for i = 1, #str do
 		istr ..= chr(ord(str,i)+96)
@@ -71,16 +71,16 @@ color(7)
 print("\014\f8forever")
 print("\014\#1\f8forever")
 
-print(italic("0123456789"))
-print(italic("the quick brown"))
-print(italic("fox jumps over"))
-print(italic("the lazy dog"))
+print(bold("0123456789"))
+print(bold("the quick brown"))
+print(bold("fox jumps over"))
+print(bold("the lazy dog"))
 ?""
-print(italic("THE QUICK BROWN"))
-print(italic("FOX JUMPS OVER"))
-print(italic("THE LAZY DOG."))
+print(bold("THE QUICK BROWN"))
+print(bold("FOX JUMPS OVER"))
+print(bold("THE LAZY DOG."))
 
-print("hERE'S "..italic("A PHRASE").." HERE?")
+print("hERE'S "..bold("A PHRASE").." HERE?")
 --poke(0x5f58,0)
 color(13)
 print(" [snippet copied to clipboard]",0,120)
