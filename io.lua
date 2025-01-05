@@ -86,12 +86,11 @@ function _set_text_style(n)
 	if (n > 0) n |= current_text_style
 
 	local inverse = (n&1 == 1) and '\^i' or '\^-i'
-	if (active_window == 0) inverse ..= "\^-b"
+	if (n&4 == 4 and n&2 != 2) inverse ..= "\^-b"
 	local font_shift = (n&2 == 2 or n&4 == 4) and '\014' or '\015'
 	font_width = (n&2 == 2) and 5 or 4
 
 	if (checksum == 0xfc65 or checksum == 0x91e0) and active_window == 1 then -- Bureaucracy MP & SLC
-		if (n&4 == 4) inverse ..= "\^-b"
 		if (n&4 == 2) n	&= 0xb --suppress the bold bit; maybe not the best idea
 	end
 
