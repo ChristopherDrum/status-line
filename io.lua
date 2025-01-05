@@ -88,8 +88,7 @@ function _set_text_style(n)
 	local inverse = (n&1 == 1) and '\^i' or '\^-i'
 	if (active_window == 0) inverse ..= "\^-b"
 	local font_shift = (n&2 == 2 or n&4 == 4) and '\014' or '\015'
-	font_width = 4
-	if (n&4 == 4 or n&2 == 2) font_width = 5 --italic and bold
+	font_width = (n&2 == 2) and 5 or 4
 
 	if checksum == 0xfc65 and active_window == 1 then -- Bureaucracy masterpiece
 		if (n&4 == 4) n	&= 0xb --suppress the bold bit; maybe not the best idea
@@ -165,8 +164,10 @@ function output(str, flush_now)
 		-- but we need the length of the line AFTER the char was added
 		if (in_set(c, " \n:-_;")) break_index = #current_line
 
+		log3("   at char: "..c..", pixel length now at: "..pixel_len)
+
 		-- handle right border and newline wrap triggers
-		if pixel_len > 127 or char == '\n' then
+		if pixel_len > 128 or c == '\n' then
 			if (break_index == 0) break_index = #current_line-1
 			local first, second = unpack(split(current_line, break_index, false))
 			add(buffer, first)
