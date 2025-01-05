@@ -442,6 +442,8 @@ preloaded = false
 function capture_input(char)
 	lines_shown = 0
 
+	if (_interrupt == capture_char and char) _read_char(char)
+
 	if z_timed_routine then
 		local current_time = stat(94)*60 + stat(95)
 		if (current_time - z_current_time) >= z_timed_interval then
@@ -478,8 +480,6 @@ function capture_input(char)
 	poke(0x5f30,1)
 
 	draw_cursor(current_bg)
-
-	if (_interrupt == capture_char) _read_char(char)
 
 	if _interrupt == capture_line then
 
