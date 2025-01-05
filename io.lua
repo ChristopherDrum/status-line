@@ -249,7 +249,7 @@ function screen(str)
 		local pixel_count = print('\^d'..emit_rate..str, 1, 122) - 1
 		if reuse_last_line == true then
 			reuse_last_line = false
-			if (pixel_count > 124) print('\^d'..emit_rate..str, 1-(pixel_count-124), 122)
+			if (pixel_count > 127 and _interrupt == capture_line) print('\^d'..emit_rate..str, 1-(pixel_count-124), 122)
 		end
 		
 		zx = flr(pixel_count>>2) + 1 -- z_cursor starts at 1,1
@@ -442,77 +442,79 @@ preloaded = false
 function capture_input(char)
 	lines_shown = 0
 
-	if (_interrupt == capture_char and char) _read_char(char)
+	if char then
+		poke(0x5f30,1)
+		draw_cursor(current_bg)
 
-	if z_timed_routine then
-		local current_time = stat(94)*60 + stat(95)
-		if (current_time - z_current_time) >= z_timed_interval then
-			local timed_response = _call_fp(call_type.intr, z_timed_routine)
-			if timed_response == 1 then
-				_read(0) --false
-			end
-			z_current_time = current_time
-		end
-	end
+		if _interrupt == capture_char then
+			_read_char(char)
 
-
-	if (_interrupt == capture_line) then
-		if _zm_version >= 5 and preloaded == false then
-			local text_buffer = zword_to_zaddress(z_text_buffer)
-			local num_bytes = get_zbyte(text_buffer + 0x.0001)
-			if num_bytes > 0 then
-				local pre = get_zbytes(text_buffer+0x.0002, num_bytes)
-				local zstring = zscii_to_p8scii(pre, lowercase)
-				local flipped = zscii_to_p8scii(pre, flipcase)
-				local last_line = windows[active_window].last_line
-				local left, right = unpack(split(last_line, #last_line-num_bytes))
-				if (flipped == right) then
-					windows[active_window].last_line = left
-					current_input = zstring
-					visible_input = right
+		elseif _interrupt == capture_line then
+			--prep the input line, if necessary
+			if _zm_version >= 5 and preloaded == false then
+				local text_buffer = zword_to_zaddress(z_text_buffer)
+				local num_bytes = get_zbyte(text_buffer + 0x.0001)
+				if num_bytes > 0 then
+					local pre = get_zbytes(text_buffer+0x.0002, num_bytes)
+					local zstring = zscii_to_p8scii(pre, lowercase)
+					local flipped = zscii_to_p8scii(pre, flipcase)
+					local last_line = windows[active_window].last_line
+					local left, right = unpack(split(last_line, #last_line-num_bytes))
+					if (flipped == right) then
+						windows[active_window].last_line = left
+						current_input = zstring
+						visible_input = right
+					end
 				end
+				preloaded = true
 			end
-			preloaded = true
-		end
-	end
+
+			if char == '\r' then
+				--strip whitespace
+				local words, stripped = split(current_input, ' ', false), ''
+				for w in all(words) do
+					if (#w > 0) stripped ..= (#stripped == 0 and '' or ' ')..w
+				end
+				current_input = stripped
 	
-	if (not char) draw_cursor() return
-	poke(0x5f30,1)
-
-	draw_cursor(current_bg)
-
-	if _interrupt == capture_line then
-
-		if char == '\r' then
-			--strip whitespace
-			local words, stripped = split(current_input, ' ', false), ''
-			for w in all(words) do
-				if (#w > 0) stripped ..= (#stripped == 0 and '' or ' ')..w
+				--fill text buffer
+				local bytes = pack(ord(current_input, 1, #current_input))
+	
+				local text_buffer = zword_to_zaddress(z_text_buffer)
+				local addr = text_buffer + 0x.0001
+				if _zm_version >= 5 then
+					local num_bytes = get_zbyte(addr)
+					if (preloaded == true) num_bytes = 0
+					set_zbyte(addr, #bytes+num_bytes)
+					addr += 0x.0001 + (num_bytes>>>16)
+				else 
+					add(bytes, 0x0)
+				end
+				set_zbytes(addr, bytes)
+				
+				--handle the parse buffer
+				if (z_parse_buffer) _tokenise(z_text_buffer, z_parse_buffer)
+				_read(13)
+	
+			else
+				if (max_input_length == 0) max_input_length = get_zbyte(zword_to_zaddress(z_text_buffer)) - 1
+				process_input_char(char, max_input_length)
 			end
-			current_input = stripped
 
-			--fill text buffer
-			local bytes = pack(ord(current_input, 1, #current_input))
+		end
 
-			local text_buffer = zword_to_zaddress(z_text_buffer)
-			local addr = text_buffer + 0x.0001
-			if _zm_version >= 5 then
-				local num_bytes = get_zbyte(addr)
-				if (preloaded == true) num_bytes = 0
-				set_zbyte(addr, #bytes+num_bytes)
-				addr += 0x.0001 + (num_bytes>>>16)
-			else 
-				add(bytes, 0x0)
+	else
+		-- if (_interrupt == _capture_line) draw_cursor()
+
+		if z_timed_routine then
+			local current_time = stat(94)*60 + stat(95)
+			if (current_time - z_current_time) >= z_timed_interval then
+				local timed_response = _call_fp(call_type.intr, z_timed_routine)
+				if timed_response == 1 then
+					_read(0) --false
+				end
+				z_current_time = current_time
 			end
-			set_zbytes(addr, bytes)
-			
-			--handle the parse buffer
-			if (z_parse_buffer) _tokenise(z_text_buffer, z_parse_buffer)
-			_read(13)
-
-		else
-			if (max_input_length == 0) max_input_length = get_zbyte(zword_to_zaddress(z_text_buffer)) - 1
-			process_input_char(char, max_input_length)
 		end
 	end
 end

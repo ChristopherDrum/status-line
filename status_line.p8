@@ -86,16 +86,15 @@ function log3(str)
 end
 
 function wait_for_any_key()
-	--cursor blinking suppressed; this routine is outside t() measurement
-	local keypress = ''
-	while keypress == '' do
+	local keypress = nil
+	while keypress == nil do
 		if stat(30) then
 			poke(0x5f30,1)
 			keypress = stat(31)
 		end
 		flip()
 	end
-	return
+	return keypress
 end
 
 function draw_cursor(c)
@@ -200,7 +199,7 @@ function _update60()
 				key = stat(31)
 			end
 			_interrupt(key)
-			if (active_window == 1) draw_cursor()
+			if (active_window == 0 and _interrupt == capture_line) draw_cursor()
 			flip()
 
 		else
