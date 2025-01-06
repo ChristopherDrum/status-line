@@ -97,16 +97,28 @@ function wait_for_any_key()
 	return keypress
 end
 
-function draw_cursor(c)
-	local toggle = {current_bg, current_fg}
-	if active_window != 0 then 
-		c = (current_text_style & 1 == 1) and current_fg or current_bg
-	else
-		c = c or toggle[(stat(85) % 2)+1]
+-- function draw_cursor(c)
+-- 	local toggle = {current_bg, current_fg}
+-- 	if active_window != 0 then 
+-- 		c = (current_text_style & 1 == 1) and current_fg or current_bg
+-- 	else
+-- 		c = c or toggle[(stat(85) % 2)+1]
+-- 	end
+-- 	local px, py = unpack(windows[active_window].p_cursor)
+-- 	print(cursor_type, px, py, c)
+-- end
+
+cursor_string = " "
+function cursor_blinker()
+	while true do
+		cursor_string = (cursor_string == " ") and cursor_type or " "
+		for i = 1, 15 do 
+			yield()
+		end
 	end
-	local px, py = unpack(windows[active_window].p_cursor)
-	print(cursor_type, px, py, c)
 end
+  
+cursor_co = cocreate(cursor_blinker)
 
 function build_menu(name, dval, table)
 	local var = dget(dval)
@@ -192,6 +204,7 @@ end
 
 function _update60()
 	if (story_loaded == true) then
+		coresume(cursor_co)
 		if _interrupt then
 			local key = nil
 			if stat(30) and key == nil then
@@ -199,8 +212,6 @@ function _update60()
 				key = stat(31)
 			end
 			_interrupt(key)
-			if (active_window == 0 and _interrupt == capture_line) draw_cursor()
-			flip()
 
 		else
 			--I found this method of running multiple vm instructions per frame easier to regulate

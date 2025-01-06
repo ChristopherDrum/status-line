@@ -217,7 +217,7 @@ function flush_line_buffer(_w)
 			-- end
 		end
 
-		-- Display the line and track last line
+		-- Display the line and track it
 		win.last_line = str
 		screen(str)
 
@@ -249,7 +249,10 @@ function screen(str)
 		local pixel_count = print('\^d'..emit_rate..str, 1, 122) - 1
 		if reuse_last_line == true then
 			reuse_last_line = false
-			if (pixel_count > 127 and _interrupt == capture_line) print('\^d'..emit_rate..str, 1-(pixel_count-124), 122)
+			if (pixel_count > 127 and _interrupt == capture_line) then
+				rectfill(0,121,128,128,current_bg)
+				print('\^d'..emit_rate..str, 1-(pixel_count-124), 122)
+			end
 		end
 		
 		zx = flr(pixel_count>>2) + 1 -- z_cursor starts at 1,1
@@ -419,14 +422,14 @@ function process_input_char(char, max_length)
 			current_input = sub(current_input, 1, -2)
 			visible_input = sub(visible_input, 1, -2)
 		end
-	elseif char != '' then
+	elseif char and char != '' then
 		if #current_input < max_length then
 			current_input ..= case_setter(char, lowercase)
 			visible_input ..= case_setter(char, visual_case)
 		end
 	end
 	reuse_last_line = true
-	screen(windows[active_window].last_line..sub(visible_input, -30))
+	screen(windows[active_window].last_line..sub(visible_input, -31)..cursor_string)
 end
 
 --called by read; z_text_buffer must be non-zero; z_parse_buffer could be nil
@@ -444,9 +447,10 @@ function capture_input(char)
 
 	if char then
 		poke(0x5f30,1)
-		draw_cursor(current_bg)
 
 		if _interrupt == capture_char then
+			cursor_string = " "
+			process_input_char(nil,nil)
 			_read_char(char)
 
 		elseif _interrupt == capture_line then
@@ -470,6 +474,9 @@ function capture_input(char)
 			end
 
 			if char == '\r' then
+				cursor_string = " "
+				process_input_char(nil,nil)
+				
 				--strip whitespace
 				local words, stripped = split(current_input, ' ', false), ''
 				for w in all(words) do
@@ -504,7 +511,7 @@ function capture_input(char)
 		end
 
 	else
-		-- if (_interrupt == _capture_line) draw_cursor()
+		process_input_char(nil, nil)
 
 		if z_timed_routine then
 			local current_time = stat(94)*60 + stat(95)
