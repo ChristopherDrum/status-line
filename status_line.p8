@@ -109,16 +109,16 @@ end
 -- end
 
 cursor_string = " "
-function cursor_blinker()
-	while true do
-		cursor_string = (cursor_string == " ") and cursor_type or " "
-		for i = 1, 15 do 
-			yield()
-		end
-	end
-end
+-- function cursor_blinker()
+-- 	while true do
+-- 		cursor_string = (cursor_string == " ") and cursor_type or " "
+-- 		for i = 1, 15 do 
+-- 			yield()
+-- 		end
+-- 	end
+-- end
   
-cursor_co = cocreate(cursor_blinker)
+-- cursor_co = cocreate(cursor_blinker)
 
 function build_menu(name, dval, table)
 	local var = dget(dval)
@@ -204,7 +204,7 @@ end
 
 function _update60()
 	if (story_loaded == true) then
-		coresume(cursor_co)
+		cursor_string = (stat(95)%2 == 0) and cursor_type or " "
 		if _interrupt then
 			local key = nil
 			if stat(30) and key == nil then
