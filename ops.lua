@@ -637,6 +637,10 @@ function _print_char(n)
 	if (n != 0) output(chr(n))
 end
 
+function _print_unicode(c)
+	_print_char(c)
+end
+
 function _new_line()
 	log3('  [prt] new_line')
 	output(chr(13))
