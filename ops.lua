@@ -148,23 +148,27 @@ end
 function _inc(var)
 	local zword = get_var(var) + 1
 	_result(zword, var)
-	return zword
+	-- return zword
 end
 
 function _dec(var)
 	local zword = get_var(var) - 1 
 	_result(zword, var)
-	return zword
+	-- return zword
 end
 
 function _inc_jg(var, s)
-	local val = _inc(var)
-	_branch(val > s)
+	-- local val = _inc(var)
+	local zword = get_var(var) + 1
+	_result(zword, var)
+	_branch(zword > s)
 end
 
 function _dec_jl(var, s)
-	local val = _dec(var)
-	_branch(val < s)
+	-- local val = _dec(var)
+	local zword = get_var(var) - 1 
+	_result(zword, var)
+	_branch(zword < s)
 end
 
 function _or(a, b)

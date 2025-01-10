@@ -434,6 +434,7 @@ end
 
 --called by read; z_text_buffer must be non-zero; z_parse_buffer could be nil
 function capture_char(char)
+	cursor_string = " "
 	capture_input(char)
 end
 
@@ -449,8 +450,7 @@ function capture_input(char)
 		poke(0x5f30,1)
 
 		if _interrupt == capture_char then
-			cursor_string = " "
-			process_input_char(nil,nil)
+			-- process_input_char(nil,nil)
 			_read_char(char)
 
 		elseif _interrupt == capture_line then
@@ -511,7 +511,6 @@ function capture_input(char)
 		end
 
 	else
-		if (_interrupt == capture_char) cursor_string = " "
 		process_input_char(nil, nil)
 
 		if z_timed_routine then
