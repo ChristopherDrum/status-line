@@ -690,17 +690,19 @@ function _print_table(baddr, width, _height, _skip)
 	local za = zword_to_zaddress(baddr)
 	local zx, zy = unpack(windows[active_window].z_cursor)
 	for i = 1, height do
+		local str = ""
 		for j = 1, width + skip do
-			if (j <= width) _print_char(get_zbyte(za))
+			if j <= width then
+				local c = chr(get_zbyte(za))
+				c = case_setter(c, flipcase)
+				str ..= c	
+			end
 			za += 0x.0001
 		end
-		zy += 1
-
-		if zy > windows[active_window].h then
-			if (active_window == 0 and height > 1) _print_char(13)
-		else
+		output(str, true)
+		if height > 1 then
+			zy += 1
 			_set_cursor(zy,zx)
-			-- log3(" z_cursor moved to: "..zx..','..zy)
 		end
 	end
 end
