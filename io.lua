@@ -198,7 +198,7 @@ function flush_line_buffer(_w)
 	while #buffer > 0 do
 
 		local str = deli(buffer, 1)
-		if (str == text_style..text_colors) goto continue 
+		-- if (str == text_style..text_colors) goto continue 
 		
 		-- Pagination needed first?
 		if w == 0 and lines_shown == (win.h - 1) then
@@ -210,11 +210,9 @@ function flush_line_buffer(_w)
 
 		-- Trim newline if present
 		did_trim_nl = false
-		if str[-1] == '\n' then
-			str = sub(str, 1, -2)
-			-- if w == 0 or (w == 1 and _zm_version == 3) then
-				did_trim_nl = true
-			-- end
+		if (w == 1 and _zm_version == 3) then
+			if (str[-1] == '\n') str = sub(str, 1, -2)
+			did_trim_nl = true
 		end
 
 		-- Display the line and track it
@@ -228,23 +226,22 @@ end
 
 --actually put text onto the screen and adjust the z_cursor to reflect the new state
 function screen(str)
-	log3(' [drw] screen ('..active_window..'): '..str)
 	local win = windows[active_window]
 	local zx, zy = unpack(win.z_cursor)
 	-- log3("   window "..active_window.." z_cursor start at: "..zx..','..zy)
+	log3("  [drw] screen ("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
 
-	local px, py = unpack(win.p_cursor)
 	if active_window == 0 then
 		if reuse_last_line == true then
 			--skip the line scroll
 			log3("  REUSE LINE")
 		else
 			if (did_trim_nl == true) log3("  TRIMMED A NEW LINE")
-			if (did_trim_nl == true) print(text_colors..'\n',px,py)
+			if (did_trim_nl == true) print(text_colors..'\n')
 			print(text_colors..'\n')
 		end
-
 		rectfill(0,121,128,128,current_bg)
+		zx, zy = 1, win.h
 
 		--print the line to screen and update the lines_shown count 
 		--this will be caught by pagination on the next line flushed
@@ -257,21 +254,21 @@ function screen(str)
 			end
 		end
 		
-		zx = flr(pixel_count>>2) + 1 -- z_cursor starts at 1,1
-		zy = win.h
+		zx = ceil(pixel_count>>2) -- z_cursor starts at 1,1
+		-- zy = win.h
 		lines_shown += 1
 	else
-		log3("\t|"..str.."| (x: "..zx.." y: "..zy..")")
+		local px, py = unpack(win.p_cursor)
 		local pixel_count = print(str, px, py) - px
 		-- log3("   win1 pixel count: "..pixel_count)
 
 		zx += flr(pixel_count>>2)
-		-- if _zm_version == 3 then
+		if _zm_version == 3 then
 			if did_trim_nl == true then
 				zx = 1
 				zy += 1
 			end
-		-- end
+		end
 	end
 
 	set_z_cursor(active_window, zx, zy)
