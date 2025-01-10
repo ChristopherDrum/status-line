@@ -693,13 +693,10 @@ function _print_table(baddr, width, _height, _skip)
 		local str = ""
 		for j = 1, width + skip do
 			if j <= width then
-				local c = chr(get_zbyte(za))
-				c = case_setter(c, flipcase)
-				str ..= c	
+				_print_char(get_zbyte(za))
 			end
 			za += 0x.0001
 		end
-		output(str, true)
 		if height > 1 then
 			zy += 1
 			_set_cursor(zy,zx)
