@@ -210,9 +210,11 @@ function flush_line_buffer(_w)
 
 		-- Trim newline if present
 		did_trim_nl = false
-		if (w == 1 and _zm_version == 3) then
-			if (str[-1] == '\n') str = sub(str, 1, -2)
-			did_trim_nl = true
+		if _zm_version == 3 and w == 1 then
+			if str[-1] == '\n' then
+				str = sub(str, 1, -2)
+				did_trim_nl = true
+			end
 		end
 
 		-- Display the line and track it
@@ -236,12 +238,12 @@ function screen(str)
 			--skip the line scroll
 			log3("  REUSE LINE")
 		else
-			if (did_trim_nl == true) log3("  TRIMMED A NEW LINE")
-			if (did_trim_nl == true) print(text_colors..'\n')
+			-- if (did_trim_nl == true) log3("  TRIMMED A NEW LINE")
+			-- if (did_trim_nl == true) print(text_colors..'\n')
 			print(text_colors..'\n')
 		end
 		rectfill(0,121,128,128,current_bg)
-		zx, zy = 1, win.h
+		-- zx, zy = 1, win.h
 
 		--print the line to screen and update the lines_shown count 
 		--this will be caught by pagination on the next line flushed
@@ -255,7 +257,7 @@ function screen(str)
 		end
 		
 		zx = ceil(pixel_count>>2) -- z_cursor starts at 1,1
-		-- zy = win.h
+		zy = win.h
 		lines_shown += 1
 	else
 		local px, py = unpack(win.p_cursor)
@@ -263,11 +265,9 @@ function screen(str)
 		-- log3("   win1 pixel count: "..pixel_count)
 
 		zx += flr(pixel_count>>2)
-		if _zm_version == 3 then
-			if did_trim_nl == true then
-				zx = 1
-				zy += 1
-			end
+		if did_trim_nl == true then --I think this will only trigger on z3 games
+			zx = 1
+			zy += 1
 		end
 	end
 
