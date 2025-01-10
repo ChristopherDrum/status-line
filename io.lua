@@ -511,6 +511,7 @@ function capture_input(char)
 		end
 
 	else
+		if (_interrupt == capture_char) cursor_string = " "
 		process_input_char(nil, nil)
 
 		if z_timed_routine then
