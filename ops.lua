@@ -666,8 +666,7 @@ end
 function _print_addr(baddr, is_packed)
 	log3('  [prt] print_addr')
 	local zaddress = zword_to_zaddress(baddr, is_packed)
-	local zstring = get_zstring(zaddress)
-	output(zstring)
+	_print(zaddress)
 end
 
 function _print_paddr(saddr)
