@@ -255,10 +255,13 @@ end
 --_call_p shared opcode with _not; see bottom of this file
 
 function _call_fp(type, raddr, a1, a2, a3, a4, a5, a6, a7)
-		
-	if (raddr == 0x0 and type == call_type.func) then
-		_result(0)
-
+	
+	if raddr == 0x0 then
+		if type == call_type.func then
+			_result(0)
+		else
+			return
+		end
 	else
 		--z3/4 formula is "r = r + 2 ∗ L + 1"
 		--z5 formula is "r = r + 1"
