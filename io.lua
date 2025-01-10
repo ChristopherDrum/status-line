@@ -228,7 +228,7 @@ end
 
 --actually put text onto the screen and adjust the z_cursor to reflect the new state
 function screen(str)
-	-- log3(' [drw] screen ('..active_window..'): '..str)
+	log3(' [drw] screen ('..active_window..'): '..str)
 	local win = windows[active_window]
 	local zx, zy = unpack(win.z_cursor)
 	-- log3("   window "..active_window.." z_cursor start at: "..zx..','..zy)
@@ -237,7 +237,9 @@ function screen(str)
 	if active_window == 0 then
 		if reuse_last_line == true then
 			--skip the line scroll
+			log3("  REUSE LINE")
 		else
+			if (did_trim_nl == true) log3("  TRIMMED A NEW LINE")
 			if (did_trim_nl == true) print(text_colors..'\n',px,py)
 			print(text_colors..'\n')
 		end

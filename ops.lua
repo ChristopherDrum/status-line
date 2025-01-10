@@ -649,18 +649,17 @@ function _print_unicode(c)
 end
 
 function _new_line()
-	log3('  [prt] new_line')
 	output(chr(13))
 end
 
 function _print(string)
-	log3('  [prt] _print')
+	-- log3('  [prt] _print')
 	local zstring = get_zstring(string)
 	output(zstring)
 end
 
 function _print_rtrue(string)
-	log3('  [prt] _print_rtrue')
+	-- log3('  [prt] _print_rtrue')
 	_print(string)
 	_new_line()
 	_rtrue()
@@ -673,7 +672,7 @@ function _print_addr(baddr, is_packed)
 end
 
 function _print_paddr(saddr)
-	log3('  [prt] print_paddr')
+	-- log3('  [prt] print_paddr')
 	_print_addr(saddr, true)
 end
 
