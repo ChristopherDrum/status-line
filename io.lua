@@ -164,7 +164,7 @@ function output(str, flush_now)
 		-- but we need the length of the line AFTER the char was added
 		if (in_set(c, " \n:-_;")) break_index = #current_line
 
-		log3("   at char: "..c..", pixel length now at: "..pixel_len)
+		-- log3("   at char: "..c..", pixel length now at: "..pixel_len)
 
 		-- handle right border and newline wrap triggers
 		if pixel_len > 128 or c == '\n' then
@@ -228,7 +228,7 @@ end
 
 --actually put text onto the screen and adjust the z_cursor to reflect the new state
 function screen(str)
-	log3(' [drw] screen ('..active_window..'): '..str)
+	-- log3(' [drw] screen ('..active_window..'): '..str)
 	local win = windows[active_window]
 	local zx, zy = unpack(win.z_cursor)
 	-- log3("   window "..active_window.." z_cursor start at: "..zx..','..zy)
@@ -259,17 +259,17 @@ function screen(str)
 		zy = win.h
 		lines_shown += 1
 	else
-		--  = print(str,0,-20)
+		log3("\t|"..str.."| (x: "..zx.." y: "..zy..")")
 		local pixel_count = print(str, px, py) - px
 		-- log3("   win1 pixel count: "..pixel_count)
 
 		zx += flr(pixel_count>>2)
-		if _zm_version == 3 then
+		-- if _zm_version == 3 then
 			if did_trim_nl == true then
 				zx = 1
 				zy += 1
 			end
-		end
+		-- end
 	end
 
 	set_z_cursor(active_window, zx, zy)
@@ -434,6 +434,7 @@ end
 
 --called by read; z_text_buffer must be non-zero; z_parse_buffer could be nil
 function capture_char(char)
+	cursor_string = " "
 	capture_input(char)
 end
 
@@ -449,8 +450,7 @@ function capture_input(char)
 		poke(0x5f30,1)
 
 		if _interrupt == capture_char then
-			cursor_string = " "
-			process_input_char(nil,nil)
+			-- process_input_char(nil,nil)
 			_read_char(char)
 
 		elseif _interrupt == capture_line then

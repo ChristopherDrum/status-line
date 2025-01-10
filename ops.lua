@@ -148,23 +148,27 @@ end
 function _inc(var)
 	local zword = get_var(var) + 1
 	_result(zword, var)
-	return zword
+	-- return zword
 end
 
 function _dec(var)
 	local zword = get_var(var) - 1 
 	_result(zword, var)
-	return zword
+	-- return zword
 end
 
 function _inc_jg(var, s)
-	local val = _inc(var)
-	_branch(val > s)
+	-- local val = _inc(var)
+	local zword = get_var(var) + 1
+	_result(zword, var)
+	_branch(zword > s)
 end
 
 function _dec_jl(var, s)
-	local val = _dec(var)
-	_branch(val < s)
+	-- local val = _dec(var)
+	local zword = get_var(var) - 1 
+	_result(zword, var)
+	_branch(zword < s)
 end
 
 function _or(a, b)
@@ -637,6 +641,10 @@ function _print_char(n)
 	if (n != 0) output(chr(n))
 end
 
+function _print_unicode(c)
+	_print_char(c)
+end
+
 function _new_line()
 	log3('  [prt] new_line')
 	output(chr(13))
@@ -686,17 +694,16 @@ function _print_table(baddr, width, _height, _skip)
 	local za = zword_to_zaddress(baddr)
 	local zx, zy = unpack(windows[active_window].z_cursor)
 	for i = 1, height do
+		local str = ""
 		for j = 1, width + skip do
-			if (j <= width) _print_char(get_zbyte(za))
+			if j <= width then
+				_print_char(get_zbyte(za))
+			end
 			za += 0x.0001
 		end
-		zy += 1
-
-		if zy > windows[active_window].h then
-			if (active_window == 0 and height > 1) _print_char(13)
-		else
+		if height > 1 then
+			zy += 1
 			_set_cursor(zy,zx)
-			-- log3(" z_cursor moved to: "..zx..','..zy)
 		end
 	end
 end

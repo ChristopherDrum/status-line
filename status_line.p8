@@ -39,7 +39,7 @@ function rehydrate_menu_vars()
 end
 
 function rehydrate_ops()
-	local raw_strings = "_zero_ops,_rtrue,_rfalse,_print,_print_rtrue,_nop,_save,_restore,_restart,_ret_pulled,_pop_catch,_quit,_new_line,_show_status,_btrue,_nop,_btrue/_short_ops,_jz,_get_sibling,_get_child,_get_parent,_get_prop_len,_inc,_dec,_print_addr,_call_f,_remove_obj,_print_obj,_ret,_jump,_print_paddr,_load,_not_call_p/_long_ops,_nop,_je,_jl,_jg,_dec_jl,_inc_jg,_jin,_test,_or,_and,_test_attr,_set_attr,_clear_attr,_store,_insert_obj,_loadw,_loadb,_get_prop,_get_prop_addr,_get_next_prop,_add,_sub,_mul,_div,_mod,_call_f,_call_p,_set_color,_throw/_var_ops,_call_f,_storew,_storeb,_put_prop,_read,_print_char,_print_num,_random,stack_push,_pull,_split_screen,_set_window,_call_f,_erase_window,_erase_line,_set_cursor,_get_cursor,_set_text_style,_nop,_output_stream,_input_stream,_sound_effect,_read_char,_scan_table,_not,_call_p,_call_p,_tokenise,_encode_text,_copy_table,_print_table,_check_arg_count/_ext_ops,_save,_restore,_log_shift,_art_shift,_set_font,_nop,_nop,_nop,_deny_undo,_deny_undo,_nop,_nop,_nop,_nop"
+	local raw_strings = "_zero_ops,_rtrue,_rfalse,_print,_print_rtrue,_nop,_save,_restore,_restart,_ret_pulled,_pop_catch,_quit,_new_line,_show_status,_btrue,_nop,_btrue/_short_ops,_jz,_get_sibling,_get_child,_get_parent,_get_prop_len,_inc,_dec,_print_addr,_call_f,_remove_obj,_print_obj,_ret,_jump,_print_paddr,_load,_not_call_p/_long_ops,_nop,_je,_jl,_jg,_dec_jl,_inc_jg,_jin,_test,_or,_and,_test_attr,_set_attr,_clear_attr,_store,_insert_obj,_loadw,_loadb,_get_prop,_get_prop_addr,_get_next_prop,_add,_sub,_mul,_div,_mod,_call_f,_call_p,_set_color,_throw/_var_ops,_call_f,_storew,_storeb,_put_prop,_read,_print_char,_print_num,_random,stack_push,_pull,_split_screen,_set_window,_call_f,_erase_window,_erase_line,_set_cursor,_get_cursor,_set_text_style,_nop,_output_stream,_input_stream,_sound_effect,_read_char,_scan_table,_not,_call_p,_call_p,_tokenise,_encode_text,_copy_table,_print_table,_check_arg_count/_ext_ops,_save,_restore,_log_shift,_art_shift,_set_font,_nop,_nop,_nop,_nop,_deny_undo,_deny_undo,_print_unicode,_nop,_nop,_nop"
 	
 	local function hydrate(str)
 		local def = split(str)
@@ -96,29 +96,6 @@ function wait_for_any_key()
 	end
 	return keypress
 end
-
--- function draw_cursor(c)
--- 	local toggle = {current_bg, current_fg}
--- 	if active_window != 0 then 
--- 		c = (current_text_style & 1 == 1) and current_fg or current_bg
--- 	else
--- 		c = c or toggle[(stat(85) % 2)+1]
--- 	end
--- 	local px, py = unpack(windows[active_window].p_cursor)
--- 	print(cursor_type, px, py, c)
--- end
-
-cursor_string = " "
-function cursor_blinker()
-	while true do
-		cursor_string = (cursor_string == " ") and cursor_type or " "
-		for i = 1, 15 do 
-			yield()
-		end
-	end
-end
-  
-cursor_co = cocreate(cursor_blinker)
 
 function build_menu(name, dval, table)
 	local var = dget(dval)
@@ -202,10 +179,11 @@ function setup_user_prefs()
 	_, cursor_type = unpack(cursor_types.values[cur])
 end
 
+cursor_string = " "
 function _update60()
 	if (story_loaded == true) then
-		coresume(cursor_co)
 		if _interrupt then
+			cursor_string = (stat(95)%2 == 0) and cursor_type or " "
 			local key = nil
 			if stat(30) and key == nil then
 				poke(0x5f30,1)
