@@ -3,7 +3,6 @@ function save_game(char)
 	--can the keyboard handler be shared with capture_input()?
 	if show_warning == true then
 		output('Enter filename (max 30 chars; careful, do NOT press "ESC")\n\n>', true)
-		flush_line_buffer()
 		show_warning = false
 	end
 
@@ -48,12 +47,11 @@ function restore_game()
 		local chunk = serial(0x800, 0x4300, 0x1000)
 		for j = 0, chunk-1, 8 do
 			local a, b, c, d, e, f, g, h = peek(0x4300+j, 8)
-			local hex = '0x'..chr(a)..chr(b)..chr(c)..chr(d)..'.'..chr(e)..chr(f)..chr(g)..chr(h)
-			add(temp, tonum(hex))
+			local hex = chr(a)..chr(b)..chr(c)..chr(d)..chr(e)..chr(f)..chr(g)..chr(h)
+			add(temp, tonum(hex, 0x3))
 		end
 	end
 
-	log(temp[#temp]..','..checksum)
 	local save_checksum = dword_to_str(temp[#temp])
 	local this_checksum = dword_to_str(checksum)
 
@@ -63,59 +61,46 @@ function restore_game()
 		return (_zm_version == 3) and false or 0
 	end
 
-	local offset = 1
-	local save_version = temp[offset]
-	if save_version > tonum(_engine_version) then
+	local index = 1
+	local save_version = temp[index]
+	if save_version != tonum(_engine_version) then
 		output('This save file requires v'..tostr(save_version)..' of Status Line.\n', true)
 		return (_zm_version == 3) and false or 0
 	end
 
-	offset += 1
-	local memory_length = temp[offset]
-	--this needs repair!
-	--local mem_max_bank, mem_max_index, _ = get_memory_location( _static_memory_mem_addr - 0x.0001)
-	-- log('memory_length ('..mem_max_bank..','..mem_max_index..'): '..memory_length)
-	local temp_index = 1
-	for i = 1, mem_max_bank do
-		local max_j = _memory_bank_size
-		if (i == mem_max_bank) max_j = mem_max_index
-		for j = 1, max_j do
-			_memory[i][j] = temp[offset+temp_index]
-			temp_index += 1
-		end
+	index += 1
+	for i = 1, _memory_bank_size do
+		_memory[1][i] = temp[index]
+		index += 1
 	end
 
-	offset += memory_length + 1
+	--write into the call_stack directly; memory is tight
 	_call_stack = {}
-	local call_stack_length = temp[offset]
-	-- log('call_stack_length: '..call_stack_length)
-	temp_index = 1
+	local call_stack_length = temp[index]
+
+	index += 1
 	for i = 1, call_stack_length do
 		local frame = frame:new()
-		frame.pc = temp[offset + 1]
-		frame.call = temp[offset + 2]
-		frame.args = temp[offset + 3]
+		frame.pc = temp[index]
+		frame.call = temp[index + 1]
+		frame.args = temp[index + 2]
 		-- log("restoring frame "..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args))
-		local stack_length = temp[offset + 4]
-		-- log("---frame stack---")
+		local stack_length = temp[index + 3]
+		
+		-- log3("---frame stack---")
 		for j = 1, stack_length do
-			local val = temp[offset + 4 + j]
-			add(frame.stack, val)
-			-- log("  "..j..': '..tohex(temp[offset + 4 + j])..' -> '..tohex(frame.stack[j]))
+			add(frame.stack, temp[index + 3 + j])
 		end
-		offset += 4 + stack_length
-		-- log("---frame vars---")
+		index += 3 + stack_length --now points to last item on frame stack
+
+		-- log3("---frame vars---")
 		for k = 1, 16 do
-			local val = temp[offset + k]
-			frame.vars[k] =  val
-			-- log("  "..k..": "..tohex(temp[offset + k])..' -> '..tohex(frame.vars[k]))
+			frame.vars[k] = temp[index + k]
 		end
 		add(_call_stack, frame)
-		offset += 16
+		index += 17 --bring us to the start of next frame
 	end
 
-	_program_counter = temp[#temp-1]
-	-- log('restoring pc: '..tohex(_program_counter, true))
 	current_input = ''
 	return (_zm_version == 3) and true or 2
 end

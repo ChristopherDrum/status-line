@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 35
+version 42
 __lua__
 --status line 3.0
 --by christopher drum
@@ -79,8 +79,6 @@ function tohex(value, full)
 	return hex
 end
 
-function log() end
-function log2() end
 function log3(str)
 	printh(str, '_status_line_log_30')
 end
@@ -110,15 +108,15 @@ end
 
 #include memory.lua
 #include ops.lua
+#include save_restore.lua
 #include io.lua
--- #include debug.lua
 
 function _init()
 	poke(0x5f2d, 1)
 	poke(0x5f36,0x4)
 	memcpy(0x5600,0x2000,0x800)
 
-	cartdata('drum_statusline_1')
+	cartdata('drum_statusline_3')
 
 	rehydrate_menu_vars()
 	build_menu('screen', 0, screen_types)
@@ -201,7 +199,6 @@ function _update60()
 				local func, operands = load_instruction()
 				func(unpack(operands))
 				_count += 1
-				-- log('instruction count: '..count)
 			end
 		end
 
@@ -238,7 +235,7 @@ function build_dictionary(addr)
 	local word_count = abs(get_zword(addr))
 
 	addr += 0x.0002
-	log("  [dct] "..separators..", entry len: "..tohex(entry_length)..", count: "..word_count)
+	-- log("  [dct] "..separators..", entry len: "..tohex(entry_length)..", count: "..word_count)
 	for i = 1, word_count do
 		local zstring = get_zstring(addr, true)
 		dict[zstring] = (addr << 16)
@@ -306,7 +303,7 @@ function process_header()
 	_zobject_address 		= _object_table_mem_addr + (_zm_object_property_count>>>15)
 
 	checksum = get_zword(_file_checksum_header_addr)
-	log3("game checksum: "..tohex(checksum))
+	-- log3("game checksum: "..tohex(checksum))
 
 	--patches for specific games; just saving tokens by putting it here :/
 	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, thanks @fredrick

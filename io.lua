@@ -1,7 +1,3 @@
--- #include save_restore.lua
-function save_game(char) end
-function restore_game() end
-
 zchar_map_str = [[
 	00, 00, 00, 00, 05, 00, 00, 00, 00, 07,
     00, 00, 00, 00, 00, 00, 00, 00, 00, 00,
@@ -26,7 +22,7 @@ function reset_io_state()
 		current_bg = get_zbyte(_default_bg_color_addr)
 	end
 	pal(0,current_bg)
-	log("  [drw]  reset_io_state fg = "..current_fg..", bg = "..current_bg)
+	-- log("  [drw]  reset_io_state fg = "..current_fg..", bg = "..current_bg)
 
 	current_text_style = 0
 	text_style_updated = false
@@ -76,13 +72,13 @@ function reset_io_state()
 end
 
 function update_text_colors()
-	log("  [drw] update_text_colors: fg = "..current_fg..", bg = "..current_bg)
+	-- log("  [drw] update_text_colors: fg = "..current_fg..", bg = "..current_bg)
 	text_colors = '\f'..tostr(current_fg,true)[6]..'\#'..tostr(current_bg,true)[6]
 	text_style_updated = true
 end
 
 function _set_text_style(n)
-	log("  [drw] _set_text_style to: "..n)
+	-- log("  [drw] _set_text_style to: "..n)
 	if (n > 0) n |= current_text_style
 
 	local inverse = (n&1 == 1) and '\^i' or '\^-i'
@@ -113,7 +109,6 @@ function set_z_cursor(_win, _x, _y)
 end
 
 function memory(str)
-	-- log('  [mem] memory asked to record '..#str..' zscii chars')
 	if (#str == 0) return
 	local addr = mem_stream_addr[#mem_stream_addr]
 	local table_len = get_zword(addr)
@@ -125,7 +120,7 @@ end
 --process word wrapping into a buffer
 local break_index = 0
 function output(str, flush_now)
-	log3('  [drw] output to window '..active_window..', raw str: '..str)
+	-- log3('  [drw] output to window '..active_window..', raw str: '..str)
 	if (mem_stream == true) memory(str) return
 	if (screen_stream == false) return
 
@@ -198,7 +193,7 @@ function flush_line_buffer(_w)
 	while #buffer > 0 do
 
 		local str = deli(buffer, 1)
-		-- if (str == text_style..text_colors) goto continue 
+		if (str == text_style..text_colors) goto continue 
 		
 		-- Pagination needed first?
 		if w == 0 and lines_shown == (win.h - 1) then
@@ -231,15 +226,14 @@ function screen(str)
 	local win = windows[active_window]
 	local zx, zy = unpack(win.z_cursor)
 	-- log3("   window "..active_window.." z_cursor start at: "..zx..','..zy)
-	log3("  [drw] screen ("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
+	-- log3("  [drw] screen ("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
 
 	if active_window == 0 then
 		if reuse_last_line == true then
 			--skip the line scroll
-			log3("  REUSE LINE")
+			-- log3("  REUSE LINE")
+
 		else
-			-- if (did_trim_nl == true) log3("  TRIMMED A NEW LINE")
-			-- if (did_trim_nl == true) print(text_colors..'\n')
 			print(text_colors..'\n')
 		end
 		rectfill(0,121,128,128,current_bg)
@@ -262,10 +256,15 @@ function screen(str)
 	else
 		local px, py = unpack(win.p_cursor)
 		local pixel_count = print(str, px, py) - px
-		-- log3("   win1 pixel count: "..pixel_count)
 
 		zx += flr(pixel_count>>2)
 		if did_trim_nl == true then --I think this will only trigger on z3 games
+			if zy == win.h then --make room
+				wait_for_any_key()
+				print("",0,122)
+				print("")
+				rectfill(0,py,128,128,current_bg)
+			end	
 			zx = 1
 			zy += 1
 		end
@@ -277,7 +276,6 @@ function screen(str)
 end
 
 function _tokenise(baddr1, baddr2, baddr3, _bit)
-	-- log('[prs] _tokenise from: '..tohex(baddr1)..' into: '..tohex(baddr2)..' alt dict: '..tohex(baddr3)..' bit?: '..tohex(_bit or 0))
 	local bit = _bit or 0
 	local text_buffer = zword_to_zaddress(baddr1)
 	local parse_buffer = zword_to_zaddress(baddr2)
@@ -309,7 +307,6 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 				set_zword(parse_buffer, word_addr)
 				set_zbyte(parse_buffer+0x.0002, #word)
 				set_zbyte(parse_buffer+0x.0003, index+offset)
-				-- log("  [prs] token for "..word..": "..tohex(word_addr)..', '..#word..', '..index+offset)
 			end
 			parse_buffer += 0x.0004
 			token_count += 1
@@ -553,7 +550,6 @@ function show_status()
 	end
 
 	local score = scorea..separator..scoreb..' '
-	-- score = tostr(stat(0))
 	local loc = ' '..sub(location, 1, 30-#score-2)
 	if (#loc < #location) loc = sub(loc, 1, -2)..chr(144)
 	local spacer_len = 32 - #loc - #score

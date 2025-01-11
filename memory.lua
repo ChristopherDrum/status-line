@@ -19,15 +19,10 @@ end
 
 function frame:stack_push(val)
 	add(self.stack,val)
-	-- log("pushing "..tostr(val)..", and now "..tostr(self.stack[#self.stack]))
 end
 
 function frame:stack_pop()
-	if #self.stack == 0 then
-		log("ERR: asked to pop beyond the this frame's stack count")
-		return nil
-	end
-	-- log("popping "..tostr(self.stack[#self.stack]))
+	if (#self.stack == 0) return nil
 	return deli(self.stack)
 end
 
@@ -73,12 +68,10 @@ end
 
 --may just be a zbyte, but storage is the same
 function stack_push(zword)
-	-- log('+ + stack_push: '..tohex(zword))
 	top_frame():stack_push(zword)
 end
 
 function stack_pop()
-	-- log('- - stack_pop: '..tohex(top_frame().stack))
 	return top_frame():stack_pop()
 end
 
@@ -93,16 +86,15 @@ function call_stack_pop()
 end
 
 function abbr_address(index)
-	--abbreviation addresses are word addresses (2*addr)
+	--abbr addresses are words (2*addr)
 	return zword_to_zaddress(get_zword(_abbr_table_mem_addr + (index >>> 15))<<1)
 end 
 
 --zobject_address(index) replaced with inline calculations
 --search for _zobject_address usage
 
---rather than passing off to set_zword, we'll do it here directly
+--rather than passing to set_zword, we'll do it directly
 function set_var(value, _var_byte, indirect)
-	-- log("  [mem] set_var: "..tostr(value)..','..tostr(var_byte))
 	local var_byte = _var_byte or get_zbyte()
 
 	if (var_byte == 0) then
@@ -137,7 +129,6 @@ function zword_to_zaddress(zaddress, _is_packed)
 	local is_packed = _is_packed or false
 	zaddress >>>= 16
 	if (is_packed == true) zaddress <<= _zm_packed_shift
-	-- log("zword_to_zaddress("..tostr(is_packed)..") returning: "..tohex(zaddress))
 	return zaddress
 end
 
@@ -149,14 +140,12 @@ end
 function get_dword(zaddress, indirect)
 	local zaddress = zaddress or _program_counter
 	-- log("  [mem] get_dword at address "..tohex(zaddress))
-	-- local base = (zaddress & 0xffff)
 
 	if zaddress < 0xa then
 		local bank = (zaddress & 0x000f) + 1
 		local za = ((zaddress<<16)>>>2) + 1 --contains index and cell
 		local index = za & 0xffff
 		local cell = (za & 0x.ffff) << 2
-		-- local bank, index, cell = get_memory_location(zaddress)
 		-- log("  [mem]  memory banks "..bank..','..index..','..cell)
 		return _memory[bank][index], bank, index, cell
 	end
@@ -186,7 +175,6 @@ function get_zbyte(zaddress)
 
 	local dword, _, _, cell  = get_dword(zaddress)
 	if (zaddress < 0xa) dword >>>= -((cell<<3)-8)
-	-- log('  [mem] get_zbyte from: '..tohex(zaddress).." --> "..sub(tohex(dword & 0xff),5,6))
 	return dword & 0xff
 end
 
@@ -204,11 +192,10 @@ end
 function set_zbyte(zaddress, _byte)
 	--log('  [mem] set_zbyte at '..tohex(zaddress)..' to value: '..tohex(byte))
 	local byte = _byte & 0xff --filter off garbage
-	-- local base = (zaddress & 0xffff)
-	-- assert(base != _local_var_table_mem_addr, "asked to write a zbyte to local var: "..tohex(zaddress))
+
 	if zaddress == _stack_mem_addr then
-		-- log('  [mem] setting stack: '..tohex(byte))
 		stack_push(byte)
+
 	elseif zaddress < 0xa then --regular memory
 		local dword, bank, index, cell  = get_dword(zaddress)
 		local offset = cell<<3
@@ -233,7 +220,7 @@ function get_zword(zaddress, indirect)
 		zaddress = _program_counter
 		_program_counter += 0x.0002
 	end
-	-- local base = (zaddress & 0xffff)
+
 	local dword, _, _, cell  = get_dword(zaddress, indirect)
 
 	if zaddress < 0xa then
@@ -243,16 +230,13 @@ function get_zword(zaddress, indirect)
 			dword |= (dwordb >>> 8)
 		end
 	end
-	-- log('  [mem] get_zword from: '..tohex(zaddress).." --> "..sub(tohex(dword & 0xff),3,6))
 	return dword & 0xffff
 end
 
 function set_zword(zaddress, _zword, indirect)
 	local zword = _zword & 0xffff --filter off garbage
-	-- log('  [mem] set_zword at: '..tohex(zaddress)..' to: '..sub(tohex(_zword),3,6))
 	
 	if zaddress == _stack_mem_addr then
-		-- log('  [mem] setting stack: '..tohex(zword))
 		if (indirect) set_stack_top(zword) else stack_push(zword)
 
 	elseif zaddress < 0xa then --this should also resolve global var access because those addresses are maintained by the zcode, not us
@@ -260,7 +244,6 @@ function set_zword(zaddress, _zword, indirect)
 		set_zbyte(zaddress+0x.0001, zword)
 
 	elseif zaddress >= _local_var_table_mem_addr then
-		-- log2("  setLocal: "..(zaddress<<16).." -> "..tohex(zword))
 		top_frame().vars[zaddress<<16] = zword
 	end
 end
@@ -287,10 +270,8 @@ function zobject_set_attribute(index, attribute_id, val)
 	if ((index < 1) or (val > 1)) return
 	-- log('  [mem] zobject_set_attribute: '..zobject_name(index)..', set attr '..attribute_id..' to: '..val)
 	local attr_byte, attr_bit, address = zobject_attributes_byte_bit(index, attribute_id)
-	-- log('     byte was: '..tohex(attr_byte))
 	attr_byte &= ~(0x80>>attr_bit)
 	attr_byte |= (val<<(7-attr_bit))
-	-- log('     byte now: '..tohex(attr_byte))
 	set_zbyte(address, attr_byte)
 end
 
@@ -573,41 +554,32 @@ function load_instruction()
 	end
 
 	-- Logging
-	local op_string = ''
-	for i = 1, #operands do
-		op_string ..= sub(tohex(operands[i]), 3, 6) .. ' '
-	end
-	log3(sub(tohex(pc), 6) .. ': ' .. op_table[#op_table][op_code + 1] .. '(' .. op_string .. ')')
+	-- local op_string = ''
+	-- for i = 1, #operands do
+	-- 	op_string ..= sub(tohex(operands[i]), 3, 6) .. ' '
+	-- end
+	-- log3(sub(tohex(pc), 6) .. ': ' .. op_table[#op_table][op_code + 1] .. '(' .. op_string .. ')')
 
 	return op_table[op_code + 1], operands
 end
 
 function capture_mem_state(state)
 
-	-- dynamic memory can never exceed 0xffff, so bank is always the first one
+	-- dynamic memory can never exceed 0xffff; just capture the whole memory chunk
 	local addr = _static_memory_mem_addr - 0x.0001
-	local mem_max_index = (((addr<<16)>>>2) + 1)&0xffff
+	-- local mem_max_index = (((addr<<16)>>>2) + 1)&0xffff
 	-- log3("capture_mem_state until addr: "..tohex(addr)..', index: '..mem_max_index)
-	if state != nil then
-		-- log('  [mem] capture _memory_start_state')
+	
+	if state == _memory_start_state then
 		_memory_start_state = {unpack(_memory[1])}
-		-- log3(" memory[1] len: "..#_memory[1]..', copy: '..#_memory_start_state)
 
-		while #_memory_start_state > mem_max_index do
-			deli(_memory_start_state)
-		end
-		-- log("  [mem] after memory_start_state with bank "..mem_max_bank..": "..stat(0))
-	else
+	elseif state == _current_state then
 
 		local memory_dump = dword_to_str(tonum(_engine_version))
 
-		-- log('  [mem] saving memory up to bank: '..mem_max_bank..', index: '..mem_max_index)
-		memory_dump ..= dword_to_str(mem_max_index)
-		for i = 1, mem_max_bank do
-			local max_j = (i == mem_max_bank) and mem_max_index or #_memory[i]
-			for j = 1, max_j do
-				memory_dump ..= dword_to_str(_memory[i][j])
-			end
+		--all of memory bank 1
+		for i = 1, _memory_bank_size do
+			memory_dump ..= dword_to_str(_memory[1][i])
 		end
 
 		-- log('  [mem] saving call stack: '..(#_call_stack))
@@ -632,7 +604,7 @@ function capture_mem_state(state)
 		end
 
 		-- log('  [mem] saving pc: '..(tohex(_program_counter,true)))
-		memory_dump ..= dword_to_str(_program_counter)
+		-- memory_dump ..= dword_to_str(_program_counter)
 		memory_dump ..= dword_to_str(checksum)
 
 		_current_state = memory_dump

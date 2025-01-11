@@ -8,7 +8,6 @@ _result = set_var
 function _branch(should_branch)
 	--log('branch called with should_branch: '..tostr(should_branch,true))
 	local branch_arg = get_zbyte()
-	--log('branch arg: '..tohex(branch_arg))
 	local reverse_arg = (branch_arg & 0x80) == 0
 	local big_branch = (branch_arg & 0x40) == 0
 	local offset = (branch_arg & 0x3f)
@@ -16,16 +15,13 @@ function _branch(should_branch)
 	if (reverse_arg == true) should_branch = not should_branch
 
 	if big_branch == true then
-		--log('big_branch evaluated')
 		if (offset > 31) offset -= 64
 		offset <<= 8
 		offset += get_zbyte()
 	end
 
-	--log('_program_counter at: '..tohex(_program_counter))
-	--log('branch offset at: '..offset)
+
 	if should_branch == true then
-		--log('should_branch is true')
 		if offset == 0 or offset == 1 then --same as rfalse/rtrue
 			_ret(offset)
 		else 
@@ -122,7 +118,6 @@ end
 --8.3 Arithmetic
 
 function _add(a, b)
-	-- log("  [ops] _add: "..a.."("..tohex(a)..") "..b.."("..tohex(b)..")")
 	_result(a + b)
 end
 
@@ -148,36 +143,30 @@ end
 function _inc(var)
 	local zword = get_var(var) + 1
 	_result(zword, var)
-	-- return zword
 end
 
 function _dec(var)
 	local zword = get_var(var) - 1 
 	_result(zword, var)
-	-- return zword
 end
 
 function _inc_jg(var, s)
-	-- local val = _inc(var)
 	local zword = get_var(var) + 1
 	_result(zword, var)
 	_branch(zword > s)
 end
 
 function _dec_jl(var, s)
-	-- local val = _dec(var)
 	local zword = get_var(var) - 1 
 	_result(zword, var)
 	_branch(zword < s)
 end
 
 function _or(a, b)
-	-- log("  [ops] _add: "..a.."("..tohex(a)..") "..b.."("..tohex(b)..")")
 	_result(a | b)
 end
 
 function _and(a, b)
-	-- log("  [ops] _and: "..a.."("..tohex(a)..") "..b.."("..tohex(b)..")")
 	_result(a & b)
 end
 
@@ -198,12 +187,10 @@ end
 --8.4 Comparisons and jumps
 
 function _jz(a)
-	-- log("  [ops] _jz: "..a.."("..tohex(a)..")")
 	_branch(a == 0)
 end
 
 function _je(a, b1, b2, b3)
-	-- log("  [ops] _je: "..a.."("..tohex(a)..") "..tostr(b1).."("..tohex(b1)..")"..tostr(b2).."("..tohex(b2)..")"..tostr(b3).."("..tohex(b3)..")")
 	if b1 then
 		if (a == b1 or a == b2 or a == b3) then
 			_branch(true)
@@ -216,12 +203,10 @@ function _je(a, b1, b2, b3)
 end
 
 function _jl(s, t)
-	-- log("  [ops] _jl: "..s.."("..tohex(s)..") "..t.."("..tohex(t)..")")
 	_branch(s < t)
 end
 
 function _jg(s, t)
-	-- log("  [ops] _jg: "..s.."("..tohex(s)..") "..t.."("..tohex(t)..")")
 	_branch(s > t)
 end
 
@@ -257,11 +242,9 @@ end
 function _call_fp(type, raddr, a1, a2, a3, a4, a5, a6, a7)
 	
 	if raddr == 0x0 then
-		if type == call_type.func then
-			_result(0)
-		else
-			return
-		end
+		if (type == call_type.proc) return
+		_result(0)
+
 	else
 		--z3/4 formula is "r = r + 2 ∗ L + 1"
 		--z5 formula is "r = r + 1"
@@ -296,21 +279,16 @@ function _call_fp(type, raddr, a1, a2, a3, a4, a5, a6, a7)
 		if (_zm_version < 5) top_frame().pc = r
 		top_frame().call = type
 		top_frame().args = n
-		-- log3("  frame #"..#_call_stack..": pc at: "..tohex(top_frame().pc))
-		-- if (#_call_stack >= 4) log3("  d frame #4: pc at: "..tohex(_call_stack[4].pc))
 
 		_program_counter = top_frame().pc
-		-- if (#_call_stack >= 4) log3("  e frame #4: pc at: "..tohex(_call_stack[4].pc))
 
 		--in an interrupt, the normal instruction load loop is not run
-		--so we have to run it manually here 
+		--so we run it manually here 
 		if type == call_type.intr then
-			-- if (#_call_stack >= 4) log3("  f frame #4: pc at: "..tohex(_call_stack[4].pc))
 			while _program_counter != 0x0 do
 				-- log3(" --- running timed routine ---")
 				local func, operands = load_instruction()
 				func(unpack(operands))
-				-- log3("  frame #"..#_call_stack..": pc at: "..tohex(top_frame().pc))
 			end
 			top_frame().pc = fpc
 			_program_counter = pc
@@ -346,7 +324,6 @@ function _ret_pulled()
 end
 
 function _check_arg_count(n)
-	-- log("  [ops] _check_arg_count: "..tostr(n)..' vs. frame #'..#_call_stack..", "..tostr(top_frame().args))
 	_branch(top_frame().args >= n)
 end
 
@@ -370,7 +347,6 @@ function _get_family_member(obj, fam)
 	-- log('  [ops] _get_family_member: '..zobject_name(obj))
 	local member = zobject_family(obj, fam)
 	if (not member) member = 0
-	-- if (member != 0) log('  found: '..zobject_name(member)..'('..fam..')')
 	_result(member)
 	if (fam != zparent) _branch(member != 0)
 end
@@ -415,7 +391,7 @@ end
 
 function _insert_obj(obj1, obj2)
 	if (obj1 == 0 or obj2 == 0) return
-	-- log('  [ops] insert_obj: '..zobject_name(obj1)..'('..obj1..')'..' into '..zobject_name(obj2)..'('..obj2..')')
+
 	_remove_obj(obj1)
 	local first_child = zobject_family(obj2, zchild)
 	zobject_set_family(obj2, zchild, obj1)
@@ -476,7 +452,6 @@ end
 --8.7 Windows
 
 function _split_screen(lines)
-	-- log('  [ops] _split_screen: '..lines)
 	flush_line_buffer(1)
 	flush_line_buffer(0)
 
@@ -499,7 +474,6 @@ function _split_screen(lines)
 end
 
 function _set_window(win)
-	log3('  [ops] _set_window: '..win)
 	flush_line_buffer()
 	active_window = win
 	if _zm_version < 4 then 
@@ -512,14 +486,12 @@ end
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
 --autosplitting Nord & Bert revealed status line bug (!)
 function _set_cursor(lin, col)
-	log3('  [drw] _set_cursor: line '..lin..', col '..col)
 	if (_zm_version > 3 and active_window == 0) return
 	flush_line_buffer()
 	set_z_cursor(active_window,col,lin)
 end
 
 function _get_cursor(baddr)
-	log3('  [ops] _get_cursor: '..tohex(baddr))
 	baddr = zword_to_zaddress(baddr)
 	local zx,zy = unpack(windows[active_window].z_cursor)
 	set_zword(baddr, zy)
@@ -529,7 +501,6 @@ end
 --_buffer_mode; not sure this applies to us so _nop() for now
 
 function _set_color(byte0, byte1)
-	-- log('  [ops] _set_color: fg = '..byte0..', bg = '..byte1)
 	if byte0 > 0 then
 		current_fg = (byte0 > 1) and byte0 
 		or get_zbyte(_default_fg_color_addr)
@@ -544,7 +515,6 @@ end
 --_set_text_style defined in io.lua
 
 function _set_font(n)
-	-- log('  [ops] _set_font: '..n)
 	_result(0)
 end
 
@@ -553,7 +523,6 @@ end
 --8.8 Input and output streams
 
 function _output_stream(_n, baddr, w)
-	log3('  [ops] output_stream: '.._n..', '..tohex(baddr)..', '..tostr(w))
 	if (_n == 0) return
 
 	local n, on_off = abs(_n), (_n > 0)
@@ -584,7 +553,7 @@ function _output_stream(_n, baddr, w)
 end
 
 function _input_stream(n)
-	log3('  [ops] _input_stream '..n)
+	-- log3('  [ops] _input_stream '..n)
 end
 
 
@@ -593,7 +562,6 @@ end
 
 function _read(baddr1, baddr2, time, raddr)
 	if (not _interrupt) then
-		-- log('  [ops] _read: '..tohex(baddr1)..','..tohex(baddr2)..', time: '..tohex(time)..', '..tohex(raddr))
 		flush_line_buffer()
 		--cache addresses for capture_input()
 		z_text_buffer = baddr1
@@ -639,7 +607,6 @@ end
 --8.10 Character based output
 
 function _print_char(n)
-	log3('  [prt] _print_char: '..n)
 	if (n == 10) n = 13	
 	if (n != 0) output(chr(n))
 end
@@ -653,45 +620,39 @@ function _new_line()
 end
 
 function _print(string)
-	-- log3('  [prt] _print')
 	local zstring = get_zstring(string)
 	output(zstring)
 end
 
 function _print_rtrue(string)
-	-- log3('  [prt] _print_rtrue')
 	_print(string)
 	_new_line()
 	_rtrue()
 end
 
 function _print_addr(baddr, is_packed)
-	log3('  [prt] print_addr')
 	local zaddress = zword_to_zaddress(baddr, is_packed)
 	_print(zaddress)
 end
 
 function _print_paddr(saddr)
-	-- log3('  [prt] print_paddr')
 	_print_addr(saddr, true)
 end
 
 function _print_num(s)
-	log3('  [prt] _print_num: '..s)
 	output(tostr(s))
 end
 
 function _print_obj(obj)
 	if (obj == 0) return
 	local name = zobject_name(obj)
-	log3('  [prt] print_obj: '..name)
 	output(name)
 end
 
 function _print_table(baddr, width, _height, _skip)
 	local skip = _skip or 0
 	local height = _height or 1
-	-- log3('  [ops] _print_table to win '..active_window..': '..tohex(baddr)..','..width..','..height..','..skip)
+
 	local za = zword_to_zaddress(baddr)
 	local zx, zy = unpack(windows[active_window].z_cursor)
 	for i = 1, height do
@@ -714,7 +675,6 @@ end
 --8.11 Miscellaneous screen output
 
 function _erase_line(val)
-	log3('  [drw] erase_line: '..val)
 	if val == 1 then
 		local px,py = unpack(windows[active_window].p_cursor)
 		rectfill(px,py,128,py+5,current_bg)
@@ -722,7 +682,6 @@ function _erase_line(val)
 end
 
 function _erase_window(win)
-	log3('  [drw] _erase_window: '..win)
 	if win >= 0 then
 		local a,b,c,d = unpack(windows[win].screen_rect)
 		clip(a,b,c,d)
@@ -776,7 +735,6 @@ function _restore()
 end
 
 function _deny_undo()
-	-- log("  [ops] _deny_undo")
 	_result(-1)
 end
 
@@ -784,7 +742,6 @@ end
 --8.14 Miscellaneous
 
 function _nop()
-	-- log('_nop: ')
 end
 
 function _random(s)
