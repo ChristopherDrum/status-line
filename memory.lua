@@ -596,16 +596,16 @@ function capture_mem_state(state)
 				memory_dump ..= dword_to_str(frame.stack[j])
 				-- log("  [mem]  "..j..': '..tohex(frame.stack[j])..' -> '..dword_to_str(frame.stack[j]))
 			end
-			-- log("  [mem] ---frame vars---")
+			log("  [mem] ---capture frame vars---")
 			for k = 1, 16 do
 				memory_dump ..= dword_to_str(frame.vars[k])
-				-- log("  [mem]  "..k..": "..tohex(frame.vars[k])..' -> '..dword_to_str(frame.vars[k]))
+				log("  [mem]  "..k..": "..tohex(frame.vars[k])..' -> '..dword_to_str(frame.vars[k]))
 			end
 		end
 
 		-- log('  [mem] saving pc: '..(tohex(_program_counter,true)))
 		-- memory_dump ..= dword_to_str(_program_counter)
-		memory_dump ..= dword_to_str(checksum)
+		memory_dump ..= dword_to_str(game_id)
 
 		_current_state = memory_dump
 	end

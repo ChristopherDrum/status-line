@@ -11,7 +11,7 @@ function save_game(char)
 	--do the save
 	if char == '\r' then
 		capture_mem_state(_current_state)
-		local filename = current_input..'_'..game_id()..'_save'
+		local filename = current_input..'_'..game_id..'_save'
 		printh(_current_state, filename, true)
 		current_input, visible_input = '', ''
 		show_warning = true
@@ -25,7 +25,7 @@ end
 
 function restore_game()
 
-	output('Drag in a '..game_id()..'_save.p8l file or any key to exit.\n', true)
+	output('Drag in a '..game_id..'_save.p8l file or any key to exit.\n', true)
 	extcmd("folder")
 
 	--hang out waiting for a file drop or keypress
@@ -52,12 +52,11 @@ function restore_game()
 		end
 	end
 
-	local save_checksum = dword_to_str(temp[#temp])
-	local this_checksum = dword_to_str(checksum)
+	local save_id = dword_to_str(temp[#temp])
+	log(" restore game_id says: "..save_id.." vs. "..game_id)
 
-	if save_checksum != this_checksum then
+	if save_id != game_id then
 		output('This save file appears to be for a different game.\n')
-		output(save_checksum..' vs. '..this_checksum..'\n', true)
 		return (_zm_version == 3) and false or 0
 	end
 
@@ -93,14 +92,15 @@ function restore_game()
 		end
 		index += 3 + stack_length --now points to last item on frame stack
 
-		-- log3("---frame vars---")
+		log("---restoring frame vars---")
 		for k = 1, 16 do
 			frame.vars[k] = temp[index + k]
+			log("  "..k..":"..frame.vars[k])
 		end
 		add(_call_stack, frame)
 		index += 17 --bring us to the start of next frame
 	end
 
 	current_input = ''
-	return (_zm_version == 3) and true or 2
+	return (_zm_version == 3) and true or 1
 end

@@ -9,7 +9,7 @@ _engine_version = '3.0'
 _program_counter = 0x0
 _interrupt = nil
 
-checksum = 0x0
+game_id = 0x0
 story_loaded, full_color = false, false
 
 punc = '.,!?_#\'"/\\-:()'
@@ -79,7 +79,7 @@ function tohex(value, full)
 	return hex
 end
 
-function log3(str)
+function log(str)
 	printh(str, '_status_line_log_30')
 end
 
@@ -116,7 +116,7 @@ function _init()
 	poke(0x5f36,0x4)
 	memcpy(0x5600,0x2000,0x800)
 
-	cartdata('drum_statusline_3')
+	cartdata('drum_statusline_1')
 
 	rehydrate_menu_vars()
 	build_menu('screen', 0, screen_types)
@@ -149,12 +149,6 @@ function draw_splashscreen(did_load)
 
 	-- color()
 	-- flip()
-end
-
-function game_id()
-	local id = checksum
-	if (_zm_version == 3) id = get_zword(_static_memory_mem_addr)
-	return tohex(id, false)
 end
 
 function setup_palette()
@@ -302,12 +296,16 @@ function process_header()
 	_static_memory_mem_addr = zaddress_at_zaddress(_static_memory_header_addr)
 	_zobject_address 		= _object_table_mem_addr + (_zm_object_property_count>>>15)
 
-	checksum = get_zword(_file_checksum_header_addr)
-	-- log3("game checksum: "..tohex(checksum))
+	game_id = get_zword(_file_checksum_header_addr)
+	log(tostr(game_id, 3))
+	if (game_id == 0) game_id = _static_memory_mem_addr << 16
+	log(tostr(_static_memory_mem_addr<<16, 3))
+	game_id = tohex(game_id, false)
+	log("checksum/game_id): "..game_id)
 
 	--patches for specific games; just saving tokens by putting it here :/
-	if (checksum == 0x16ab) set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
-	if (checksum == 0x4860 or checksum == 0xfc65) set_zbyte(_screen_width_header_addr, 40) --amfv, bur
+	if (game_id == 0x16ab) set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
+	if (game_id == 0x4860 or game_id == 0xfc65) set_zbyte(_screen_width_header_addr, 40) --amfv, bur
 end
 
 function initialize_game()

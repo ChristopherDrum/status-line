@@ -86,7 +86,7 @@ function _set_text_style(n)
 	local font_shift = (n&2 == 2 or n&4 == 4) and '\014' or '\015'
 	font_width = (n&2 == 2) and 5 or 4
 
-	if (checksum == 0xfc65 or checksum == 0x91e0) and active_window == 1 then -- Bureaucracy MP & SLC
+	if (game_id == 0xfc65 or game_id == 0x91e0) and active_window == 1 then -- Bureaucracy MP & SLC
 		if (n&4 == 2) n	&= 0xb --suppress the bold bit; maybe not the best idea
 	end
 
