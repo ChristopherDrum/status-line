@@ -304,8 +304,8 @@ function process_header()
 	log("checksum/game_id): "..game_id)
 
 	--patches for specific games; just saving tokens by putting it here :/
-	if (game_id == 0x16ab) set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
-	if (game_id == 0x4860 or game_id == 0xfc65) set_zbyte(_screen_width_header_addr, 40) --amfv, bur
+	if (game_id == "16ab") set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
+	if (game_id == "4860" or game_id == "fc65") set_zbyte(_screen_width_header_addr, 40) --amfv, bur
 end
 
 function initialize_game()

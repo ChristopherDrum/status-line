@@ -603,10 +603,7 @@ function capture_mem_state(state)
 			end
 		end
 
-		-- log('  [mem] saving pc: '..(tohex(_program_counter,true)))
-		-- memory_dump ..= dword_to_str(_program_counter)
-		memory_dump ..= dword_to_str(game_id)
-
+		memory_dump ..= game_id.."0000"
 		_current_state = memory_dump
 	end
 end

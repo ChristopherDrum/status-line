@@ -52,7 +52,7 @@ function restore_game()
 		end
 	end
 
-	local save_id = dword_to_str(temp[#temp])
+	local save_id = tohex(temp[#temp], false)
 	log(" restore game_id says: "..save_id.." vs. "..game_id)
 
 	if save_id != game_id then
