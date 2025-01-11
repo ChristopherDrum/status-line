@@ -81,7 +81,7 @@ function _set_text_style(n)
 	-- log("  [drw] _set_text_style to: "..n)
 	if (n > 0) n |= current_text_style
 
-	local inverse = (n&1 == 1) and '\^i' or '\^-i'
+	local inverse = (n&1 == 1) and '\^i' or '\^-i\^-b'
 	if (n&4 == 4 and n&2 != 2) inverse ..= "\^-b"
 	local font_shift = (n&2 == 2 or n&4 == 4) and '\014' or '\015'
 	font_width = (n&2 == 2) and 5 or 4
@@ -507,7 +507,7 @@ function capture_input(char)
 		end
 
 	else
-		process_input_char(nil, nil)
+		if (active_window == 0) process_input_char(nil, nil)
 
 		if z_timed_routine then
 			local current_time = stat(94)*60 + stat(95)
