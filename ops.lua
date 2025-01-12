@@ -242,7 +242,7 @@ end
 function _call_fp(type, raddr, a1, a2, a3, a4, a5, a6, a7)
 	
 	if raddr == 0x0 then
-		if (type == call_type.proc) return
+		if (type != call_type.func) return
 		_result(0)
 
 	else

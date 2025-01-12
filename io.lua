@@ -193,7 +193,7 @@ function flush_line_buffer(_w)
 	while #buffer > 0 do
 
 		local str = deli(buffer, 1)
-		if (str == text_style..text_colors) goto continue 
+		-- if (str == text_style..text_colors) goto continue 
 		
 		-- Pagination needed first?
 		if w == 0 and lines_shown == (win.h - 1) then
@@ -216,7 +216,7 @@ function flush_line_buffer(_w)
 		win.last_line = str
 		screen(str)
 
-		::continue::
+		-- ::continue::
 	end
 	clip()
 end
