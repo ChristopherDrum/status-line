@@ -476,11 +476,7 @@ end
 function _set_window(win)
 	flush_line_buffer()
 	active_window = win
-	if _zm_version < 4 then 
-		if (win == 1) _erase_window(1)
-	else 
-		_set_cursor(1,1)
-	end
+	if (win == 1) _set_cursor(1,1)
 end
 
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
@@ -684,14 +680,27 @@ end
 function _erase_window(win)
 	if win >= 0 then
 		local a,b,c,d = unpack(windows[win].screen_rect)
-		clip(a,b,c,d)
-		cls(current_bg)
-		clip()
+		rectfill(a,b,c,d,current_bg)
+
+		if win == 1 then
+			set_z_cursor(win, 1, 1)
+		else
+			if _zm_version >= 5 then
+				set_z_cursor(win, 1, 1)
+			else
+				set_z_cursor(win, 1, windows[win].h)
+			end
+		end
 
 	elseif win == -1 then
 		_split_screen(0)
+		active_window = 0
 		cls(current_bg)
-		if (_zm_version >= 5) _set_cursor(1,1)
+		if _zm_version < 5 then
+			set_z_cursor(0, 1, windows[0].h)
+		else
+			set_z_cursor(0, 1, 1)
+		end
 	
 	elseif win == -2 then
 		cls(current_bg)

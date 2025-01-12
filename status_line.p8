@@ -323,7 +323,7 @@ function initialize_game()
 	top_frame().args = 0
 
 	if (#_memory_start_state == 0) _memory_start_state = {unpack(_memory[1])}
-	_split_screen(0)
+	_erase_window(-1) --"the operation should happen at the start of a game"
 	_set_text_style(0)
 	update_text_colors()
 	story_loaded = true

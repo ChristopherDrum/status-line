@@ -89,8 +89,6 @@ function restore_game()
 		end
 	end
 
-	log("temp size after loading from serial: "..#temp)
-
 	local index = 1
 	local save_engine = temp[index]
 	-- log(" restore save_engine says raw: "..save_engine..", _engine_version: "..tonum(_engine_version))

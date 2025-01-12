@@ -57,6 +57,7 @@ function reset_io_state()
 		}
 	}
 
+	if (_zm_version >= 5) windows[0].z_cursor = {1,1}
 	origin_y = (_zm_version == 3) and 7 or 0
 	windows[0].h = _zm_screen_height
 
@@ -115,6 +116,89 @@ function memory(str)
 	local p8bytes = pack(ord(str,1,#str))
 	set_zbytes(addr + 0x.0002 + (table_len>>>16), p8bytes)
 	set_zword(addr, table_len + #p8bytes)
+end
+
+--actually put text onto the screen and adjust the z_cursor to reflect the new state
+function screen(str)
+	local win = windows[active_window]
+	local zx, zy = unpack(win.z_cursor)
+	log("  [drw] screen("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
+
+	if active_window == 0 then
+		if reuse_last_line == true then
+			--skip the line scroll
+		else
+			print(text_colors..'\n')
+		end
+		rectfill(0,121,128,128,current_bg)
+
+		--print the line to screen and update the lines_shown count 
+		--this will be caught by pagination on the next line flushed
+		local pixel_count = print('\^d'..emit_rate..str, 1, 122) - 1
+		if reuse_last_line == true then
+			reuse_last_line = false
+			if (pixel_count > 127 and _interrupt == capture_line) then
+				rectfill(0,121,128,128,current_bg)
+				print('\^d'..emit_rate..str, 1-(pixel_count-124), 122)
+			end
+		end
+		
+		zx = ceil(pixel_count>>2) -- z_cursor starts at 1,1
+		zy = win.h
+		lines_shown += 1
+	else
+		local px, py = unpack(win.p_cursor)
+		local pixel_count = print(str, px, py) - px
+
+		zx += ceil(pixel_count>>2)
+		if did_trim_nl == true then --I think this will only trigger on z3 games
+			--from docs: "the upper window should never be scrolled"
+			zx = 1
+			zy += 1
+		end
+	end
+
+	set_z_cursor(active_window, zx, zy)
+	-- log3("   z_cursor moved to: "..zx..','..zy)
+	flip()
+end
+
+--buffered lines receive pagination
+function flush_line_buffer(_w)
+	local w = _w or active_window
+	local win = windows[w]
+	local buffer = win.buffer
+
+	if (#buffer == 0 or win.h == 0) return
+
+	clip(unpack(win.screen_rect))
+	while #buffer > 0 do
+
+		local str = deli(buffer, 1)
+		
+		-- Pagination needed first?
+		if w == 0 and lines_shown == (win.h - 1) then
+			screen("\^i"..text_colors.."          - - MORE - -          ")
+			reuse_last_line, lines_shown = true, 0
+			wait_for_any_key()
+			lines_shown = 0
+		end
+
+		-- Trim newline if present
+		did_trim_nl = false
+		if _zm_version == 3 and w == 1 then
+			if str[-1] == '\n' then
+				str = sub(str, 1, -2)
+				did_trim_nl = true
+			end
+		end
+
+		-- Display the line and track it
+		win.last_line = str
+		screen(str)
+
+	end
+	clip()
 end
 
 --process word wrapping into a buffer
@@ -179,100 +263,6 @@ function output(str, flush_now)
 	-- add remaining content to buffer and flush
 	if (#current_line) add(buffer, current_line)
 	if (_interrupt or flush_now) flush_line_buffer()
-end
-
---buffered lines receive pagination
-function flush_line_buffer(_w)
-	local w = _w or active_window
-	local win = windows[w]
-	local buffer = win.buffer
-
-	if (#buffer == 0 or win.h == 0) return
-
-	clip(unpack(win.screen_rect))
-	while #buffer > 0 do
-
-		local str = deli(buffer, 1)
-		-- if (str == text_style..text_colors) goto continue 
-		
-		-- Pagination needed first?
-		if w == 0 and lines_shown == (win.h - 1) then
-			screen("\^i"..text_colors.."          - - MORE - -          ")
-			reuse_last_line, lines_shown = true, 0
-			wait_for_any_key()
-			lines_shown = 0
-		end
-
-		-- Trim newline if present
-		did_trim_nl = false
-		if _zm_version == 3 and w == 1 then
-			if str[-1] == '\n' then
-				str = sub(str, 1, -2)
-				did_trim_nl = true
-			end
-		end
-
-		-- Display the line and track it
-		win.last_line = str
-		screen(str)
-
-		-- ::continue::
-	end
-	clip()
-end
-
---actually put text onto the screen and adjust the z_cursor to reflect the new state
-function screen(str)
-	local win = windows[active_window]
-	local zx, zy = unpack(win.z_cursor)
-	-- log3("   window "..active_window.." z_cursor start at: "..zx..','..zy)
-	-- log3("  [drw] screen ("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
-
-	if active_window == 0 then
-		if reuse_last_line == true then
-			--skip the line scroll
-			-- log3("  REUSE LINE")
-
-		else
-			print(text_colors..'\n')
-		end
-		rectfill(0,121,128,128,current_bg)
-		-- zx, zy = 1, win.h
-
-		--print the line to screen and update the lines_shown count 
-		--this will be caught by pagination on the next line flushed
-		local pixel_count = print('\^d'..emit_rate..str, 1, 122) - 1
-		if reuse_last_line == true then
-			reuse_last_line = false
-			if (pixel_count > 127 and _interrupt == capture_line) then
-				rectfill(0,121,128,128,current_bg)
-				print('\^d'..emit_rate..str, 1-(pixel_count-124), 122)
-			end
-		end
-		
-		zx = ceil(pixel_count>>2) -- z_cursor starts at 1,1
-		zy = win.h
-		lines_shown += 1
-	else
-		local px, py = unpack(win.p_cursor)
-		local pixel_count = print(str, px, py) - px
-
-		zx += flr(pixel_count>>2)
-		if did_trim_nl == true then --I think this will only trigger on z3 games
-			if zy == win.h then --make room
-				wait_for_any_key()
-				print("",0,122)
-				print("")
-				rectfill(0,py,128,128,current_bg)
-			end	
-			zx = 1
-			zy += 1
-		end
-	end
-
-	set_z_cursor(active_window, zx, zy)
-	-- log3("   z_cursor moved to: "..zx..','..zy)
-	flip()
 end
 
 function _tokenise(baddr1, baddr2, baddr3, _bit)
