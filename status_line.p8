@@ -297,11 +297,11 @@ function process_header()
 	_zobject_address 		= _object_table_mem_addr + (_zm_object_property_count>>>15)
 
 	game_id = get_zword(_file_checksum_header_addr)
-	log(tostr(game_id, 3))
+	-- log(tostr(game_id, 3))
 	if (game_id == 0) game_id = _static_memory_mem_addr << 16
-	log(tostr(_static_memory_mem_addr<<16, 3))
+	-- log(tostr(_static_memory_mem_addr<<16, 3))
 	game_id = tohex(game_id, false)
-	log("checksum/game_id): "..game_id)
+	-- log("checksum/game_id: "..game_id)
 
 	--patches for specific games; just saving tokens by putting it here :/
 	if (game_id == "16ab") set_zbyte(0x.fddd,1) --trinity, thanks @fredrick
@@ -322,7 +322,7 @@ function initialize_game()
 	top_frame().pc = _program_counter
 	top_frame().args = 0
 
-	if (#_memory_start_state == 0) capture_mem_state(_memory_start_state)
+	if (#_memory_start_state == 0) _memory_start_state = {unpack(_memory[1])}
 	_split_screen(0)
 	_set_text_style(0)
 	update_text_colors()

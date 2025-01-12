@@ -563,51 +563,6 @@ function load_instruction()
 	return op_table[op_code + 1], operands
 end
 
-function capture_mem_state(state)
-
-	-- dynamic memory can never exceed 0xffff; just capture the whole memory chunk
-	local addr = _static_memory_mem_addr - 0x.0001
-	-- local mem_max_index = (((addr<<16)>>>2) + 1)&0xffff
-	-- log3("capture_mem_state until addr: "..tohex(addr)..', index: '..mem_max_index)
-	
-	if state == _memory_start_state then
-		_memory_start_state = {unpack(_memory[1])}
-
-	elseif state == _current_state then
-
-		local memory_dump = dword_to_str(tonum(_engine_version))
-
-		--all of memory bank 1
-		for i = 1, _memory_bank_size do
-			memory_dump ..= dword_to_str(_memory[1][i])
-		end
-
-		-- log('  [mem] saving call stack: '..(#_call_stack))
-		memory_dump ..= dword_to_str(#_call_stack)
-		for i = 1, #_call_stack do
-			local frame = _call_stack[i]
-			memory_dump ..= dword_to_str(frame.pc)
-			memory_dump ..= dword_to_str(frame.call)
-			memory_dump ..= dword_to_str(frame.args)
-			-- log("  [mem] saving frame"..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args))
-			memory_dump ..= dword_to_str(#frame.stack)
-			-- log("  [mem] ---frame stack---")
-			for j = 1, #frame.stack do
-				memory_dump ..= dword_to_str(frame.stack[j])
-				-- log("  [mem]  "..j..': '..tohex(frame.stack[j])..' -> '..dword_to_str(frame.stack[j]))
-			end
-			log("  [mem] ---capture frame vars---")
-			for k = 1, 16 do
-				memory_dump ..= dword_to_str(frame.vars[k])
-				log("  [mem]  "..k..": "..tohex(frame.vars[k])..' -> '..dword_to_str(frame.vars[k]))
-			end
-		end
-
-		memory_dump ..= game_id.."0000"
-		_current_state = memory_dump
-	end
-end
-
 function load_story_file()
 	clear_all_memory()
 	while stat(120) do
