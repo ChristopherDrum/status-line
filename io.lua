@@ -186,7 +186,7 @@ function flush_line_buffer(_w)
 
 		-- Trim newline if present
 		did_trim_nl = false
-		if _zm_version == 3 and w == 1 then
+		if w == 1 then
 			if str[-1] == '\n' then
 				str = sub(str, 1, -2)
 				did_trim_nl = true
