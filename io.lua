@@ -203,8 +203,9 @@ end
 
 --process word wrapping into a buffer
 local break_index = 0
+local unicode_adjust = false
 function output(str, flush_now)
-	-- log3('  [drw] output to window '..active_window..', raw str: '..str)
+	log('[drw] output to window '..active_window..', raw str: '..str)
 	if (mem_stream == true) memory(str) return
 	if (screen_stream == false) return
 
@@ -224,14 +225,15 @@ function output(str, flush_now)
 	local pixel_len = print(current_line, 0, -20)
 
 	for i = 1, #str do
-		local char = case_setter(str[i], flipcase)
+		local char, is_unicode = case_setter(str[i], flipcase)
 		local c = char
-		
+		unicode_adjust = is_unicode
+
 		-- estimate the total visual length
 		if (char != '\n') pixel_len += font_width
 
-		-- switch into bold font, if needed
-		if current_text_style & 2 == 2 then --bold characters sit in shifted range
+		-- switch into bold font (except unicode), if needed
+		if (current_text_style & 2 == 2) and (unicode_adjust == false) then --bold chars sit in shifted range
 			if (char >= ' ') char = chr(ord(char) + 96)
 		end
 
@@ -243,12 +245,11 @@ function output(str, flush_now)
 		-- but we need the length of the line AFTER the char was added
 		if (in_set(c, " \n:-_;")) break_index = #current_line
 
-		-- log3("   at char: "..c..", pixel length now at: "..pixel_len)
-
 		-- handle right border and newline wrap triggers
 		if pixel_len > 128 or c == '\n' then
 			if (break_index == 0) break_index = #current_line-1
 			local first, second = unpack(split(current_line, break_index, false))
+			if (unicode_adjust == true) first ..= "\|e"
 			add(buffer, first)
 
 			second = second or ''
@@ -257,6 +258,7 @@ function output(str, flush_now)
 			current_line = current_format..second
 			pixel_len = print(current_line, 0, -20)
 			break_index = 0
+			unicode_adjust = false
 		end
 	end
 
@@ -372,6 +374,7 @@ end
 --ASCII holds capital letters in a different range than P8SCII does
 --So 'Q' typed becomes '...', which we have to remap to P8's 'Q'
 lowercase, visual_case, flipcase = 1, 2, 3
+local uc = {}
 function case_setter(char, case)
 	local o = ord(char)
 
@@ -396,10 +399,13 @@ function case_setter(char, case)
 			o += 32
 		elseif o == 13 then
 			o = 10
+		elseif o >= 161 then
+			log("asked to print unicode "..o)
+			return uc[o], true
 		end
 	end
 
-	return chr(o)
+	return chr(o), false
 end
 
 function process_input_char(char, max_length)
