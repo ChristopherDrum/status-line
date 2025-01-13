@@ -608,13 +608,7 @@ function _print_char(n)
 end
 
 function _print_unicode(c)
-	if c <= 126 then
-		-- normal ascii, stop evaluation early
-	elseif c >= 161 and c <= 255 then
-		c += 1000 --append one-off char indicator
-	else
-		c = 63 --unknown, default to "?"
-	end
+	if (c > 255) c = 63 --unsupported, default to "?"
 	_print_char(c)
 end
 
