@@ -576,7 +576,7 @@ function _read(baddr1, baddr2, time, raddr)
 		current_input, visible_input = '', ''
 		z_text_buffer, z_parse_buffer, _interrupt = nil, nil, nil
 		z_timed_interval, z_timed_routine, z_current_time = 0, nil, 0
-		if (_zm_version > 4) _result(baddr1) --receives 13 from normal read, 
+		if (_zm_version > 4) _result(baddr1) --receives 13 from capture_input
 	end
 end
 

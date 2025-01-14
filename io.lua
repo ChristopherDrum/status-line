@@ -61,7 +61,7 @@ function reset_io_state()
 	origin_y = (_zm_version == 3) and 7 or 0
 	windows[0].h = _zm_screen_height
 
-	did_trim_nl, clear_last_line = false, false
+	did_trim_nl, reuse_last_line = false, false
 	lines_shown = 0
 
 	z_text_buffer, z_parse_buffer = nil, nil
@@ -121,25 +121,28 @@ end
 --actually put text onto the screen and adjust the z_cursor to reflect the new state
 function screen(str)
 	local win = windows[active_window]
+	clip(unpack(win.screen_rect))
 	local zx, zy = unpack(win.z_cursor)
-	log("  [drw] screen("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
+	-- log("  [drw] screen("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
 
 	if active_window == 0 then
-		if reuse_last_line == true then
-			--skip the line scroll
-		else
-			print(text_colors..'\n')
-		end
+		-- log(" -- reuse last line says: "..tostr(reuse_last_line))
+		if (reuse_last_line == false) print("\n")
+
+		-- log(" -- blanking the last line")
 		rectfill(0,121,128,128,current_bg)
 
 		--print the line to screen and update the lines_shown count 
 		--this will be caught by pagination on the next line flushed
+		-- log(" -- printing the string")
 		local pixel_count = print('\^d'..emit_rate..str, 1, 122) - 1
+
 		if reuse_last_line == true then
 			reuse_last_line = false
 			if (pixel_count > 127 and _interrupt == capture_line) then
 				rectfill(0,121,128,128,current_bg)
 				print('\^d'..emit_rate..str, 1-(pixel_count-124), 122)
+				-- log(" -- blanked and printed the string a second time (shifted)")
 			end
 		end
 		
@@ -151,7 +154,7 @@ function screen(str)
 		local pixel_count = print(str, px, py) - px
 
 		zx += ceil(pixel_count>>2)
-		if did_trim_nl == true then --I think this will only trigger on z3 games
+		if did_trim_nl == true then
 			--from docs: "the upper window should never be scrolled"
 			zx = 1
 			zy += 1
@@ -160,6 +163,7 @@ function screen(str)
 
 	set_z_cursor(active_window, zx, zy)
 	-- log3("   z_cursor moved to: "..zx..','..zy)
+	clip()
 	flip()
 end
 
@@ -171,7 +175,6 @@ function flush_line_buffer(_w)
 
 	if (#buffer == 0 or win.h == 0) return
 
-	clip(unpack(win.screen_rect))
 	while #buffer > 0 do
 
 		local str = deli(buffer, 1)
@@ -204,7 +207,7 @@ end
 --process word wrapping into a buffer
 local break_index = 0
 function output(str, flush_now)
-	-- log3('  [drw] output to window '..active_window..', raw str: '..str)
+	-- log('output win'..active_window..': '..str)
 	if (mem_stream == true) memory(str) return
 	if (screen_stream == false) return
 
@@ -242,8 +245,6 @@ function output(str, flush_now)
 		-- have to check the char BEFORE it was emboldened
 		-- but we need the length of the line AFTER the char was added
 		if (in_set(c, " \n:-_;")) break_index = #current_line
-
-		-- log3("   at char: "..c..", pixel length now at: "..pixel_len)
 
 		-- handle right border and newline wrap triggers
 		if pixel_len > 128 or c == '\n' then
@@ -408,14 +409,15 @@ function process_input_char(char, max_length)
 			current_input = sub(current_input, 1, -2)
 			visible_input = sub(visible_input, 1, -2)
 		end
-	elseif char and char != '' then
+	elseif char and char != '' and char != '\r' then
 		if #current_input < max_length then
 			current_input ..= case_setter(char, lowercase)
 			visible_input ..= case_setter(char, visual_case)
 		end
 	end
+
 	reuse_last_line = true
-	screen(windows[active_window].last_line..sub(visible_input, -31)..cursor_string)
+	screen(windows[active_window].last_line..visible_input..cursor_string)
 end
 
 --called by read; z_text_buffer must be non-zero; z_parse_buffer could be nil
@@ -436,10 +438,11 @@ function capture_input(char)
 		poke(0x5f30,1)
 
 		if _interrupt == capture_char then
-			-- process_input_char(nil,nil)
 			_read_char(char)
 
 		elseif _interrupt == capture_line then
+			local win = windows[active_window]
+
 			--prep the input line, if necessary
 			if _zm_version >= 5 and preloaded == false then
 				local text_buffer = zword_to_zaddress(z_text_buffer)
@@ -448,10 +451,10 @@ function capture_input(char)
 					local pre = get_zbytes(text_buffer+0x.0002, num_bytes)
 					local zstring = zscii_to_p8scii(pre, lowercase)
 					local flipped = zscii_to_p8scii(pre, flipcase)
-					local last_line = windows[active_window].last_line
+					local last_line = win.last_line
 					local left, right = unpack(split(last_line, #last_line-num_bytes))
 					if (flipped == right) then
-						windows[active_window].last_line = left
+						win.last_line = left
 						current_input = zstring
 						visible_input = right
 					end
@@ -460,9 +463,9 @@ function capture_input(char)
 			end
 
 			if char == '\r' then
-				cursor_string = " "
-				process_input_char(nil,nil)
-				
+				add(win.buffer, win.last_line..visible_input)
+				add(win.buffer, "")
+
 				--strip whitespace
 				local words, stripped = split(current_input, ' ', false), ''
 				for w in all(words) do
@@ -497,7 +500,7 @@ function capture_input(char)
 		end
 
 	else
-		if (active_window == 0) process_input_char(nil, nil)
+		if (active_window == 0) process_input_char()
 
 		if z_timed_routine then
 			local current_time = stat(94)*60 + stat(95)
