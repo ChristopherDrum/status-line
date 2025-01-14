@@ -123,12 +123,11 @@ function screen(str)
 	local win = windows[active_window]
 	clip(unpack(win.screen_rect))
 	local zx, zy = unpack(win.z_cursor)
-	-- log("  [drw] screen("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
+	log("  [drw] screen("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
 
 	if active_window == 0 then
 		-- log(" -- reuse last line says: "..tostr(reuse_last_line))
 		if (reuse_last_line == false) print("\n")
-
 		-- log(" -- blanking the last line")
 		rectfill(0,121,128,128,current_bg)
 
@@ -201,13 +200,12 @@ function flush_line_buffer(_w)
 		screen(str)
 
 	end
-	clip()
 end
 
 --process word wrapping into a buffer
 local break_index = 0
 function output(str, flush_now)
-	-- log('output win'..active_window..': '..str)
+	log('output win'..active_window..': '..str)
 	if (mem_stream == true) memory(str) return
 	if (screen_stream == false) return
 
@@ -223,6 +221,7 @@ function output(str, flush_now)
 	else
 		current_line = current_format
 	end
+	-- local check_line = current_line
 
 	local pixel_len = print(current_line, 0, -20)
 
@@ -235,34 +234,43 @@ function output(str, flush_now)
 
 		-- switch into bold font, if needed
 		if current_text_style & 2 == 2 then --bold characters sit in shifted range
-			if (char >= ' ') char = chr(ord(char) + 96)
+			-- if (char >= ' ') char = chr(ord(char) + 96)
 		end
 
 		--add the character
 		current_line ..= char
+		-- check_line ..= c
 
-		-- have we found a visually appealing line-break character?
-		-- have to check the char BEFORE it was emboldened
-		-- but we need the length of the line AFTER the char was added
-		if (in_set(c, " \n:-_;")) break_index = #current_line
+		if active_window == 0 then
+			-- have we found a visually appealing line-break character?
+			-- have to check the char BEFORE it was emboldened
+			-- but we need the length of the line AFTER the char was added
+			if (in_set(c, " \n:-_;")) break_index = #current_line
 
-		-- handle right border and newline wrap triggers
-		if pixel_len > 128 or c == '\n' then
-			if (break_index == 0) break_index = #current_line-1
-			local first, second = unpack(split(current_line, break_index, false))
-			add(buffer, first)
+			-- handle right border and newline wrap triggers
+			if pixel_len > 128 or c == '\n' then
+				if (break_index == 0) break_index = #current_line-1
+				local first, second = unpack(split(current_line, break_index, false))
+				-- local one, two = unpack(split(check_line, break_index, false))
+				-- if (one) log("split at: "..one)
+				-- if (two) log("        : "..two)
+				add(buffer, first)
 
-			second = second or ''
-			while (second[1] == ' ') second = sub(second,2)
+				second = second or ''
+				-- two = two or ''
+				while (second[1] == ' ') second = sub(second,2)
+				-- while (two[1] == ' ') two = sub(two,2)
 
-			current_line = current_format..second
-			pixel_len = print(current_line, 0, -20)
-			break_index = 0
+				current_line = current_format..second
+				-- check_line = current_format..two
+				pixel_len = print(current_line, 0, -20)
+				break_index = 0
+			end
 		end
 	end
 
 	-- add remaining content to buffer and flush
-	if (#current_line) add(buffer, current_line)
+	add(buffer, current_line)
 	if (_interrupt or flush_now) flush_line_buffer()
 end
 
@@ -434,6 +442,7 @@ preloaded = false
 function capture_input(char)
 	lines_shown = 0
 
+	local win = windows[active_window]
 	if char then
 		poke(0x5f30,1)
 
@@ -441,7 +450,6 @@ function capture_input(char)
 			_read_char(char)
 
 		elseif _interrupt == capture_line then
-			local win = windows[active_window]
 
 			--prep the input line, if necessary
 			if _zm_version >= 5 and preloaded == false then
@@ -463,8 +471,8 @@ function capture_input(char)
 			end
 
 			if char == '\r' then
-				add(win.buffer, win.last_line..visible_input)
-				add(win.buffer, "")
+				add(win.buffer, win.last_line..visible_input) --commit user input to the transcript
+				add(win.buffer, text_style..text_colors) --prep the buffer for the next line
 
 				--strip whitespace
 				local words, stripped = split(current_input, ' ', false), ''
@@ -505,10 +513,12 @@ function capture_input(char)
 		if z_timed_routine then
 			local current_time = stat(94)*60 + stat(95)
 			if (current_time - z_current_time) >= z_timed_interval then
+				local cached_line = win.last_line --routines that print to screen need to restore back to input state
 				local timed_response = _call_fp(call_type.intr, z_timed_routine)
 				if timed_response == 1 then
 					_read(0) --false
 				end
+				win.last_line = cached_line
 				z_current_time = current_time
 			end
 		end
