@@ -129,14 +129,14 @@ function screen(str)
 	local win = windows[active_window]
 	clip(unpack(win.screen_rect))
 	local zx, zy = unpack(win.z_cursor)
-	-- log("  [drw] screen("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
+	local px, py = unpack(win.p_cursor)
+	log("  [drw] screen("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
 	-- if (sub(str,-9) == "LEFT ARM.") slow_down = true
 
 	if active_window == 0 then
 		-- log(" -- reuse last line says: "..tostr(reuse_last_line))
 		-- log("print cursor starts at: "..peek(0x5f26)..", "..peek(0x5f27))
 		if (reuse_last_line == false) print("\n")
-		
 		-- if (slow_down == true) if (reuse_last_line == false) log("1. scrolled up a line") for i = 1, 30000 do for j = 1, delay do end end
 		-- log(" -- blanking the last line")
 		rectfill(0,121,128,128,current_bg)
@@ -163,7 +163,6 @@ function screen(str)
 		zy = win.h
 		lines_shown += 1
 	else
-		local px, py = unpack(win.p_cursor)
 		local pixel_count = print(str, px, py) - px
 
 		zx += ceil(pixel_count>>2)
@@ -176,8 +175,8 @@ function screen(str)
 
 	set_z_cursor(active_window, zx, zy)
 	-- log3("   z_cursor moved to: "..zx..','..zy)
-	clip()
 	flip()
+	clip()
 end
 
 --buffered lines receive pagination
@@ -219,7 +218,7 @@ end
 --process word wrapping into a buffer
 local break_index = 0
 function output(str, flush_now)
-	-- log('output win'..active_window..': '..str)
+	log('output win'..active_window..': '..str)
 	if (mem_stream == true) memory(str) return
 	if (screen_stream == false) return
 
@@ -285,12 +284,18 @@ function output(str, flush_now)
 
 				break_index = 0
 			end
+		else 
+			if c == '\n' then
+				add(buffer, current_line)
+				current_line = current_format
+				flush_line_buffer()
+			end
 		end
 	end
 
 	-- add remaining content to buffer and flush
-	add(buffer, current_line)
-	if (flush_now) flush_line_buffer()
+	if (#current_line > 0) add(buffer, current_line)
+	if (flush_now == true) flush_line_buffer()
 end
 
 function _tokenise(baddr1, baddr2, baddr3, _bit)
@@ -528,7 +533,7 @@ function capture_input(char)
 		end
 
 	else
-		if (active_window == 0) process_input_char()
+		if (active_window == 0 and _interrupt == capture_line) process_input_char()
 
 		if z_timed_routine then
 			local current_time = stat(94)*60 + stat(95)
