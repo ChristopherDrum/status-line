@@ -98,14 +98,18 @@ function _set_text_style(n)
 end
 
 function set_z_cursor(_win, _x, _y)
-	-- log3(" set_z_cursor: ".._win..', x: '.._x..', y: '.._y)	
+	-- log(" set_z_cursor ".._win..'  x: '.._x..', y: '.._y)	
 	local win = windows[_win]
 	_x, _y = mid(1,_x,32), mid(1,_y,win.h)
 	local px = flr((_x - 1) << 2) + 1
 	local py = ((_y - 1) * 6) + 1
+	-- log("  equals px: "..px..", py: "..py)
 	if (_zm_version > 3 and _win == 0) py += 1
 	local py_offset = (_win == 0) and windows[1].h*6 or 0
-	win.p_cursor = {px, py + py_offset + origin_y}	
+	win.p_cursor = {px, py + py_offset + origin_y}
+	-- log("  win.p_cursor: "..win.p_cursor[1]..", "..win.p_cursor[2])
+	cursor(unpack(win.p_cursor))
+	-- log("  print cursor set to: "..peek(0x5f26)..", "..peek(0x5f27))
 	win.z_cursor = {_x, _y}
 end
 
@@ -119,28 +123,38 @@ function memory(str)
 end
 
 --actually put text onto the screen and adjust the z_cursor to reflect the new state
+local slow_down = false
 function screen(str)
+	local delay = 500
 	local win = windows[active_window]
 	clip(unpack(win.screen_rect))
 	local zx, zy = unpack(win.z_cursor)
-	log("  [drw] screen("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
+	-- log("  [drw] screen("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
+	-- if (sub(str,-9) == "LEFT ARM.") slow_down = true
 
 	if active_window == 0 then
 		-- log(" -- reuse last line says: "..tostr(reuse_last_line))
+		-- log("print cursor starts at: "..peek(0x5f26)..", "..peek(0x5f27))
 		if (reuse_last_line == false) print("\n")
+		
+		if (slow_down == true) if (reuse_last_line == false) log("1. scrolled up a line") for i = 1, 30000 do for j = 1, delay do end end
 		-- log(" -- blanking the last line")
 		rectfill(0,121,128,128,current_bg)
+		-- if (slow_down == true) log("2. just drew a rectfill to blank out a line") for i = 1, 30000 do for j = 1, delay do end end
 
 		--print the line to screen and update the lines_shown count 
 		--this will be caught by pagination on the next line flushed
 		-- log(" -- printing the string")
 		local pixel_count = print('\^d'..emit_rate..str, 1, 122) - 1
+		-- if (slow_down == true) log("3. drew the string to screen") for i = 1, 30000 do for j = 1, delay do end end
 
 		if reuse_last_line == true then
 			reuse_last_line = false
 			if (pixel_count > 127 and _interrupt == capture_line) then
 				rectfill(0,121,128,128,current_bg)
+				-- if (slow_down == true) log("4. had to reblank the line, due to length") for i = 1, 30000 do for j = 1, delay do end end
 				print('\^d'..emit_rate..str, 1-(pixel_count-124), 122)
+				-- if (slow_down == true) log("5. reprinted the line with negative horizontal offset") for i = 1, 30000 do for j = 1, delay do end end
 				-- log(" -- blanked and printed the string a second time (shifted)")
 			end
 		end
@@ -188,12 +202,12 @@ function flush_line_buffer(_w)
 
 		-- Trim newline if present
 		did_trim_nl = false
-		if w == 1 then
+		-- if w == 1 then
 			if str[-1] == '\n' then
 				str = sub(str, 1, -2)
 				did_trim_nl = true
 			end
-		end
+		-- end
 
 		-- Display the line and track it
 		win.last_line = str
@@ -205,7 +219,7 @@ end
 --process word wrapping into a buffer
 local break_index = 0
 function output(str, flush_now)
-	log('output win'..active_window..': '..str)
+	-- log('output win'..active_window..': '..str)
 	if (mem_stream == true) memory(str) return
 	if (screen_stream == false) return
 
@@ -223,7 +237,9 @@ function output(str, flush_now)
 	end
 	-- local check_line = current_line
 
-	local pixel_len = print(current_line, 0, -20)
+	local cx, cy = cursor(0, -20)
+	local pixel_len = print(current_line)
+	cursor(cx,cy)
 
 	for i = 1, #str do
 		local char = case_setter(str[i], flipcase)
@@ -234,7 +250,7 @@ function output(str, flush_now)
 
 		-- switch into bold font, if needed
 		if current_text_style & 2 == 2 then --bold characters sit in shifted range
-			-- if (char >= ' ') char = chr(ord(char) + 96)
+			if (char >= ' ') char = chr(ord(char) + 96)
 		end
 
 		--add the character
@@ -263,7 +279,10 @@ function output(str, flush_now)
 
 				current_line = current_format..second
 				-- check_line = current_format..two
-				pixel_len = print(current_line, 0, -20)
+				cx, cy = cursor(0, -20)
+				pixel_len = print(current_line)
+				cursor(cx,cy)
+
 				break_index = 0
 			end
 		end
@@ -271,7 +290,7 @@ function output(str, flush_now)
 
 	-- add remaining content to buffer and flush
 	add(buffer, current_line)
-	if (_interrupt or flush_now) flush_line_buffer()
+	if (flush_now) flush_line_buffer()
 end
 
 function _tokenise(baddr1, baddr2, baddr3, _bit)
@@ -471,6 +490,7 @@ function capture_input(char)
 			end
 
 			if char == '\r' then
+				reuse_last_line = true
 				add(win.buffer, win.last_line..visible_input) --commit user input to the transcript
 				add(win.buffer, text_style..text_colors) --prep the buffer for the next line
 
@@ -518,7 +538,8 @@ function capture_input(char)
 				if timed_response == 1 then
 					_read(0) --false
 				end
-				win.last_line = cached_line
+				if (_interrupt == capture_line) win.last_line = cached_line
+				flush_line_buffer()
 				z_current_time = current_time
 			end
 		end
