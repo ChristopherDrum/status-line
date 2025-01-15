@@ -129,8 +129,7 @@ function screen(str)
 	local win = windows[active_window]
 	clip(unpack(win.screen_rect))
 	local zx, zy = unpack(win.z_cursor)
-	local px, py = unpack(win.p_cursor)
-	log("  [drw] screen("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
+	-- log("  [drw] screen("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
 	-- if (sub(str,-9) == "LEFT ARM.") slow_down = true
 
 	if active_window == 0 then
@@ -163,6 +162,7 @@ function screen(str)
 		zy = win.h
 		lines_shown += 1
 	else
+		local px, py = unpack(win.p_cursor)
 		local pixel_count = print(str, px, py) - px
 
 		zx += ceil(pixel_count>>2)
