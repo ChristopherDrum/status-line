@@ -123,9 +123,9 @@ function memory(str)
 end
 
 --actually put text onto the screen and adjust the z_cursor to reflect the new state
-local slow_down = false
+-- local slow_down = false
 function screen(str)
-	local delay = 500
+	-- local delay = 500
 	local win = windows[active_window]
 	clip(unpack(win.screen_rect))
 	local zx, zy = unpack(win.z_cursor)
@@ -137,7 +137,7 @@ function screen(str)
 		-- log("print cursor starts at: "..peek(0x5f26)..", "..peek(0x5f27))
 		if (reuse_last_line == false) print("\n")
 		
-		if (slow_down == true) if (reuse_last_line == false) log("1. scrolled up a line") for i = 1, 30000 do for j = 1, delay do end end
+		-- if (slow_down == true) if (reuse_last_line == false) log("1. scrolled up a line") for i = 1, 30000 do for j = 1, delay do end end
 		-- log(" -- blanking the last line")
 		rectfill(0,121,128,128,current_bg)
 		-- if (slow_down == true) log("2. just drew a rectfill to blank out a line") for i = 1, 30000 do for j = 1, delay do end end
