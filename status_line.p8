@@ -181,6 +181,12 @@ function _update60()
 				poke(0x5f30,1)
 				key = stat(31)
 			end
+			if key == nil then
+				if (btn(0)) key = chr(131)
+				if (btn(1)) key = chr(132)
+				if (btn(2)) key = chr(129)
+				if (btn(3)) key = chr(130)
+			end
 			_interrupt(key)
 
 		else
