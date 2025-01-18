@@ -484,6 +484,11 @@ end
 function _set_cursor(lin, col)
 	if (_zm_version > 3 and active_window == 0) return
 	flush_line_buffer()
+	if (active_window == 1 and lin > windows[1].h) then
+		windows[1].h = min(_zm_screen_height, lin)
+		local p_height = windows[1].h*6 + origin_y
+		windows[1].screen_rect = {0, origin_y, 128, p_height+1}
+	end
 	set_z_cursor(active_window,col,lin)
 end
 
