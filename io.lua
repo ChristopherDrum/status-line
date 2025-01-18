@@ -323,7 +323,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 	local function commit_token()
 		if #word > 0 then
 			local word_addr = dict[sub(word,1,_zm_dictionary_word_length)] or 0x0
-			log("commit_token: "..word)
+			-- log("commit_token: "..word)
 			if (bit > 0) and (word_addr == 0x0) then
 				--nothing to do here
 			else
@@ -342,7 +342,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 		if (_zm_version < 5 and c == 0) then break end
 
 		local char = chr(c)
-		log("tokenizing byte: "..tostr(c).." as char: "..char)
+		-- log("tokenizing byte: "..tostr(c).." as char: "..char)
 		--do we have a token commit trigger?
 		if char == ' ' or in_set(char, separators) then
 			commit_token()
