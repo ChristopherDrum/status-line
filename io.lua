@@ -218,7 +218,7 @@ end
 --process word wrapping into a buffer
 local break_index = 0
 function output(str, flush_now)
-	log('output win'..active_window..': '..str)
+	-- log('output win'..active_window..': '..str)
 	if (mem_stream == true) memory(str) return
 	if (screen_stream == false) return
 
@@ -323,7 +323,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 	local function commit_token()
 		if #word > 0 then
 			local word_addr = dict[sub(word,1,_zm_dictionary_word_length)] or 0x0
-
+			log("commit_token: "..word)
 			if (bit > 0) and (word_addr == 0x0) then
 				--nothing to do here
 			else
@@ -342,12 +342,19 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 		if (_zm_version < 5 and c == 0) then break end
 
 		local char = chr(c)
+		log("tokenizing byte: "..tostr(c).." as char: "..char)
 		--do we have a token commit trigger?
 		if char == ' ' or in_set(char, separators) then
 			commit_token()
-			word = (char != ' ') and char or ""
-			index = (char != ' ') and j or 0
-		
+			word, index = "", 0
+			if char != ' ' then
+				word, index = char, j
+				commit_token()
+				word = ""
+			end
+			-- word = (char != ' ') and char or ""
+			-- index = (char != ' ') and j or 0
+			-- if (char != ' ') commit_token() word = ""
 		--start tracking a new token
 		else
 			if (index == 0) index = j

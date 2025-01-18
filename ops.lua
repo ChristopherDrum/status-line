@@ -739,14 +739,22 @@ function _save(did_save)
 		_interrupt = save_game
 	else
 		_interrupt = nil
+		-- did_restore = false
 		if (_zm_version == 3) _branch(did_save) else _result(did_save)
 	end
 end
 
-function _restore()
-	--log('restore: ')
+function _restore(baddr1, n, baddr2)
+	-- log('restore: '..tostr(baddr1)..', '..tostr(n)..', '..tostr(baddr2))
 	local rg = restore_game()
-	if (_zm_version == 3) _branch(rg) else _result(rg)
+	if _zm_version == 3 then 
+		_branch(rg)
+	else
+		-- log('  rg == '..tostr(rg))
+		if (rg != 0 and n) rg = n
+		-- log('  rg == '..tostr(rg))
+		_result(rg)
+	end
 end
 
 function _deny_undo()

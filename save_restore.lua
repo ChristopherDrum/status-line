@@ -1,5 +1,14 @@
+-- did_restore = false
 function save_game(char)
-	-- log('save_game: '..tostr(char)..','..tostr(ord(char)))
+	-- log('save_game: '..tostr(char))
+
+	-- if did_restore == true then 
+	-- 	log('  re-entered from restore_game')
+	-- 	did_restore = false
+	-- 	_save(2)
+	-- 	return
+	-- end
+
 	--can the keyboard handler be shared with capture_input()?
 	if show_warning == true then
 		output('Enter filename (max 30 chars; careful, do NOT press "ESC")\n\n>', true)
@@ -31,6 +40,7 @@ function write_save_state(filename)
 
 	dump(tonum(_engine_version))
 	dump(tonum(game_id.."0000", 0x3))
+	dump(tonum(_program_counter))
 
 	--all of memory bank 1
 	for i = 1, _memory_bank_size do
@@ -106,6 +116,9 @@ function restore_game()
 	end
 
 	index += 1
+	_program_counter = temp[index]
+
+	index += 1
 	for i = 1, _memory_bank_size do
 		_memory[1][i] = temp[index]
 		-- log(" restore "..i..": "..dword_to_str(temp[index]))
@@ -140,5 +153,6 @@ function restore_game()
 	end
 
 	current_input = ''
+	-- did_restore = true
 	return (_zm_version == 3) and true or 2
 end
