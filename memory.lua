@@ -558,7 +558,7 @@ function load_instruction()
 	-- for i = 1, #operands do
 	-- 	op_string ..= sub(tohex(operands[i]), 3, 6) .. ' '
 	-- end
-	-- log3(sub(tohex(pc), 6) .. ': ' .. op_table[#op_table][op_code + 1] .. '(' .. op_string .. ')')
+	-- log(sub(tohex(pc), 6) .. ': ' .. op_table[#op_table][op_code + 1] .. '(' .. op_string .. ')')
 
 	return op_table[op_code + 1], operands
 end

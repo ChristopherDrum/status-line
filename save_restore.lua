@@ -2,13 +2,6 @@
 function save_game(char)
 	-- log('save_game: '..tostr(char))
 
-	-- if did_restore == true then 
-	-- 	log('  re-entered from restore_game')
-	-- 	did_restore = false
-	-- 	_save(2)
-	-- 	return
-	-- end
-
 	--can the keyboard handler be shared with capture_input()?
 	if show_warning == true then
 		output('Enter filename (max 30 chars; careful, do NOT press "ESC")\n\n>', true)
