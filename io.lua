@@ -149,10 +149,10 @@ function screen(str)
 
 		if reuse_last_line == true then
 			reuse_last_line = false
-			if (pixel_count > 127 and _interrupt == capture_line) then
+			if (pixel_count > 128 and _interrupt == capture_line) then
 				rectfill(0,121,128,128,current_bg)
 				-- if (slow_down == true) log("4. had to reblank the line, due to length") for i = 1, 30000 do for j = 1, delay do end end
-				print('\^d'..emit_rate..str, 1-(pixel_count-124), 122)
+				print('\^d'..emit_rate..str, 1-(pixel_count-128), 122)
 				-- if (slow_down == true) log("5. reprinted the line with negative horizontal offset") for i = 1, 30000 do for j = 1, delay do end end
 				-- log(" -- blanked and printed the string a second time (shifted)")
 			end
@@ -234,7 +234,6 @@ function output(str, flush_now)
 	else
 		current_line = current_format
 	end
-	-- local check_line = current_line
 
 	local cx, cy = cursor(0, -20)
 	local pixel_len = print(current_line)
@@ -254,7 +253,6 @@ function output(str, flush_now)
 
 		--add the character
 		current_line ..= char
-		-- check_line ..= c
 
 		if active_window == 0 then
 			-- have we found a visually appealing line-break character?
@@ -266,18 +264,12 @@ function output(str, flush_now)
 			if pixel_len > 128 or c == '\n' then
 				if (break_index == 0) break_index = #current_line-1
 				local first, second = unpack(split(current_line, break_index, false))
-				-- local one, two = unpack(split(check_line, break_index, false))
-				-- if (one) log("split at: "..one)
-				-- if (two) log("        : "..two)
 				add(buffer, first)
 
 				second = second or ''
-				-- two = two or ''
 				while (second[1] == ' ') second = sub(second,2)
-				-- while (two[1] == ' ') two = sub(two,2)
 
 				current_line = current_format..second
-				-- check_line = current_format..two
 				cx, cy = cursor(0, -20)
 				pixel_len = print(current_line)
 				cursor(cx,cy)
@@ -352,9 +344,6 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 				commit_token()
 				word, index = "", 0
 			end
-			-- word = (char != ' ') and char or ""
-			-- index = (char != ' ') and j or 0
-			-- if (char != ' ') commit_token() word = ""
 		--start tracking a new token
 		else
 			if (index == 0) index = j
