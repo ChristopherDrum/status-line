@@ -350,7 +350,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 			if char != ' ' then
 				word, index = char, j
 				commit_token()
-				word = ""
+				word, index = "", 0
 			end
 			-- word = (char != ' ') and char or ""
 			-- index = (char != ' ') and j or 0
