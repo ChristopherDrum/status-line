@@ -496,6 +496,7 @@ end
 function _get_cursor(baddr)
 	baddr = zword_to_zaddress(baddr)
 	local zx,zy = unpack(windows[active_window].z_cursor)
+	if (active_window == 1 and windows[1].fakex) zx = windows[1].fakex
 	-- log('  [ops] _get_cursor reports line: '..zy..' col: '..zx)
 	set_zword(baddr, zy)
 	set_zword(baddr + 0x.0002, zx)

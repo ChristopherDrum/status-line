@@ -53,7 +53,8 @@ function reset_io_state()
 			p_cursor = {0,0},
 			screen_rect = {},
 			buffer = {},
-			last_line = ''
+			last_line = '',
+			fakex = nil
 		}
 	}
 
@@ -207,6 +208,7 @@ function flush_line_buffer(_w)
 		-- end
 
 		-- Display the line and track it
+		if (w == 1) win.fakex = nil
 		win.last_line = str
 		screen(str)
 
@@ -274,7 +276,9 @@ function output(str, flush_now)
 
 				break_index = 0
 			end
-		else 
+		else
+			--fakex lets _get_cursor understand where the virtual cursor "is"
+			windows[1].fakex = flr(pixel_len>>2)
 			if c == '\n' then
 				add(buffer, current_line)
 				current_line = current_format
@@ -283,13 +287,8 @@ function output(str, flush_now)
 		end
 	end
 
-	-- basically no buffering in window 1 :/
-	-- if active_window == 1 then
-	-- 	screen(current_line)
-	-- else
-		if (#current_line > 0) add(buffer, current_line)
-		if (flush_now == true or active_window == 1) flush_line_buffer()
-	-- end
+	if (#current_line > 0) add(buffer, current_line)
+	if (flush_now == true) flush_line_buffer()
 end
 
 function _tokenise(baddr1, baddr2, baddr3, _bit)
