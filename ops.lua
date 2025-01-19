@@ -482,6 +482,7 @@ end
 --"It is an error in V4-5 to use this instruction when window 0 is selected"
 --autosplitting Nord & Bert revealed status line bug (!)
 function _set_cursor(lin, col)
+	-- log('  [ops] _set_cursor to line: '..lin..' col: '..col)
 	if (_zm_version > 3 and active_window == 0) return
 	flush_line_buffer()
 	if (active_window == 1 and lin > windows[1].h) then
@@ -495,6 +496,7 @@ end
 function _get_cursor(baddr)
 	baddr = zword_to_zaddress(baddr)
 	local zx,zy = unpack(windows[active_window].z_cursor)
+	-- log('  [ops] _get_cursor reports line: '..zy..' col: '..zx)
 	set_zword(baddr, zy)
 	set_zword(baddr + 0x.0002, zx)
 end

@@ -123,14 +123,11 @@ function memory(str)
 end
 
 --actually put text onto the screen and adjust the z_cursor to reflect the new state
--- local slow_down = false
 function screen(str)
-	-- local delay = 500
 	local win = windows[active_window]
 	clip(unpack(win.screen_rect))
 	local zx, zy = unpack(win.z_cursor)
 	-- log("  [drw] screen("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
-	-- if (sub(str,-9) == "LEFT ARM.") slow_down = true
 
 	if active_window == 0 then
 		-- log(" -- reuse last line says: "..tostr(reuse_last_line))
@@ -165,7 +162,7 @@ function screen(str)
 		local px, py = unpack(win.p_cursor)
 		local pixel_count = print(str, px, py) - px
 
-		zx += ceil(pixel_count>>2)
+		zx += flr(pixel_count>>2)
 		if did_trim_nl == true then
 			--from docs: "the upper window should never be scrolled"
 			zx = 1
@@ -174,7 +171,7 @@ function screen(str)
 	end
 
 	set_z_cursor(active_window, zx, zy)
-	-- log3("   z_cursor moved to: "..zx..','..zy)
+	-- log("   z_cursor moved to: "..zx..','..zy)
 	flip()
 	clip()
 end
@@ -203,6 +200,7 @@ function flush_line_buffer(_w)
 		did_trim_nl = false
 		-- if w == 1 then
 			if str[-1] == '\n' then
+				-- log(" trimmed newline")
 				str = sub(str, 1, -2)
 				did_trim_nl = true
 			end
@@ -285,9 +283,13 @@ function output(str, flush_now)
 		end
 	end
 
-	-- add remaining content to buffer and flush
-	if (#current_line > 0) add(buffer, current_line)
-	if (flush_now == true) flush_line_buffer()
+	-- basically no buffering in window 1 :/
+	-- if active_window == 1 then
+	-- 	screen(current_line)
+	-- else
+		if (#current_line > 0) add(buffer, current_line)
+		if (flush_now == true or active_window == 1) flush_line_buffer()
+	-- end
 end
 
 function _tokenise(baddr1, baddr2, baddr3, _bit)
