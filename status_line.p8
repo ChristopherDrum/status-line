@@ -72,11 +72,17 @@ function in_set(val, set) --set must be single chars in a string
 	return false
 end
 
-function tohex(value, full)
-	if (value == nil) return '(no_value)'
-	local hex = tostr(value, 3)
-	if (full == false) hex = sub(hex, 3, 6)
-	return hex
+-- general debugging version
+-- function tohex(value, full)
+-- 	if (value == nil) return '(no_value)'
+-- 	local hex = tostr(value, 3)
+-- 	if (full == false) hex = sub(hex, 3, 6)
+-- 	return hex
+-- end
+
+-- token-saving version for release
+function tohex(value)
+	return sub(tostr(value, 3), 3, 6)
 end
 
 function log(str)
