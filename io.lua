@@ -131,28 +131,19 @@ function screen(str)
 	-- log("  [drw] screen("..active_window.."): |"..str.."| (x: "..zx.." y: "..zy..")")
 
 	if active_window == 0 then
-		-- log(" -- reuse last line says: "..tostr(reuse_last_line))
-		-- log("print cursor starts at: "..peek(0x5f26)..", "..peek(0x5f27))
 		if (reuse_last_line == false) print("\n")
-		-- if (slow_down == true) if (reuse_last_line == false) log("1. scrolled up a line") for i = 1, 30000 do for j = 1, delay do end end
-		-- log(" -- blanking the last line")
 		rectfill(0,121,128,128,current_bg)
-		-- if (slow_down == true) log("2. just drew a rectfill to blank out a line") for i = 1, 30000 do for j = 1, delay do end end
 
 		--print the line to screen and update the lines_shown count 
 		--this will be caught by pagination on the next line flushed
-		-- log(" -- printing the string")
 		local pixel_count = print('\^d'..emit_rate..str, 1, 122) - 1
-		-- if (slow_down == true) log("3. drew the string to screen") for i = 1, 30000 do for j = 1, delay do end end
 
 		if reuse_last_line == true then
 			reuse_last_line = false
 			if (pixel_count > 128 and _interrupt == capture_line) then
 				rectfill(0,121,128,128,current_bg)
-				-- if (slow_down == true) log("4. had to reblank the line, due to length") for i = 1, 30000 do for j = 1, delay do end end
+
 				print('\^d'..emit_rate..str, 1-(pixel_count-128), 122)
-				-- if (slow_down == true) log("5. reprinted the line with negative horizontal offset") for i = 1, 30000 do for j = 1, delay do end end
-				-- log(" -- blanked and printed the string a second time (shifted)")
 			end
 		end
 		
@@ -240,6 +231,7 @@ function output(str, flush_now)
 	cursor(cx,cy)
 
 	for i = 1, #str do
+		-- log("considering char: "..ord(str[i]))
 		local char = case_setter(str[i], flipcase)
 		local c = char
 		
@@ -335,7 +327,7 @@ function _tokenise(baddr1, baddr2, baddr3, _bit)
 		if (_zm_version < 5 and c == 0) then break end
 
 		local char = chr(c)
-		-- log("tokenizing byte: "..tostr(c).." as char: "..char)
+
 		--do we have a token commit trigger?
 		if char == ' ' or in_set(char, separators) then
 			commit_token()
@@ -493,8 +485,9 @@ function capture_input(char)
 
 			if char == '\r' then
 				reuse_last_line = true
-				add(win.buffer, win.last_line..visible_input) --commit user input to the transcript
-				add(win.buffer, text_style..text_colors) --prep the buffer for the next line
+				add(win.buffer, win.last_line)
+				 --commit user input to the transcript; only outputs lowercase, but oh well for now
+				output(current_input,true)
 
 				--strip whitespace
 				local words, stripped = split(current_input, ' ', false), ''

@@ -1,19 +1,11 @@
--- did_restore = false
 function save_game(char)
-	-- log('save_game: '..tostr(char))
-
-	--can the keyboard handler be shared with capture_input()?
-	if show_warning == true then
-		output('Enter filename (max 30 chars; careful, do NOT press "ESC")\n\n>', true)
-		show_warning = false
-	end
-
-	if (not char) return
-
 	--do the save
 	if char == '\r' then
 		local filename = current_input..'_'..game_id..'_save'
 		write_save_state(filename)
+		reuse_last_line = true
+		add(windows[active_window].buffer, windows[active_window].last_line)
+	   	output(current_input,true)
 		current_input, visible_input = '', ''
 		show_warning = true
 		local s = (_zm_version == 3) and true or 1

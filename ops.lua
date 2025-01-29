@@ -740,6 +740,7 @@ function _save(did_save)
 	--log('_save: ')
 	if _interrupt == nil then
 		_interrupt = save_game
+		output('Enter filename (max 30 chars; careful, do NOT press "ESC")\n\n>', true)
 	else
 		_interrupt = nil
 		-- did_restore = false

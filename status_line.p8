@@ -80,7 +80,7 @@ function tohex(value, full)
 end
 
 function log(str)
-	printh(str, '_status_line_log_30')
+	-- printh(str, '_status_line_log_30')
 end
 
 function wait_for_any_key()
@@ -181,7 +181,7 @@ function _update60()
 				poke(0x5f30,1)
 				key = stat(31)
 			end
-			if key == nil then
+			if (key == nil) and (_interrupt == capture_char) then
 				if (btn(0)) key = chr(131)
 				if (btn(1)) key = chr(132)
 				if (btn(2)) key = chr(129)
