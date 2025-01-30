@@ -67,12 +67,16 @@ function restore_game()
 		if stat(30) then
 			poke(0x5f30,1)
 			key_pressed = true
+		elseif stat(120) then
+			file_dropped = true
 		end
-		if (stat(120)) file_dropped = true
 		stop_waiting = key_pressed or file_dropped
 	end
 
-	if (key_pressed == true) current_input = '' return false
+	if key_pressed == true then
+		 current_input = ''
+		 return (_zm_version == 3) and false or 0
+	end
 
 	local temp = {}
 	while stat(120) do

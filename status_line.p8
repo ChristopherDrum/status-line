@@ -65,7 +65,7 @@ end
 
 --useful functions
 function in_set(val, set) --set must be single chars in a string
-	if (not val or not set) return
+	if (not val or not set) return false
 	for i = 1, #set do
 		if (set[i] == val) return true
 	end

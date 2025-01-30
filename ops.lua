@@ -743,7 +743,6 @@ function _save(did_save)
 		output('Enter filename (max 30 chars; careful, do NOT press "ESC")\n\n>', true)
 	else
 		_interrupt = nil
-		-- did_restore = false
 		if (_zm_version == 3) _branch(did_save) else _result(did_save)
 	end
 end
