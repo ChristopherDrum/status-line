@@ -588,7 +588,7 @@ function load_story_file()
 				else
 					-- log("  adding to memory")
 					add(_memory[#_memory], dword)
-					log("wrote: "..tostr(dword,1).." to memory "..#_memory..":"..#_memory[#_memory])
+					-- log("wrote: "..tostr(dword,1).." to memory "..#_memory..":"..#_memory[#_memory])
 				end
 			end
 			if (#_memory[#_memory] == _memory_bank_size) add(_memory, {})
@@ -596,13 +596,13 @@ function load_story_file()
 	end
 
 	::flush::
-	-- while (stat(120)) serial(0x800, 0x4300, 1024) --force flush serial
+	while (stat(120)) serial(0x800, 0x4300, 1024) --force flush serial
 
 	if disk == 1 then
-		log("made it to load disk 2???")
+		-- log("made it to load disk 2???")
 		message = "please drag in disk 2"
 	else
-		log("done with the load, moving on to initialize_game()")
+		-- log("done with the load, moving on to initialize_game()")
 		story_id, disk = nil, 0
 		initialize_game()
 	end
