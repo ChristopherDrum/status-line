@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Line Splitter</title>
+</head>
+<body>
+    <h1>Upload .z8 Game to Split</h1>
+    <input type="file" id="z8game" />
+    <!-- <button onclick="splitGame()">Split</button> -->
+
+    <script>
+        async function writeChunk(baseFilename, index, gameData) {
+
+            const gameIdentifier = new TextEncoder().encode(baseFilename.slice(-4));
+
+            // Combine header and data
+            const chunkData = new Uint8Array(8 + gameData.length);
+            chunkData.set([0xDE, 0xCA, 0xFF, index], 0);             // Using our magic header number, 3 bytes
+            chunkData.set(gameIdentifier, 4);   // The last 4 chars of the filename
+            chunkData.set(gameData, 8);
+
+            // Create a downloadable blob
+            const blob = new Blob([chunkData], { type: "application/octet-stream" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `${baseFilename}.disk${index}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        async function splitGame(file) {
+            const CHUNK_SIZE = 256 * 1024 - 8; // Account for 8-byte header
+            const reader = new FileReader();
+
+            reader.onload = async function (event) {
+                const arrayBuffer = event.target.result;
+                const totalSize = arrayBuffer.byteLength;
+
+                if (totalSize > 512 * 1024 - 16) { // Adjusted for two headers
+                    alert(".z8 games can only be a maximum of 512Kb.\nFile is too large.");
+                    return;
+                }
+
+                const data = new Uint8Array(arrayBuffer);
+                await writeChunk(file.name, 1, data.slice(0, CHUNK_SIZE));
+                if (totalSize > CHUNK_SIZE) {
+                    await writeChunk(file.name, 2, data.slice(CHUNK_SIZE));
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Usage: Attach this to a file input element
+        document.getElementById("z8game").addEventListener("change", function (event) {
+            const file = event.target.files[0];
+            if (file && file.name.endsWith(".z8")) {
+                splitGame(file);
+            } else {
+                alert("Please select a .z8 file.");
+            }
+        });
+
+    </script>
+</body>
+</html>

@@ -86,7 +86,7 @@ function tohex(value)
 end
 
 function log(str)
-	-- printh(str, '_status_line_log_30')
+	printh(str, '_status_line_log_30')
 end
 
 function wait_for_any_key()
@@ -292,11 +292,11 @@ function process_header()
 	_zobject_address 		= _object_table_mem_addr + (_zm_object_property_count>>>15)
 
 	game_id = get_zword(_file_checksum_header_addr)
-	-- log(tostr(game_id, 3))
+	log(tostr(game_id, 3))
 	if (game_id == 0) game_id = _static_memory_mem_addr << 16
-	-- log(tostr(_static_memory_mem_addr<<16, 3))
+	log(tostr(_static_memory_mem_addr<<16, 3))
 	game_id = tohex(game_id, false)
-	-- log("checksum/game_id: "..game_id)
+	log("checksum/game_id: "..game_id)
 
 	--patches for specific games; just saving tokens by putting it here :/
 	if (game_id == "16ab") set_zbyte(0x.fddd,1) --trinity, thanks @fredrick

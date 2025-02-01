@@ -416,7 +416,7 @@ function get_zstring(zaddress, _is_dict)
 			add(zchars, (zword >>> shift) & 0x1F)
 		end
 		if (zaddress) zaddress += 0x.0002
-		end_found = zword & 0x8000 == 0x8000
+		end_found = (zword & 0x8000) == 0x8000
 		if _is_dict == true then
 			end_found = #zchars == _zm_dictionary_word_length
 		end
@@ -561,11 +561,11 @@ function load_instruction()
 	return op_table[op_code + 1], operands
 end
 
-load_checksum, disk = nil, 0
+story_id, disk = nil, 0
 function load_story_file()
 	clear_all_memory()
 
-	local in_header = false
+	local in_header, header_processed = false, false
 	while stat(120) do
 		if (#_memory[#_memory] == _memory_bank_size) add(_memory, {})
 		local bank_num = #_memory
@@ -574,28 +574,35 @@ function load_story_file()
 			local a, b, c, d = peek(0x4300+j, 4)
 			local dword = (a<<8 | b | c>>>8 | d>>>16)
 
-			if j == 0 then
-				in_header = (dword == 0xdecaff) --magic number
+
+			if header_processed == false and in_header == false and (dword & 0xffff.ff00 == 0xdeca.ff00) then --magic header identifier
+				if (d - disk > 1) log("disk mismatch: "..d.." vs. "..disk) goto flush
+				in_header, disk = true, d
+				-- log("set in_header: "..tostr(in_header)..", disk: "..d)
 			else
-				if in_header == true then
-					local cs = dword & 0x0fff
-					if (not load_checksum) load_checksum = cs
-					if cs != load_checksum then
-						while (stat(120)) serial(0x800, 0x4300, 1024) --force flush serial
-					else 
-						disk, in_header = a, false
-					end
+				if in_header then
+					if (not story_id) story_id = dword
+					-- log(" story_id: "..story_id..", id: "..dword)
+					if (dword != story_id) goto flush
+					in_header, header_processed = false, true
 				else
+					-- log("  adding to memory")
 					add(_memory[bank_num], dword)
+					log("wrote: "..tostr(dword,1).." to memory slot "..#_memory[bank_num])
 				end
 			end
 		end
 	end
 
+	::flush::
+	-- while (stat(120)) serial(0x800, 0x4300, 1024) --force flush serial
+
 	if disk == 1 then
+		log("made it to load disk 2???")
 		message = "please drag in disk 2"
 	else
-		load_checksum, disk = nil, 0
+		log("done with the load, moving on to initialize_game()")
+		story_id, disk = nil, 0
 		initialize_game()
 	end
 end
