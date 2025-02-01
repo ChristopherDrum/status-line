@@ -563,11 +563,11 @@ end
 
 story_id, disk = nil, 0
 function load_story_file()
-	clear_all_memory()
+	if (story_id == nil) clear_all_memory()
 
 	local in_header, header_processed = false, false
 	while stat(120) do
-		if (#_memory[#_memory] == _memory_bank_size) add(_memory, {})
+		-- if (#_memory[#_memory] == _memory_bank_size) add(_memory, {})
 		local bank_num = #_memory
 		local chunk = serial(0x800, 0x4300, 1024)
 		for j = 0, chunk-1, 4 do
@@ -588,9 +588,10 @@ function load_story_file()
 				else
 					-- log("  adding to memory")
 					add(_memory[bank_num], dword)
-					log("wrote: "..tostr(dword,1).." to memory slot "..#_memory[bank_num])
+					log("wrote: "..tostr(dword,1).." to memory "..#_memory..":"..#_memory[bank_num])
 				end
 			end
+			if (#_memory[#_memory] == _memory_bank_size) add(_memory, {})
 		end
 	end
 
