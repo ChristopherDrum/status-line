@@ -569,15 +569,13 @@ function _show_status()
 		scoreb = sub('0'..scoreb, -2)..ampm
 	end
 
-	local score = scorea..separator..scoreb..' '
-	local loc = ' '..sub(location, 1, 30-#score-2)
-	if (#loc < #location) loc = sub(loc, 1, -2)..chr(144)
-	local spacer_len = 32 - #loc - #score
-	local spacer = sub('                                ', -spacer_len)
-	loc ..= spacer..score
+	local score = scorea..separator..scoreb
+	location = sub(location, 1, 30-#score-2)
 	local flipped = ""
-	for i = 1, #loc do
-		flipped ..= case_setter(loc[i], flipcase)
+	for i = 1, #location do
+		flipped ..= case_setter(location[i], flipcase)
 	end
+	local spacer_len = 32 - #location - #score
+	flipped ..= sub('                                ', -spacer_len)..score
 	print('\^i'..text_colors..flipped, 1, 1)
 end
