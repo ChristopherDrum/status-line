@@ -82,9 +82,9 @@ function tohex(value)
 	return sub(tostr(value, 3), 3, 6)
 end
 
-function log(str)
-	printh(str, '_status_line_log_30')
-end
+-- function log(str)
+-- 	printh(str, '_status_line_log_30')
+-- end
 
 function wait_for_any_key()
 	local keypress = nil
