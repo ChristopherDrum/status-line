@@ -568,7 +568,7 @@ function load_story_file()
 	local in_header, header_processed = false, false
 	while stat(120) do
 		-- if (#_memory[#_memory] == _memory_bank_size) add(_memory, {})
-		local bank_num = #_memory
+		-- local bank_num = 
 		local chunk = serial(0x800, 0x4300, 1024)
 		for j = 0, chunk-1, 4 do
 			local a, b, c, d = peek(0x4300+j, 4)
@@ -587,8 +587,8 @@ function load_story_file()
 					in_header, header_processed = false, true
 				else
 					-- log("  adding to memory")
-					add(_memory[bank_num], dword)
-					log("wrote: "..tostr(dword,1).." to memory "..#_memory..":"..#_memory[bank_num])
+					add(_memory[#_memory], dword)
+					log("wrote: "..tostr(dword,1).." to memory "..#_memory..":"..#_memory[#_memory])
 				end
 			end
 			if (#_memory[#_memory] == _memory_bank_size) add(_memory, {})
