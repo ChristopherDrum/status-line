@@ -97,10 +97,10 @@ end
 function set_var(value, _var_byte, indirect)
 	local var_byte = _var_byte or get_zbyte()
 
-	if (var_byte == 0) then
+	if var_byte == 0 then
 		if (indirect) set_stack_top(value) else stack_push(value)
 
-	elseif (var_byte < 16) then
+	elseif var_byte < 16 then
 		local zaddr = _local_var_table_mem_addr + (var_byte >>> 16)
 		top_frame().vars[zaddr<<16] = value
 
@@ -115,9 +115,9 @@ function get_var(_var_byte, indirect)
 	-- log("  [mem] get_var: "..tostr(var_byte))
 	local var_address
 	local var_byte = _var_byte or get_zbyte()
-	if (var_byte == 0) then
+	if var_byte == 0 then
 		var_address = _stack_mem_addr
-	elseif (var_byte < 16) then
+	elseif var_byte < 16 then
 		var_address = _local_var_table_mem_addr + (var_byte >>> 16)
 	else
 		var_address = _global_var_table_mem_addr + ((var_byte-16) >>> 15) 	-- index*0x.0002 == (index>>>15)
@@ -201,7 +201,6 @@ function set_zbyte(zaddress, _byte)
 		local offset = cell<<3
 		local filter = ~(0xff00.0000 >>> offset)
 		dword &= filter
-		-- byte <<= 8
 		byte >>>= offset-8
 		dword |= byte
 		_memory[bank][index] = dword
@@ -261,13 +260,13 @@ end
 function zobject_has_attribute(index, attribute_id)
 	if (index == 0) return 0
 	local attr_byte, attr_bit = zobject_attributes_byte_bit(index, attribute_id)
-	local attr_check = (0x80>>attr_bit)
+	local attr_check = 0x80>>attr_bit
 	-- log('  [mem] zobject_has_attribute: '..zobject_name(index)..', '..attribute_id..' '..tostr(attr_check))
 	return (attr_byte & attr_check) == attr_check
 end
 
 function zobject_set_attribute(index, attribute_id, val)
-	if ((index < 1) or (val > 1)) return
+	if (index < 1 or val > 1) return
 	-- log('  [mem] zobject_set_attribute: '..zobject_name(index)..', set attr '..attribute_id..' to: '..val)
 	local attr_byte, attr_bit, address = zobject_attributes_byte_bit(index, attribute_id)
 	attr_byte &= ~(0x80>>attr_bit)
@@ -299,7 +298,7 @@ end
 
 -- 12.3.1
 function zobject_prop_table_address(index)
-	local offset = (_zm_version == 3) and 0x.0007 or 0x.000c
+	local offset = _zm_version == 3 and 0x.0007 or 0x.000c
 	local prop_table_address = _zobject_address + (((index-1)*_zm_object_entry_size)>>>16) + offset
 	local zword = get_zword(prop_table_address)
 	return zword_to_zaddress(zword)
@@ -309,9 +308,8 @@ end
 function zobject_name(obj_index)
 	local prop_addr = zobject_prop_table_address(obj_index)
 	local text_length = get_zbyte(prop_addr)
-	if text_length > 0 then
-		return get_zstring(prop_addr + 0x.0001)
-	end
+	
+	if (text_length > 0) return get_zstring(prop_addr + 0x.0001)
 	return ''
 end
 
@@ -328,11 +326,11 @@ function extract_prop_len_num(local_addr)
 	if (_zm_version == 3) then
 		-- bits |7.6.5| == len; |4.3.2.1.0| == prop num
 		len = ((len_num_byte >>> 5) & 0x7) + 1
-		num = (len_num_byte & 0x1f)
+		num = len_num_byte & 0x1f
 		-- log("  [mem] z3 len: "..len..", num: "..num)
 	else
 		-- bits |7.6| == len; |5.4.3.2.1.0| == prop num
-		num = (len_num_byte & 0x3f)
+		num = len_num_byte & 0x3f
 
 		if (len_num_byte & 0x80 == 0) then
 			len = ((len_num_byte >>> 6) & 0x1) + 1
@@ -418,7 +416,7 @@ function get_zstring(zaddress, _is_dict)
 			add(zchars, (zword >>> shift) & 0x1F)
 		end
 		if (zaddress) zaddress += 0x.0002
-		end_found = ((zword & 0x8000) == 0x8000)
+		end_found = zword & 0x8000 == 0x8000
 		if _is_dict == true then
 			end_found = #zchars == _zm_dictionary_word_length
 		end
@@ -524,14 +522,14 @@ function load_instruction()
 		if (op_definition & 0x20 == 0x20) operands[2] = get_var(operands[2])
 
 	-- $BE indicates an extended instruction
-	elseif (op_form == 0xbe) and (_zm_version >= 5) then
+	elseif op_form == 0xbe and _zm_version >= 5 then
 		op_table = _ext_ops
 		op_code = get_zbyte()
 		extract_operands(get_zbyte(), 4)
 
 	elseif op_form == 0x02 then
 		op_table = _short_ops
-		op_code = (op_definition & 0xf)
+		op_code = op_definition & 0xf
 		local op_type = (op_definition & 0x30) >>> 4
 		operands = {extract_operand_by_type(op_type)}
 		if op_type == 3 then
@@ -541,7 +539,7 @@ function load_instruction()
 
 	elseif op_form == 0x03 then
 		op_table = (op_definition & 0x20 == 0) and _long_ops or _var_ops
-		op_code = (op_definition & 0x1f)
+		op_code = op_definition & 0x1f
 
 		local type_information, op_count
 		if (_zm_version > 3) and (op_definition == 0xec or op_definition == 0xfa) then
@@ -550,7 +548,7 @@ function load_instruction()
 			type_information, op_count = get_zbyte(), 4
 		end
 		extract_operands(type_information, op_count)
-		if ((op_table == _long_ops) and (#operands == 1) and (op_code > 1)) get_zbyte()
+		if (op_table == _long_ops and #operands == 1 and op_code > 1) get_zbyte()
 	end
 
 	-- Logging
@@ -563,20 +561,41 @@ function load_instruction()
 	return op_table[op_code + 1], operands
 end
 
+load_checksum, disk = nil, 0
 function load_story_file()
 	clear_all_memory()
+
+	local in_header = false
 	while stat(120) do
 		if (#_memory[#_memory] == _memory_bank_size) add(_memory, {})
 		local bank_num = #_memory
 		local chunk = serial(0x800, 0x4300, 1024)
 		for j = 0, chunk-1, 4 do
 			local a, b, c, d = peek(0x4300+j, 4)
-			a <<= 8
-			c >>>= 8
-			d >>>= 16
-			local dword = (a|b|c|d)
-			add(_memory[bank_num], dword)
+			local dword = (a<<8 | b | c>>>8 | d>>>16)
+
+			if j == 0 then
+				in_header = (dword == 0xdecaff) --magic number
+			else
+				if in_header == true then
+					local cs = dword & 0x0fff
+					if (not load_checksum) load_checksum = cs
+					if cs != load_checksum then
+						while (stat(120)) serial(0x800, 0x4300, 1024) --force flush serial
+					else 
+						disk, in_header = a, false
+					end
+				else
+					add(_memory[bank_num], dword)
+				end
+			end
 		end
 	end
-	initialize_game()
+
+	if disk == 1 then
+		message = "please drag in disk 2"
+	else
+		load_checksum, disk = nil, 0
+		initialize_game()
+	end
 end

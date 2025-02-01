@@ -11,7 +11,7 @@ _interrupt = nil
 
 game_id = 0x0
 story_loaded, full_color = false, false
-
+message = "DRAG IN A Z3/4/5/8 STORY\n   TO START PLAYING"
 punc = '.,!?_#\'"/\\-:()'
 blank_line = '                                '
 
@@ -65,7 +65,7 @@ end
 
 --useful functions
 function in_set(val, set) --set must be single chars in a string
-	if (not val or not set) return false
+	-- if (not val or not set) return false
 	for i = 1, #set do
 		if (set[i] == val) return true
 	end
@@ -133,28 +133,10 @@ function _init()
 	rehydrate_mem_addresses()
 end
 
-function draw_splashscreen(did_load)
-	-- cls(0)
-
-	-- sspr(0,0,128,124,0,0)--monitor
-	-- rectfill(6,125,122,127,1)
-	-- sspr(90,125,7,3,83,124)--knobs
-	-- sspr(90,125,7,3,93,124)
-
-	-- color(7)
-	-- line(33,83,93,83)
-	-- print('V'.._engine_version, 82, 69)
-
-	-- if (did_load == true) then
-	-- 	sspr(100,124,14,4,103,116)
-	-- 	print('sTORY IS LOADING', 31, 100)
-	-- else
-	-- 	sspr(114,124,14,4,103,116)
-	-- 	print('DRAG IN A Z3/4/5/8 STORY\n   TO START PLAYING', 21, 92)
-	-- end
-
-	-- color()
-	-- flip()
+function draw_splashscreen()
+	cls(0)
+	print(message, 0, 100)
+	flip()
 end
 
 function setup_palette()
@@ -210,7 +192,8 @@ function _update60()
 
 	else
 		if stat(120) then
-			draw_splashscreen(true)
+			message = 'sTORY IS LOADING'
+			draw_splashscreen()
 			load_story_file()
 		else
 			if _program_counter != 0x0 then
@@ -221,7 +204,7 @@ function _update60()
 				clear_all_memory()
 			end
 			pal()
-			draw_splashscreen(false)
+			draw_splashscreen()
 		end
 	end
 end

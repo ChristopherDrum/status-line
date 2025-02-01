@@ -101,7 +101,7 @@ function _copy_table(baddr1, baddr2, s)
 	else
 		local to = zword_to_zaddress(baddr2)
 		local st, en, step = s-1, 0, -1
-		if (s < 0) or (from > to) then
+		if s < 0 or from > to then
 			s = abs(s)
 			st, en, step = 0, s-1, 1
 		end
@@ -192,7 +192,7 @@ end
 
 function _je(a, b1, b2, b3)
 	if b1 then
-		if (a == b1 or a == b2 or a == b3) then
+		if a == b1 or a == b2 or a == b3 then
 			_branch(true)
 		else 
 			_branch(false)
@@ -265,7 +265,7 @@ function _call_fp(type, raddr, a1, a2, a3, a4, a5, a6, a7)
 		local a_vars = {a1, a2, a3, a4, a5, a6, a7}
 		local n = min(l, #a_vars)
 		for i = 1, l do -- "L"
-			if (i <= n) then 
+			if i <= n then 
 				zword = a_vars[i]
 			else
 				zword = (_zm_version < 5) and get_zword(r) or 0
@@ -787,9 +787,7 @@ function _quit()
 	story_loaded = false
 end
 
-function _show_status()
-	if (_zm_version == 3) show_status()
-end
+--_show_status() defined in io.lua
 
 --_verify() and _piracy() are just _branch(true)
 

@@ -17,7 +17,7 @@ zchar_map = split(zchar_map_str)
 
 function reset_io_state()
 	current_bg, current_fg, current_font = 0, 15, 1
-	if (full_color == true) then
+	if full_color == true then
 		current_fg = get_zbyte(_default_fg_color_addr)
 		current_bg = get_zbyte(_default_bg_color_addr)
 	end
@@ -140,7 +140,7 @@ function screen(str)
 
 		if reuse_last_line == true then
 			reuse_last_line = false
-			if (pixel_count > 128 and _interrupt == capture_line) then
+			if pixel_count > 128 and _interrupt == capture_line then
 				rectfill(0,121,128,128,current_bg)
 
 				print('\^d'..emit_rate..str, 1-(pixel_count-128), 122)
@@ -398,23 +398,23 @@ function case_setter(char, case)
 	local o = ord(char)
 
 	if case == lowercase then
-		if (o >= 128 and o <= 153) then
+		if o >= 128 and o <= 153 then
 			o -= 31
-		elseif (o >= 65 and o <= 90) then
+		elseif o >= 65 and o <= 90 then
 			o += 32
 		end
 
 	elseif case == visual_case then
-		if (o >= 97 and o <= 122) then
+		if o >= 97 and o <= 122 then
 			o -= 32
-		elseif (o >= 128 and o <= 153) then 
+		elseif o >= 128 and o <= 153 then 
 			o -= 31
 		end
 	
 	elseif case == flipcase then
-		if (o >= 97 and o <= 122) then
+		if o >= 97 and o <= 122 then
 			o -= 32
-		elseif (o >= 65 and o <= 90) then
+		elseif o >= 65 and o <= 90 then
 			o += 32
 		elseif o == 13 then
 			o = 10
@@ -530,9 +530,9 @@ function capture_input(char)
 			if (current_time - z_current_time) >= z_timed_interval then
 				local cached_line = win.last_line --routines that print to screen need to restore back to input state
 				local timed_response = _call_fp(call_type.intr, z_timed_routine)
-				if timed_response == 1 then
-					_read(0) --false
-				end
+				
+				if (timed_response == 1) _read(0) --false
+
 				if (_interrupt == capture_line) win.last_line = cached_line
 				flush_line_buffer()
 				z_current_time = current_time
@@ -547,7 +547,8 @@ function dword_to_str(dword)
 end
 
 --only for v3 games; I'd like to rework this to use far fewer tokens
-function show_status()
+function _show_status()
+	if (_zm_version != 3) return
 	local obj = get_zword(_global_var_table_mem_addr) --global 0
 	local location = zobject_name(obj)
 	local scorea = get_zword(_global_var_table_mem_addr + 0x.0002) --global 1
