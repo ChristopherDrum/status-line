@@ -57,91 +57,91 @@ end
 
 function restore_game()
 
-	-- output('Drag in a '..game_id..'_save.p8l file or any key to exit.\n', true)
-	-- extcmd("folder")
+	output('Drag in a '..game_id..'_save.p8l file or any key to exit.\n', true)
+	extcmd("folder")
 
-	-- --hang out waiting for a file drop or keypress
-	-- local key_pressed, file_dropped, stop_waiting = false, false, false
-	-- while stop_waiting == false do
-	-- 	flip()
-	-- 	if stat(30) then
-	-- 		poke(0x5f30,1)
-	-- 		key_pressed = true
-	-- 	elseif stat(120) then
-	-- 		file_dropped = true
-	-- 	end
-	-- 	stop_waiting = key_pressed or file_dropped
-	-- end
+	--hang out waiting for a file drop or keypress
+	local key_pressed, file_dropped, stop_waiting = false, false, false
+	while stop_waiting == false do
+		flip()
+		if stat(30) then
+			poke(0x5f30,1)
+			key_pressed = true
+		elseif stat(120) then
+			file_dropped = true
+		end
+		stop_waiting = key_pressed or file_dropped
+	end
 
-	-- if key_pressed == true then
-	-- 	 current_input = ''
-	-- 	 return (_zm_version == 3) and false or 0
-	-- end
+	if key_pressed == true then
+		 current_input = ''
+		 return (_zm_version == 3) and false or 0
+	end
 
-	-- local temp = {}
-	-- while stat(120) do
-	-- 	local chunk = serial(0x800, 0x4300, 0x1000)
-	-- 	for j = 0, chunk-1, 8 do
-	-- 		local a, b, c, d, e, f, g, h = peek(0x4300+j, 8)
-	-- 		local hex = chr(a)..chr(b)..chr(c)..chr(d)..chr(e)..chr(f)..chr(g)..chr(h)
-	-- 		add(temp, tonum(hex, 0x3))
-	-- 	end
-	-- end
+	local temp = {}
+	while stat(120) do
+		local chunk = serial(0x800, 0x4300, 0x1000)
+		for j = 0, chunk-1, 8 do
+			local a, b, c, d, e, f, g, h = peek(0x4300+j, 8)
+			local hex = chr(a)..chr(b)..chr(c)..chr(d)..chr(e)..chr(f)..chr(g)..chr(h)
+			add(temp, tonum(hex, 0x3))
+		end
+	end
 
-	-- local index = 1
-	-- local save_engine = temp[index]
-	-- -- log(" restore save_engine says raw: "..save_engine..", _engine_version: "..tonum(_engine_version))
-	-- if save_engine != tonum(_engine_version) then
-	-- 	output('This save file requires v'..tostr(save_engine)..' of Status Line.\n', true)
-	-- 	return (_zm_version == 3) and false or 0
-	-- end
+	local index = 1
+	local save_engine = temp[index]
+	-- log(" restore save_engine says raw: "..save_engine..", _engine_version: "..tonum(_engine_version))
+	if save_engine != tonum(_engine_version) then
+		output('This save file requires v'..tostr(save_engine)..' of Status Line.\n', true)
+		return (_zm_version == 3) and false or 0
+	end
 
-	-- index += 1
-	-- local save_id = tohex(temp[index],false)
-	-- -- log(" restore game_id says raw: "..tostr(temp[index],0x3)..", save_id: "..save_id..", game_id: "..game_id)
-	-- if save_id != game_id then
-	-- 	output('This save file appears to be for a different game.\n')
-	-- 	return (_zm_version == 3) and false or 0
-	-- end
+	index += 1
+	local save_id = tohex(temp[index],false)
+	-- log(" restore game_id says raw: "..tostr(temp[index],0x3)..", save_id: "..save_id..", game_id: "..game_id)
+	if save_id != game_id then
+		output('This save file appears to be for a different game.\n')
+		return (_zm_version == 3) and false or 0
+	end
 
-	-- index += 1
-	-- _program_counter = temp[index]
+	index += 1
+	_program_counter = temp[index]
 
-	-- index += 1
-	-- for i = 1, _memory_bank_size do
-	-- 	_memory[1][i] = temp[index]
-	-- 	-- log(" restore "..i..": "..dword_to_str(temp[index]))
-	-- 	index += 1
-	-- end
+	index += 1
+	for i = 1, _memory_bank_size do
+		_memory[1][i] = temp[index]
+		-- log(" restore "..i..": "..dword_to_str(temp[index]))
+		index += 1
+	end
 
-	-- _call_stack = {}
-	-- local call_stack_length = temp[index]
+	_call_stack = {}
+	local call_stack_length = temp[index]
 
-	-- index += 1
-	-- for i = 1, call_stack_length do
-	-- 	local frame = frame:new()
-	-- 	frame.pc = temp[index]
-	-- 	frame.call = temp[index + 1]
-	-- 	frame.args = temp[index + 2]
-	-- 	-- log("restoring frame "..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args))
-	-- 	local stack_length = temp[index + 3]
+	index += 1
+	for i = 1, call_stack_length do
+		local frame = frame:new()
+		frame.pc = temp[index]
+		frame.call = temp[index + 1]
+		frame.args = temp[index + 2]
+		-- log("restoring frame "..i..": "..tohex(frame.pc)..', '..tohex(frame.call)..', '..tohex(frame.args))
+		local stack_length = temp[index + 3]
 		
-	-- 	-- log3("---frame stack---")
-	-- 	for j = 1, stack_length do
-	-- 		add(frame.stack, temp[index + 3 + j])
-	-- 	end
-	-- 	index += 3 + stack_length --now points to last item on frame stack
+		-- log3("---frame stack---")
+		for j = 1, stack_length do
+			add(frame.stack, temp[index + 3 + j])
+		end
+		index += 3 + stack_length --now points to last item on frame stack
 
-	-- 	-- log("---restoring frame vars---")
-	-- 	for k = 1, 16 do
-	-- 		frame.vars[k] = temp[index + k]
-	-- 		-- log("  "..k..":"..frame.vars[k])
-	-- 	end
-	-- 	add(_call_stack, frame)
-	-- 	index += 17 --bring us to the start of next frame
-	-- end
+		-- log("---restoring frame vars---")
+		for k = 1, 16 do
+			frame.vars[k] = temp[index + k]
+			-- log("  "..k..":"..frame.vars[k])
+		end
+		add(_call_stack, frame)
+		index += 17 --bring us to the start of next frame
+	end
 
-	-- current_input = ''
-	-- -- did_restore = true
-	-- return (_zm_version == 3) and true or 2
+	current_input = ''
+	-- did_restore = true
+	return (_zm_version == 3) and true or 2
 end

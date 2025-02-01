@@ -573,7 +573,7 @@ function _show_status()
 	local loc = ' '..sub(location, 1, 30-#score-2)
 	if (#loc < #location) loc = sub(loc, 1, -2)..chr(144)
 	local spacer_len = 32 - #loc - #score
-	local spacer = sub(blank_line,-spacer_len)
+	local spacer = sub('                                ', -spacer_len)
 	loc ..= spacer..score
 	local flipped = ""
 	for i = 1, #loc do

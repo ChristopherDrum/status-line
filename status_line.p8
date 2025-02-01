@@ -6,14 +6,11 @@ __lua__
 
 _engine_version = '3.0'
 
-_program_counter = 0x0
-_interrupt = nil
+_program_counter, _interrupt, game_id = 0x0, nil, 0x0
 
-game_id = 0x0
 story_loaded, full_color = false, false
 message = "DRAG IN A Z3/4/5/8 STORY\n   TO START PLAYING"
 punc = '.,!?_#\'"/\\-:()'
-blank_line = '                                '
 
 function rehydrate(raw_strings, func)
 	local strings = split(raw_strings,'/')

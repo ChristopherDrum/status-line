@@ -1,7 +1,5 @@
-_memory = {{}}
-_memory_start_state = {}
-_memory_bank_size = 16384 -- (1024*64)/4; four 64K banks
-
+-- (1024*64)/4; four 64K banks
+_memory, _memory_start_state, _memory_bank_size = {{}}, {}, 16384
 
 -- used for throw/catch
 call_type = { none = 0, func = 1, proc = 2, intr = 3 }
@@ -51,8 +49,7 @@ function _restart()
 end
 
 function clear_all_memory()
-	_memory = {{}}
-	_memory_start_state = {}
+	_memory, _memory_start_state = {{}}, {}
 	flush_volatile_state()
 end
 
@@ -563,25 +560,23 @@ end
 
 story_id, disk = nil, 0
 function load_story_file()
-	if (story_id == nil) clear_all_memory()
+	if (disk == 0) clear_all_memory()
 
 	local in_header, header_processed = false, false
 	while stat(120) do
-		-- if (#_memory[#_memory] == _memory_bank_size) add(_memory, {})
-		-- local bank_num = 
+
 		local chunk = serial(0x800, 0x4300, 1024)
 		for j = 0, chunk-1, 4 do
 			local a, b, c, d = peek(0x4300+j, 4)
 			local dword = (a<<8 | b | c>>>8 | d>>>16)
 
-
 			if header_processed == false and in_header == false and (dword & 0xffff.ff00 == 0xdeca.ff00) then --magic header identifier
-				if (d - disk > 1) log("disk mismatch: "..d.." vs. "..disk) goto flush
+				if (d - disk > 1) goto flush
 				in_header, disk = true, d
 				-- log("set in_header: "..tostr(in_header)..", disk: "..d)
 			else
 				if in_header then
-					if (not story_id) story_id = dword
+					story_id = story_id or dword
 					-- log(" story_id: "..story_id..", id: "..dword)
 					if (dword != story_id) goto flush
 					in_header, header_processed = false, true
