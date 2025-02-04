@@ -9,7 +9,7 @@ _engine_version = '3.0'
 _program_counter, _interrupt, game_id = 0x0, nil, 0x0
 
 story_loaded, full_color = false, false
-message = "DRAG IN A Z3/4/5/8 STORY\n   TO START PLAYING"
+message = "     DRAG IN A Z3/4/5/8 GAME\n        OR A Z8 SPLIT FILE\n         TO START PLAYING"
 punc = '.,!?_#\'"/\\-:()'
 
 function rehydrate(raw_strings, func)
@@ -133,7 +133,7 @@ end
 function draw_splashscreen()
 	cls(0)
 	sspr(0,0,128,128,0,0)
-	print(message, 0, 100)
+	print(message, 0, 88)
 	flip()
 end
 
