@@ -132,6 +132,7 @@ end
 
 function draw_splashscreen()
 	cls(0)
+	sspr(0,0,128,128,0,0)
 	print(message, 0, 100)
 	flip()
 end
