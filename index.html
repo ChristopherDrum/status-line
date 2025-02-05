@@ -25,7 +25,7 @@
             const blob = new Blob([chunkData], { type: "application/octet-stream" });
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
-            a.download = `${baseFilename}.disk${index}`;
+            a.download = `${baseFilename}.split${index}`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
