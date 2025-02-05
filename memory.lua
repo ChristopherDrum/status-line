@@ -595,7 +595,7 @@ function load_story_file()
 
 	if disk == 1 then
 		-- log("made it to load disk 2???")
-		message = "please drag in disk 2"
+		message = "\n\npLEASE DRAG IN\nSPLIT #2"
 	else
 		-- log("done with the load, moving on to initialize_game()")
 		story_id, disk = nil, 0
