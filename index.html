@@ -11,17 +11,16 @@
     <!-- <button onclick="splitGame()">Split</button> -->
 
     <script>
-        async function writeChunk(baseFilename, index, gameData) {
+        async function writeChunk(baseFilename, dict, checksum, index, sliceData) {
 
-            const gameIdentifier = new TextEncoder().encode(baseFilename.slice(-4));
+            // Prefix data slice with header info
+            const chunkData = new Uint8Array(8 + sliceData.length);
+            chunkData.set([0xDE, 0xCA, 0xFF, index], 0);    // 0xDECAFF, our magic header number, 3 bytes
+            chunkData.set(dict, 4);           
+            chunkData.set(checksum, 6);           
+            chunkData.set(sliceData, 8);
 
-            // Combine header and data
-            const chunkData = new Uint8Array(8 + gameData.length);
-            chunkData.set([0xDE, 0xCA, 0xFF, index], 0);             // Using our magic header number, 3 bytes
-            chunkData.set(gameIdentifier, 4);   // The last 4 chars of the filename
-            chunkData.set(gameData, 8);
-
-            // Create a downloadable blob
+            // Create a blob and "download" it (just a local dump of local data)
             const blob = new Blob([chunkData], { type: "application/octet-stream" });
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
@@ -32,35 +31,42 @@
         }
 
         async function splitGame(file) {
-            const CHUNK_SIZE = 256 * 1024 - 8; // Account for 8-byte header
+            const SLICE_SIZE = 256 * 1024 - 8; // Account for 8-byte header
             const reader = new FileReader();
 
             reader.onload = async function (event) {
                 const arrayBuffer = event.target.result;
                 const totalSize = arrayBuffer.byteLength;
 
-                if (totalSize > 512 * 1024 - 16) { // Adjusted for two headers
-                    alert(".z8 games can only be a maximum of 512Kb.\nFile is too large.");
-                    return;
-                }
-
                 const data = new Uint8Array(arrayBuffer);
-                await writeChunk(file.name, 1, data.slice(0, CHUNK_SIZE));
-                if (totalSize > CHUNK_SIZE) {
-                    await writeChunk(file.name, 2, data.slice(CHUNK_SIZE));
-                }
+                
+                // dict address and checksum from .z8 header
+                const dict = data.slice(0x08, 0x0A);
+                const checksum = data.slice(0x1C, 0x1E);
+                await writeChunk(file.name, dict, checksum, 1, data.slice(0, SLICE_SIZE));
+                await writeChunk(file.name, dict, checksum, 2, data.slice(SLICE_SIZE));
             };
 
             reader.readAsArrayBuffer(file);
         }
 
-        // Usage: Attach this to a file input element
-        document.getElementById("z8game").addEventListener("change", function (event) {
-            const file = event.target.files[0];
-            if (file && file.name.endsWith(".z8")) {
-                splitGame(file);
+        // Initial sanity check of the file brought in for splitting
+        document.getElementById("z8game").addEventListener("change", function () {
+            if (event.target.files.length > 1) {
+                alert("One game at a time, please.");
             } else {
-                alert("Please select a .z8 file.");
+                const file = event.target.files[0];
+                if (file && !file.name.endsWith(".z8")) {
+                    alert("Please select a .z8 file.");
+                } else if (file && file.size > 524272) {
+                    alert(".z8 games can only be a maximum of 512Kb.\nFile is too large.");
+                } else if (file && file.size <= 262144) {
+                    alert("Files 256K or less work fine without a split.\nEnjoy this game as-is!");
+                } else if (file && file.name.endsWith(".z8")) {
+                    splitGame(file);
+                } else {   
+                    alert("Couldn't make head nor tail of that file, I'm sorry.");
+                }
             }
         });
 
