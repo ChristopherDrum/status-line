@@ -11,17 +11,17 @@
     <!-- <button onclick="splitGame()">Split</button> -->
 
     <script>
-        async function writeChunk(baseFilename, dict, checksum, index, sliceData) {
+        async function writeChunk(baseFilename, dict, checksum, index, splitData) {
 
             // Prefix data slice with header info
-            const chunkData = new Uint8Array(8 + sliceData.length);
-            chunkData.set([0xDE, 0xCA, 0xFF, index], 0);    // 0xDECAFF, our magic header number, 3 bytes
-            chunkData.set(dict, 4);           
-            chunkData.set(checksum, 6);           
-            chunkData.set(sliceData, 8);
+            const fileData = new Uint8Array(8 + splitData.length);
+            fileData.set([0xDE, 0xCA, 0xFF, index], 0);    // 0xDECAFF, our magic header number
+            fileData.set(dict, 4);           
+            fileData.set(checksum, 6);           
+            fileData.set(splitData, 8);
 
             // Create a blob and "download" it (just a local dump of local data)
-            const blob = new Blob([chunkData], { type: "application/octet-stream" });
+            const blob = new Blob([fileData], { type: "application/octet-stream" });
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
             a.download = `${baseFilename}.split${index}`;
@@ -31,7 +31,7 @@
         }
 
         async function splitGame(file) {
-            const SLICE_SIZE = 256 * 1024 - 8; // Account for 8-byte header
+            const SPLIT_SIZE = 256 * 1024 - 8; // Account for 8-byte header
             const reader = new FileReader();
 
             reader.onload = async function (event) {
@@ -43,8 +43,8 @@
                 // dict address and checksum from .z8 header
                 const dict = data.slice(0x08, 0x0A);
                 const checksum = data.slice(0x1C, 0x1E);
-                await writeChunk(file.name, dict, checksum, 1, data.slice(0, SLICE_SIZE));
-                await writeChunk(file.name, dict, checksum, 2, data.slice(SLICE_SIZE));
+                await writeChunk(file.name, dict, checksum, 1, data.slice(0, SPLIT_SIZE));
+                await writeChunk(file.name, dict, checksum, 2, data.slice(SPLIT_SIZE));
             };
 
             reader.readAsArrayBuffer(file);
