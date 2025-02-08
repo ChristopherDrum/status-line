@@ -246,7 +246,7 @@ function _call_fp(type, raddr, a1, a2, a3, a4, a5, a6, a7)
 		_result(0)
 
 	else
-		--z3/4 formula is "r = r + 2 ∗ L + 1"
+		--z3/4 formula is "r = r + 2 times L + 1"
 		--z5 formula is "r = r + 1"
 		local r = zword_to_zaddress(raddr, true)
 		local l = get_zbyte(r) --num local vars
