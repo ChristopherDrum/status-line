@@ -61,31 +61,18 @@ function rehydrate_mem_addresses()
 	rehydrate(raw_strings, hydrate)
 end
 
---useful functions
-function in_set(val, set) --set must be single chars in a string
-	-- if (not val or not set) return false
+--set must be single chars in a string
+function in_set(val, set) 
 	for i = 1, #set do
 		if (set[i] == val) return true
 	end
 	return false
 end
 
--- general debugging version
--- function tohex(value, full)
--- 	if (value == nil) return '(no_value)'
--- 	local hex = tostr(value, 3)
--- 	if (full == false) hex = sub(hex, 3, 6)
--- 	return hex
--- end
-
 -- token-saving version for release
 function tohex(value)
 	return sub(tostr(value, 3), 3, 6)
 end
-
--- function log(str)
--- 	printh(str, '_status_line_log_30')
--- end
 
 function wait_for_any_key()
 	local keypress = nil
