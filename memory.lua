@@ -560,6 +560,12 @@ end
 
 story_id, disk = nil, 0
 function load_story_file()
+
+	--flush serial
+	local function flush()
+		while (stat(120)) serial(0x800, 0x4300, 1024) 
+	end
+
 	if (disk == 0) clear_all_memory()
 
 	local in_header, header_processed = false, false
@@ -571,14 +577,14 @@ function load_story_file()
 			local dword = (a<<8 | b | c>>>8 | d>>>16)
 
 			if header_processed == false and in_header == false and (dword & 0xffff.ff00 == 0xdeca.ff00) then --magic header identifier
-				if (d - disk > 1) goto flush
+				if (d - disk != 1) flush() message = load_message return
 				in_header, disk = true, d
 				-- log("set in_header: "..tostr(in_header)..", disk: "..d)
 			else
 				if in_header then
 					story_id = story_id or dword
 					-- log(" story_id: "..story_id..", id: "..dword)
-					if (dword != story_id) goto flush
+					if (dword != story_id) flush()
 					in_header, header_processed = false, true
 				else
 					-- log("  adding to memory")
@@ -590,15 +596,12 @@ function load_story_file()
 		end
 	end
 
-	::flush::
-	while (stat(120)) serial(0x800, 0x4300, 1024) --force flush serial
-
 	if disk == 1 then
 		-- log("made it to load disk 2???")
 		message = "\n\npLEASE DRAG IN\nSPLIT #2"
 	else
 		-- log("done with the load, moving on to initialize_game()")
-		story_id, disk = nil, 0
+		story_id, disk, is_split = nil, 0, false
 		initialize_game()
 	end
 end
