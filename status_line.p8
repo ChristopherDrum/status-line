@@ -10,7 +10,7 @@ _program_counter, _interrupt, game_id = 0x0, nil, 0x0
 
 story_loaded, full_color = false, false
 punc = '.,!?_#\'"/\\-:()'
-load_message = "DRAG IN A\nZ3/4/5/8 GAME\nOR A split FILE\nTO START PLAYING"
+load_message = "DRAG IN A\nZ3/4/5/8 GAME\nOR A split1 FILE\nTO START PLAYING"
 message = load_message
 
 function rehydrate(raw_strings, func)
