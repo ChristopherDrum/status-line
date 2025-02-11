@@ -1,0 +1,11 @@
+clear; printf "\n  >Status\n   Line \033[7;4m3\033[0m\n\n\n\n\n"
+
+clear; printf "\n    >\n    Status\n    Line \n\033[7;4m     SPLIT\033[0m\n\n\n\n\n";
+
+clear; printf "\033[7;4mitch.io       349/350\033[0m\n\n>Status Line \033[7;4m3\n\n\n\n"
+
+ clear; printf "\033[7;4mitch.io       349/350\033[0m\n\n>Status Line\n\033[7;4m             SPLIT\n\n
+
+
+Orange: #e8a329
+Green: #72cc55

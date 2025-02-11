@@ -41,3 +41,6 @@ luac.out
 
 # Mac junk
 *.DS_Store
+
+# Project junk
+*.p8l

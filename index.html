@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Line SPLIT</title>
+</head>
+<body>
+    <h1>Upload .z8 Game to Split</h1>
+    <input type="file" id="z8game" />
+    <!-- <button onclick="splitGame()">Split</button> -->
+
+    <script>
+        async function writeChunk(baseFilename, dict, checksum, index, splitData) {
+
+            // Prefix data slice with header info
+            const fileData = new Uint8Array(8 + splitData.length);
+            fileData.set([0xDE, 0xCA, 0xFF, index], 0);    // 0xDECAFF, our magic header number
+            fileData.set(dict, 4);           
+            fileData.set(checksum, 6);           
+            fileData.set(splitData, 8);
+
+            // Create a blob and "download" it (just a local dump of local data)
+            const blob = new Blob([fileData], { type: "application/octet-stream" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `${baseFilename}.split${index}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        async function splitGame(file) {
+            const SPLIT_SIZE = 256 * 1024 - 8; // Account for 8-byte header
+            const reader = new FileReader();
+
+            reader.onload = async function (event) {
+                const arrayBuffer = event.target.result;
+                const totalSize = arrayBuffer.byteLength;
+
+                const data = new Uint8Array(arrayBuffer);
+                
+                // dict address and checksum from .z8 header
+                const dict = data.slice(0x08, 0x0A);
+                const checksum = data.slice(0x1C, 0x1E);
+                await writeChunk(file.name, dict, checksum, 1, data.slice(0, SPLIT_SIZE));
+                await writeChunk(file.name, dict, checksum, 2, data.slice(SPLIT_SIZE));
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Initial sanity check of the file brought in for splitting
+        document.getElementById("z8game").addEventListener("change", function () {
+            if (event.target.files.length > 1) {
+                alert("One game at a time, please.");
+            } else {
+                const file = event.target.files[0];
+                if (file && !file.name.endsWith(".z8")) {
+                    alert("Please select a .z8 file.");
+                } else if (file && file.size > 524272) {
+                    alert(".z8 games can only be a maximum of 512Kb.\nFile is too large.");
+                } else if (file && file.size <= 262144) {
+                    alert("Files 256K or less work fine without a split.\nEnjoy this game as-is!");
+                } else if (file && file.name.endsWith(".z8")) {
+                    splitGame(file);
+                } else {   
+                    alert("Couldn't make head nor tail of that file, I'm sorry.");
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
