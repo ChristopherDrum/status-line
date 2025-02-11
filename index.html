@@ -4,11 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Status Line SPLIT</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+    </style>
 </head>
-<body>
-    <h1>Upload .z8 Game to Split</h1>
-    <input type="file" id="z8game" />
-    <!-- <button onclick="splitGame()">Split</button> -->
+<body bgcolor="black">
+    <!-- <h1 style="font-family: VT323; color:white">>upload .z8 game to split</h1> -->
+    <h1 style="font-family: VT323; font-size: x-large; color:white" id="response"></h1>
+    <h1 style="font-family: VT323; font-size: x-large; color:white" id="result"></h1>
+    <label for="z8game" style="font-family: VT323; color:white; font-size: x-large; border: 1px solid #ccc;display: inline-block;padding: 6px 12px;cursor: pointer;">
+        >upload .z8 game to split
+    </label>
+    <input id="z8game" type="file" style="display:none"/>
 
     <script>
         async function writeChunk(baseFilename, dict, checksum, index, splitData) {
@@ -28,6 +35,7 @@
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
         }
 
         async function splitGame(file) {
@@ -43,8 +51,15 @@
                 // dict address and checksum from .z8 header
                 const dict = data.slice(0x08, 0x0A);
                 const checksum = data.slice(0x1C, 0x1E);
-                await writeChunk(file.name, dict, checksum, 1, data.slice(0, SPLIT_SIZE));
-                await writeChunk(file.name, dict, checksum, 2, data.slice(SPLIT_SIZE));
+                setTimeout(async function() {
+                    await writeChunk(file.name, dict, checksum, 1, data.slice(0, SPLIT_SIZE));
+                }, 2000);
+                if (totalSize > CHUNK_SIZE) {
+                    await writeChunk(file.name, dict, checksum, 2, data.slice(SPLIT_SIZE));
+                }
+                setTimeout(function() {
+                    document.getElementById("result").innerHTML = `>inventory<br>You check your Downloads folder and find:<br><ul><li>${baseFilename}.disk1</li><li>${baseFilename}.disk2</li></ul>`;
+                }, 1000);
             };
 
             reader.readAsArrayBuffer(file);
@@ -63,7 +78,10 @@
                 } else if (file && file.size <= 262144) {
                     alert("Files 256K or less work fine without a split.\nEnjoy this game as-is!");
                 } else if (file && file.name.endsWith(".z8")) {
-                    splitGame(file);
+                    setTimeout(function() {
+                        document.getElementById("response").innerHTML = `You select ${file.name} from your list of favorite games<br>and Status Line SPLIT gets to work.`;
+                        splitGame(file);
+                    }, 1000);
                 } else {   
                     alert("Couldn't make head nor tail of that file, I'm sorry.");
                 }
