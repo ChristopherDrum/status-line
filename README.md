@@ -1,9 +1,10 @@
 # Status Line
 A z-machine interpreter, written in Lua, for the Pico-8. 
-The primary product page exists at itch.io
-https://christopherdrum.itch.io/statusline
+itch.io product pages at
+- [Status Line 3](https://christopherdrum.itch.io/statusline)
+- [Status Line SPLIT](https://christopherdrum.itch.io/statusline-split)
 
-A set of modified Infocom games that work great with Status Line are in the companion repository, [Status Line Classics](https://github.com/ChristopherDrum/status-line-classics)
+Hand-modified Infocom games that work great with Status Line are in the companion repository, [Status Line Classics](https://github.com/ChristopherDrum/status-line-classics)
 
 v3.0 includes 
 - z3, z4, z5, and z8 game files
