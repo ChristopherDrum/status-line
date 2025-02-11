@@ -54,11 +54,11 @@
                 setTimeout(async function() {
                     await writeChunk(file.name, dict, checksum, 1, data.slice(0, SPLIT_SIZE));
                 }, 2000);
-                if (totalSize > CHUNK_SIZE) {
+                if (totalSize > SPLIT_SIZE) {
                     await writeChunk(file.name, dict, checksum, 2, data.slice(SPLIT_SIZE));
                 }
                 setTimeout(function() {
-                    document.getElementById("result").innerHTML = `>inventory<br>You check your Downloads folder and find:<br><ul><li>${baseFilename}.disk1</li><li>${baseFilename}.disk2</li></ul>`;
+                    document.getElementById("result").innerHTML = `>inventory<br>You check your Downloads folder and find:<br><ul><li>${file.name}.split1</li><li>${file.name}.split2</li></ul>`;
                 }, 1000);
             };
 
