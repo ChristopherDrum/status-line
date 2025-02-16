@@ -26,13 +26,11 @@ function reset_io_state()
 
 	current_text_style = 0
 	text_style_updated = false
-	text_style, text_colors = '', ''
-	font_width = 4
+	text_style, text_colors, font_width = '', '', 4
 
 	window_attributes = 0b00000000.00001010
 
-	emit_rate = 0 --the lower the faster
-	clock_type, cursor_type = nil, nil
+	emit_rate, clock_type, cursor_type = 0, nil, nil
 
 	mem_stream, screen_stream, trans_stream, script_stream = false, true, false, false
 	mem_stream_addr, memory_output = {}, {}
@@ -136,18 +134,14 @@ function screen(str)
 
 		--print the line to screen and update the lines_shown count 
 		--this will be caught by pagination on the next line flushed
-		local cx, cy = cursor(0, -20)
-		local pixel_len = print(str)
-		cursor(cx,cy)
-
-		print('\^d'..emit_rate..str, 1, 122)
+		local pixel_len = print(str, 1, 122) - 1
 
 		if reuse_last_line == true then
 			reuse_last_line = false
 			if pixel_len > 128 and _interrupt == capture_line then
 				rectfill(0,121,128,128,current_bg)
 
-				print('\^d'..emit_rate..str, 1-(pixel_len-128), 122)
+				print(str, 1-(pixel_len-128), 122)
 			end
 		end
 		
