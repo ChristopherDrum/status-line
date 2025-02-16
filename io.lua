@@ -136,25 +136,29 @@ function screen(str)
 
 		--print the line to screen and update the lines_shown count 
 		--this will be caught by pagination on the next line flushed
-		local pixel_count = print('\^d'..emit_rate..str, 1, 122) - 1
+		local cx, cy = cursor(0, -20)
+		local pixel_len = print(str)
+		cursor(cx,cy)
+
+		print('\^d'..emit_rate..str, 1, 122)
 
 		if reuse_last_line == true then
 			reuse_last_line = false
-			if pixel_count > 128 and _interrupt == capture_line then
+			if pixel_len > 128 and _interrupt == capture_line then
 				rectfill(0,121,128,128,current_bg)
 
-				print('\^d'..emit_rate..str, 1-(pixel_count-128), 122)
+				print('\^d'..emit_rate..str, 1-(pixel_len-128), 122)
 			end
 		end
 		
-		zx = ceil(pixel_count>>2) -- z_cursor starts at 1,1
+		zx = ceil(pixel_len>>2) -- z_cursor starts at 1,1
 		zy = win.h
 		lines_shown += 1
 	else
 		local px, py = unpack(win.p_cursor)
-		local pixel_count = print(str, px, py) - px
+		local pixel_len = print(str, px, py) - px
 
-		zx += flr(pixel_count>>2)
+		zx += flr(pixel_len>>2)
 		if did_trim_nl == true then
 			--from docs: "the upper window should never be scrolled"
 			zx = 1
