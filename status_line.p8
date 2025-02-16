@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
---status line 3.0
+--status line 3.0.1
 --by christopher drum
 
 _engine_version = '3.0'
