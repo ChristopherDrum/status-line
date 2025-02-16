@@ -44,3 +44,4 @@ luac.out
 
 # Project junk
 *.p8l
+/exports
